@@ -760,6 +760,14 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     GenInstrV(VMV_FUNCT6, vd, simm5, v0, NoMask);
   }
 
+  void vmv_xs(Register rd, VRegister vs2) {
+    GenInstrV(VWXUNARY0_FUNCT6, OP_MVV, rd, v0, vs2, NoMask);
+  }
+
+  void vmv_sx(VRegister vd, Register rs1) {
+    GenInstrV(VRXUNARY0_FUNCT6, OP_MVX, vd, rs1, v0, NoMask);
+  }
+
   void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {
     GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, vs2, Mask);
   }
@@ -785,7 +793,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
 #define DEFINE_OPIVI(name, funct6)                          \
-  void name##_vx(VRegister vd, uint8_t imm5, VRegister vs2, \
+  void name##_vi(VRegister vd, uint8_t imm5, VRegister vs2, \
                  MaskType mask = NoMask) {                  \
     GenInstrV(funct6, vd, imm5, vs2, mask);                 \
   }
