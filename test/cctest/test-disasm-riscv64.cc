@@ -553,7 +553,7 @@ TEST(RVV) {
   COMPARE(vslidedown_vx(v0, a1, v2), "3e25c057       vslidedown.vx v0, v2, a1 ");
   COMPARE(vslidedown_vi(v0, 5, v2), "3e22b057       vslidedown.vi v0, v2, 5 ");
   COMPARE(vmv_xs(a1, v2), "422025d7       vmv.x.s       a1, v2");
-  COMPARE(vmv_sx(v2, a1), "422025d7       vmv.x.s       a1, v2");
+  COMPARE(vmv_sx(v2, a1), "4205e157       vmv.s.x       v2, a1");
   VERIFY_RUN();
 }
 
