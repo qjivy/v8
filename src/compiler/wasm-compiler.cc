@@ -7852,6 +7852,7 @@ bool BuildGraphForWasmFunction(AccountingAllocator* allocator,
         mcgraph->zone(), return_count, param_count);
     for (auto ret : sig->returns()) {
       if (ret == MachineRepresentation::kSimd128) {
+	  std::cout<<"ret kSimd128"<<std::endl;
         for (int i = 0; i < 4; ++i) {
           sig_builder.AddReturn(MachineRepresentation::kWord32);
         }
@@ -7860,6 +7861,7 @@ bool BuildGraphForWasmFunction(AccountingAllocator* allocator,
       }
     }
     for (auto param : sig->parameters()) {
+	  std::cout<<"param kSimd128"<<std::endl;
       if (param == MachineRepresentation::kSimd128) {
         for (int i = 0; i < 4; ++i) {
           sig_builder.AddParam(MachineRepresentation::kWord32);
@@ -7981,15 +7983,18 @@ class LinkageLocationAllocator {
     if (IsFloatingPoint(rep)) {
       if (allocator_.CanAllocateFP(rep)) {
         int reg_code = allocator_.NextFpReg(rep);
+	std::cout<<"LinkageLocationAllocator aloc fp: "<<reg_code<<std::endl;
         return LinkageLocation::ForRegister(reg_code, type);
       }
     } else if (IsSimd128(rep)) {
       if (allocator_.CanAllocateVP()) {
         int reg_code = allocator_.NextVpReg();
+	std::cout<<"LinkageLocationAllocator aloc vp: "<<reg_code<<std::endl;
         return LinkageLocation::ForRegister(reg_code, type);
       }
     } else if (allocator_.CanAllocateGP()) {
       int reg_code = allocator_.NextGpReg();
+	std::cout<<"LinkageLocationAllocator aloc gp: "<<reg_code<<std::endl;
       return LinkageLocation::ForRegister(reg_code, type);
     }
     // Cannot use register; use stack slot.
@@ -8015,6 +8020,7 @@ CallDescriptor* GetWasmCallDescriptor(
   bool extra_callable_param =
       call_kind == kWasmImportWrapper || call_kind == kWasmCapiFunction;
   int extra_params = extra_callable_param ? 2 : 1;
+   std::cout<<"GetWasmCallDescriptor rc: "<<fsig->return_count()<<" pc: "<<fsig->parameter_count()<<" extrapc: "<<extra_params<<std::endl;
   LocationSignature::Builder locations(zone, fsig->return_count(),
                                        fsig->parameter_count() + extra_params);
 

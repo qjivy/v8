@@ -30,16 +30,24 @@ namespace internal {
   V(fs8) V(fs9) V(fs10) V(fs11) V(ft8) V(ft9) V(ft10) V(ft11)
 
 #define FLOAT_REGISTERS DOUBLE_REGISTERS
+
 #define VECTOR_REGISTERS(V)                               \
-  V(v0)  V(v1)  V(v2)  V(v3)  V(v4)  V(v5)  V(v6)  V(v7)  \
-  V(v8)  V(v9)  V(v10) V(v11) V(v12) V(v13) V(v14) V(v15) \
-  V(v16) V(v17) V(v18) V(v19) V(v20) V(v21) V(v22) V(v23) \
-  V(v24) V(v25) V(v26) V(v27) V(v28) V(v29) V(v30) V(v31)
+  V(q0)  V(q1)  V(q2)  V(q3)  V(q4)  V(q5)  V(q6)  V(q7)  \
+  V(q8)  V(q9)  V(q10) V(q11) V(q12) V(q13) V(q14) V(q15) \
+  V(q16) V(q17) V(q18) V(q19) V(q20) V(q21) V(q22) V(q23) \
+  V(q24) V(q25) V(q26) V(q27) V(q28) V(q29) V(q30) V(q31)
 
 #define ALLOCATABLE_DOUBLE_REGISTERS(V)                                   \
   V(ft0)  V(ft1)  V(ft2) V(ft3)                                           \
   V(ft4)  V(ft5) V(ft6) V(ft7) V(fa0) V(fa1) V(fa2) V(fa3) V(fa4) V(fa5)  \
   V(fa6) V(fa7)
+
+#define ALLOCATABLE_VECTOR_REGISTERS(V)                               \
+  V(q0)  V(q1)  V(q2)  V(q3)  V(q4)  V(q5)  V(q6)  V(q7)  \
+  V(q8)  V(q9)  V(q10) V(q11) V(q12) V(q13) V(q14) V(q15) \
+  V(q16) V(q17) V(q18) V(q19) V(q20) V(q21) V(q22) V(q23) \
+  V(q24) V(q25) V(q26) V(q27) V(q28) V(q29) V(q30) V(q31)
+
 
 // clang-format on
 

@@ -3381,20 +3381,24 @@ bool PipelineImpl::SelectInstructions(Linkage* linkage) {
   // Allocate registers.
   if (call_descriptor->HasRestrictedAllocatableRegisters()) {
     RegList registers = call_descriptor->AllocatableRegisters();
+    std::cout<<"HasRestrictedAllocatableRegisters"<<NumRegs(registers)<<std::endl;
     DCHECK_LT(0, NumRegs(registers));
     std::unique_ptr<const RegisterConfiguration> config;
     config.reset(RegisterConfiguration::RestrictGeneralRegisters(registers));
     AllocateRegistersForTopTier(config.get(), call_descriptor, run_verifier);
   } else {
+  std::cout<<"No RestrictedAllocatableRegisters"<<std::endl;
     const RegisterConfiguration* config;
     if (data->info()->GetPoisoningMitigationLevel() !=
         PoisoningMitigationLevel::kDontPoison) {
+	std::cout<<"RC Poison: Poison"<<std::endl;
 #ifdef V8_TARGET_ARCH_IA32
     FATAL("Poisoning is not supported on ia32.");
 #else
       config = RegisterConfiguration::Poisoning();
 #endif  // V8_TARGET_ARCH_IA32
     } else {
+      std::cout<<"RC default"<<std::endl;
       config = RegisterConfiguration::Default();
     }
 
@@ -3569,7 +3573,7 @@ bool PipelineImpl::SelectInstructionsAndAssemble(
   Linkage linkage(call_descriptor);
 
   // Perform instruction selection and register allocation.
-  if (!SelectInstructions(&linkage)) return false;
+  if (!SelectInstructions(&linkage)) return false; //qj: here alloca ra
 
   // Generate the final machine code.
   AssembleCode(&linkage);
@@ -3618,6 +3622,7 @@ void TraceSequence(OptimizedCompilationInfo* info, PipelineData* data,
 void PipelineImpl::AllocateRegistersForTopTier(
     const RegisterConfiguration* config, CallDescriptor* call_descriptor,
     bool run_verifier) {
+   std::cout<<"AllocateRegistersForTopTier"<<std::endl;
   PipelineData* data = this->data_;
   // Don't track usage for this zone in compiler stats.
   std::unique_ptr<Zone> verifier_zone;
@@ -3661,6 +3666,10 @@ void PipelineImpl::AllocateRegistersForTopTier(
   }
 
   Run<AllocateGeneralRegistersPhase<LinearScanAllocator>>();
+
+  if (data->sequence()->HasVVirtualRegisters()) {
+   std::cout<<"Need to allocate SIMD Vreg"<<std::endl;
+  }
 
   if (data->sequence()->HasFPVirtualRegisters()) {
     Run<AllocateFPRegistersPhase<LinearScanAllocator>>();

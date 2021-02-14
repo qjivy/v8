@@ -749,23 +749,23 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   // RVV Vector Arithmetic Instruction
 
   void vmv_vv(VRegister vd, VRegister vs1) {
-    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, v0, NoMask);
+    GenInstrV(VMV_FUNCT6, OP_IVV, vd, vs1, q0, NoMask);
   }
 
   void vmv_vx(VRegister vd, Register rs1) {
-    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, v0, NoMask);
+    GenInstrV(VMV_FUNCT6, OP_IVX, vd, rs1, q0, NoMask);
   }
 
   void vmv_vi(VRegister vd, uint8_t simm5) {
-    GenInstrV(VMV_FUNCT6, vd, simm5, v0, NoMask);
+    GenInstrV(VMV_FUNCT6, vd, simm5, q0, NoMask);
   }
 
   void vmv_xs(Register rd, VRegister vs2) {
-    GenInstrV(VWXUNARY0_FUNCT6, OP_MVV, rd, v0, vs2, NoMask);
+    GenInstrV(VWXUNARY0_FUNCT6, OP_MVV, rd, q0, vs2, NoMask);
   }
 
   void vmv_sx(VRegister vd, Register rs1) {
-    GenInstrV(VRXUNARY0_FUNCT6, OP_MVX, vd, rs1, v0, NoMask);
+    GenInstrV(VRXUNARY0_FUNCT6, OP_MVX, vd, rs1, q0, NoMask);
   }
 
   void vmerge_vv(VRegister vd, VRegister vs1, VRegister vs2) {

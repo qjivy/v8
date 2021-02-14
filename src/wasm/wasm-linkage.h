@@ -124,8 +124,8 @@ constexpr DoubleRegister kFpParamRegisters[] = {fa0, fa1, fa2, fa3,
                                                 fa4, fa5, fa6};
 constexpr DoubleRegister kFpReturnRegisters[] = {fa0, fa1};
 
-constexpr Simd128Register kVpParamRegisters[] = {v1, v2};
-constexpr Simd128Register kVpReturnRegisters[] = {v1, v2};
+constexpr Simd128Register kVpParamRegisters[] = {q0, q1};
+constexpr Simd128Register kVpReturnRegisters[] = {q2, q3};
 
 #elif V8_TARGET_ARCH_RISCV
 

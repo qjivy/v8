@@ -89,6 +89,7 @@ class V8_EXPORT_PRIVATE INSTRUCTION_OPERAND_ALIGN InstructionOperand {
   inline bool IsAnyLocationOperand() const;
   inline bool IsLocationOperand() const;
   inline bool IsFPLocationOperand() const;
+  inline bool IsSimd128LocationOperand() const;
   inline bool IsAnyRegister() const;
   inline bool IsRegister() const;
   inline bool IsFPRegister() const;
@@ -176,13 +177,25 @@ std::ostream& operator<<(std::ostream&, const InstructionOperand&);
 class UnallocatedOperand final : public InstructionOperand {
  public:
   enum BasicPolicy { FIXED_SLOT, EXTENDED_POLICY };
-
+/*
   enum ExtendedPolicy {
     NONE,
     REGISTER_OR_SLOT,
     REGISTER_OR_SLOT_OR_CONSTANT,
     FIXED_REGISTER,
     FIXED_FP_REGISTER,
+    MUST_HAVE_REGISTER,
+    MUST_HAVE_SLOT,
+    SAME_AS_FIRST_INPUT
+  };
+  */
+  enum ExtendedPolicy {
+    NONE,
+    REGISTER_OR_SLOT,
+    REGISTER_OR_SLOT_OR_CONSTANT,
+    FIXED_REGISTER,
+    FIXED_FP_REGISTER,
+    FIXED_V_REGISTER,
     MUST_HAVE_REGISTER,
     MUST_HAVE_SLOT,
     SAME_AS_FIRST_INPUT
@@ -203,6 +216,7 @@ class UnallocatedOperand final : public InstructionOperand {
 
   UnallocatedOperand(ExtendedPolicy policy, int virtual_register)
       : UnallocatedOperand(virtual_register) {
+    std::cout<<"UnallocatedOperand2 vr: "<<virtual_register<<" policy: "<<policy<<std::endl;
     value_ |= BasicPolicyField::encode(EXTENDED_POLICY);
     value_ |= ExtendedPolicyField::encode(policy);
     value_ |= LifetimeField::encode(USED_AT_END);
@@ -210,6 +224,7 @@ class UnallocatedOperand final : public InstructionOperand {
 
   UnallocatedOperand(BasicPolicy policy, int index, int virtual_register)
       : UnallocatedOperand(virtual_register) {
+    std::cout<<"UnallocatedOperand3 FixSlot vr: "<<virtual_register<<" index: "<<index<<" policy: "<<policy<<std::endl;
     DCHECK(policy == FIXED_SLOT);
     value_ |= BasicPolicyField::encode(policy);
     value_ |= static_cast<uint64_t>(static_cast<int64_t>(index))
@@ -219,7 +234,8 @@ class UnallocatedOperand final : public InstructionOperand {
 
   UnallocatedOperand(ExtendedPolicy policy, int index, int virtual_register)
       : UnallocatedOperand(virtual_register) {
-    DCHECK(policy == FIXED_REGISTER || policy == FIXED_FP_REGISTER);
+    std::cout<<"UnallocatedOperand1 FIXED POLICY vr: "<<virtual_register<<" hr: "<<index<<" policy: "<<policy<<std::endl;
+    DCHECK(policy == FIXED_REGISTER || policy == FIXED_FP_REGISTER ||policy == FIXED_V_REGISTER);
     value_ |= BasicPolicyField::encode(EXTENDED_POLICY);
     value_ |= ExtendedPolicyField::encode(policy);
     value_ |= LifetimeField::encode(USED_AT_END);
@@ -229,6 +245,7 @@ class UnallocatedOperand final : public InstructionOperand {
   UnallocatedOperand(ExtendedPolicy policy, Lifetime lifetime,
                      int virtual_register)
       : UnallocatedOperand(virtual_register) {
+    std::cout<<"UnallocatedOperand4 vr: "<<virtual_register<<" policy: "<<policy<<std::endl;
     value_ |= BasicPolicyField::encode(EXTENDED_POLICY);
     value_ |= ExtendedPolicyField::encode(policy);
     value_ |= LifetimeField::encode(lifetime);
@@ -236,11 +253,13 @@ class UnallocatedOperand final : public InstructionOperand {
 
   UnallocatedOperand(int reg_id, int slot_id, int virtual_register)
       : UnallocatedOperand(FIXED_REGISTER, reg_id, virtual_register) {
+    std::cout<<"UnallocatedOperand5 vr: "<<virtual_register<<std::endl;
     value_ |= HasSecondaryStorageField::encode(true);
     value_ |= SecondaryStorageField::encode(slot_id);
   }
 
   UnallocatedOperand(const UnallocatedOperand& other, int virtual_register) {
+    std::cout<<"UnallocatedOperand6"<<std::endl;
     DCHECK_NE(kInvalidVirtualRegister, virtual_register);
     value_ = VirtualRegisterField::update(
         other.value_, static_cast<uint32_t>(virtual_register));
@@ -258,7 +277,8 @@ class UnallocatedOperand final : public InstructionOperand {
   bool HasFixedPolicy() const {
     return basic_policy() == FIXED_SLOT ||
            extended_policy() == FIXED_REGISTER ||
-           extended_policy() == FIXED_FP_REGISTER;
+           extended_policy() == FIXED_FP_REGISTER ||
+           extended_policy() == FIXED_V_REGISTER;
   }
   bool HasRegisterPolicy() const {
     return basic_policy() == EXTENDED_POLICY &&
@@ -280,6 +300,10 @@ class UnallocatedOperand final : public InstructionOperand {
   bool HasFixedFPRegisterPolicy() const {
     return basic_policy() == EXTENDED_POLICY &&
            extended_policy() == FIXED_FP_REGISTER;
+  }
+  bool HasFixedVRegisterPolicy() const {
+    return basic_policy() == EXTENDED_POLICY &&
+           extended_policy() == FIXED_V_REGISTER;
   }
   bool HasSecondaryStorage() const {
     return basic_policy() == EXTENDED_POLICY &&
@@ -307,9 +331,9 @@ class UnallocatedOperand final : public InstructionOperand {
                             FixedSlotIndexField::kShift);
   }
 
-  // [fixed_register_index]: Only for FIXED_REGISTER or FIXED_FP_REGISTER.
+  // [fixed_register_index]: Only for FIXED_REGISTER or FIXED_FP_REGISTER or FIXED_V_REGISTER
   int fixed_register_index() const {
-    DCHECK(HasFixedRegisterPolicy() || HasFixedFPRegisterPolicy());
+    DCHECK(HasFixedRegisterPolicy() || HasFixedFPRegisterPolicy() || HasFixedVRegisterPolicy());
     return FixedRegisterField::decode(value_);
   }
 
@@ -357,11 +381,18 @@ class UnallocatedOperand final : public InstructionOperand {
   using FixedSlotIndexField = base::BitField64<int, 36, 28>;
 
   // BitFields specific to BasicPolicy::EXTENDED_POLICY.
+  /*
   using ExtendedPolicyField = base::BitField64<ExtendedPolicy, 36, 3>;
   using LifetimeField = base::BitField64<Lifetime, 39, 1>;
   using HasSecondaryStorageField = base::BitField64<bool, 40, 1>;
   using FixedRegisterField = base::BitField64<int, 41, 6>;
   using SecondaryStorageField = base::BitField64<int, 47, 3>;
+  */
+  using ExtendedPolicyField = base::BitField64<ExtendedPolicy, 36, 4>;
+  using LifetimeField = base::BitField64<Lifetime, 40, 1>;
+  using HasSecondaryStorageField = base::BitField64<bool, 41, 1>;
+  using FixedRegisterField = base::BitField64<int, 42, 6>;
+  using SecondaryStorageField = base::BitField64<int, 48, 3>;
 
  private:
   explicit UnallocatedOperand(int virtual_register)
@@ -473,6 +504,7 @@ class LocationOperand : public InstructionOperand {
                   LocationOperand::LocationKind location_kind,
                   MachineRepresentation rep, int index)
       : InstructionOperand(operand_kind) {
+//    std::cout<<"New LocationOperand: location_kind: "<<location_kind<<" index: "<<index<<std::endl;
     DCHECK_IMPLIES(location_kind == REGISTER, index >= 0);
     DCHECK(IsSupportedRepresentation(rep));
     value_ |= LocationKindField::encode(location_kind);
@@ -487,7 +519,7 @@ class LocationOperand : public InstructionOperand {
   }
 
   int register_code() const {
-    DCHECK(IsRegister() || IsFPRegister());
+    DCHECK(IsRegister() || IsFPRegister() || IsSimd128Register());
     return static_cast<int64_t>(value_) >> IndexField::kShift;
   }
 
@@ -589,12 +621,18 @@ bool InstructionOperand::IsAnyLocationOperand() const {
 
 bool InstructionOperand::IsLocationOperand() const {
   return IsAnyLocationOperand() &&
-         !IsFloatingPoint(LocationOperand::cast(this)->representation());
+         !IsFloatingPoint(LocationOperand::cast(this)->representation()) &&
+         !IsSimd128(LocationOperand::cast(this)->representation());
 }
 
 bool InstructionOperand::IsFPLocationOperand() const {
   return IsAnyLocationOperand() &&
          IsFloatingPoint(LocationOperand::cast(this)->representation());
+}
+
+bool InstructionOperand::IsSimd128LocationOperand() const {
+  return IsAnyLocationOperand() &&
+         IsSimd128(LocationOperand::cast(this)->representation());
 }
 
 bool InstructionOperand::IsAnyRegister() const {
@@ -605,7 +643,8 @@ bool InstructionOperand::IsAnyRegister() const {
 
 bool InstructionOperand::IsRegister() const {
   return IsAnyRegister() &&
-         !IsFloatingPoint(LocationOperand::cast(this)->representation());
+         !IsFloatingPoint(LocationOperand::cast(this)->representation()) &&
+         !IsSimd128(LocationOperand::cast(this)->representation());
 }
 
 bool InstructionOperand::IsFPRegister() const {
@@ -624,6 +663,11 @@ bool InstructionOperand::IsDoubleRegister() const {
 }
 
 bool InstructionOperand::IsSimd128Register() const {
+  //std::cout<<std::endl<<"IsSimd128Register:"<<std::endl<<" index:"<<LocationOperand::cast(this)->index()<<" IsAnyRegister: "<<IsAnyRegister()<<std::endl; 
+  std::cout<<std::endl<<"IsSimd128Register:"<<std::endl<<" IsAnyRegister: "<<IsAnyRegister()<<std::endl; 
+  std::cout<<" IsAnyLocationOperand: "<<IsAnyLocationOperand()<<std::endl; 
+  std::cout<<" location kind: "<<LocationOperand::cast(this)->location_kind()<<std::endl; 
+  std::cout<<" MachineRepIsKSimd128: "<<(LocationOperand::cast(this)->representation() == MachineRepresentation::kSimd128)<<std::endl; 
   return IsAnyRegister() && LocationOperand::cast(this)->representation() ==
                                 MachineRepresentation::kSimd128;
 }
@@ -1582,6 +1626,11 @@ class V8_EXPORT_PRIVATE InstructionSequence final
         RepresentationBit(MachineRepresentation::kFloat64) |
         RepresentationBit(MachineRepresentation::kSimd128);
     return (representation_mask() & kFPRepMask) != 0;
+  }
+  bool HasVVirtualRegisters() const {
+    constexpr int kVRepMask =
+        RepresentationBit(MachineRepresentation::kSimd128);
+    return (representation_mask() & kVRepMask) != 0;
   }
 
   Instruction* GetBlockStart(RpoNumber rpo) const;

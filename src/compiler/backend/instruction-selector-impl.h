@@ -111,7 +111,7 @@ class OperandGenerator {
   }
 
   InstructionOperand DefineAsLocation(Node* node, LinkageLocation location) {
-    return Define(node, ToUnallocatedOperand(location, GetVReg(node)));
+    return Define(node, ToUnallocatedOperand(location, GetVReg(node))); //qj2
   }
 
   InstructionOperand DefineAsDualLocation(Node* node,
@@ -433,8 +433,15 @@ class OperandGenerator {
       return UnallocatedOperand(UnallocatedOperand::FIXED_FP_REGISTER,
                                 location.AsRegister(), virtual_register);
     }
+
+    if(IsSimd128(location.GetType().representation())) {
+      std::cout<<"HIT the simd128 at instruction-selector-impl.h"<<std::endl; //qj: here modify extendpolicy
+      return UnallocatedOperand(UnallocatedOperand::FIXED_V_REGISTER,
+                                location.AsRegister(), virtual_register);
+	}
     return UnallocatedOperand(UnallocatedOperand::FIXED_REGISTER,
                               location.AsRegister(), virtual_register);
+
   }
 
   InstructionSelector* selector_;

@@ -514,46 +514,46 @@ TEST(RVV) {
           , "000372d7       vsetvli       t0, t1, E8, m1");
   COMPARE(vsetvli(t0, t1, E16, m1);
           , "004372d7       vsetvli       t0, t1, E16, m1");
-  COMPARE(vadd_vv(v0, v1, v2), "02208057       vadd.vv       v0, v2, v1  ");
-  COMPARE(vl(v0, t0, 0, E8, Mask), "00028007       vle8.v       v0, (t0) vm");
-  COMPARE(vs(v0, t0, 0, E8, Mask), "00028027       vse8.v       v0, (t0) vm");
-  COMPARE(vls(v0, t0, t1, E8, Mask),
-          "08628007       vlse8.v       v0, (t0), t1 vm");
-  COMPARE(vss(v0, t0, t1, E8, Mask),
-          "08628027       vsse8.v       v0, (t0), t1 vm");
-  COMPARE(vlx(v0, t0, v1, E8, Mask),
-          "0c128007       vlxei8.v       v0, (t0), v1 vm");
-  COMPARE(vsx(v0, t0, v1, E8, Mask),
-          "0c128027       vsxei8.v       v0, (t0), v1 vm");
-  COMPARE(vsu(v0, t0, v1, E8, Mask),
-          "04128027       vsuxei8.v       v0, (t0), v1 vm");
-  COMPARE(vsu(v0, t0, v1, E128, Mask),
-          "14128027       vsuxei128.v       v0, (t0), v1 vm");
-  COMPARE(vsu(v0, t0, v1, E256, Mask),
-          "1412d027       vsuxei256.v       v0, (t0), v1 vm");
-  COMPARE(vsu(v0, t0, v1, E256, NoMask),
-          "1612d027       vsuxei256.v       v0, (t0), v1 ");
-  COMPARE(vlseg2(v0, t0, 0, E8, Mask),
-          "20028007       vlseg2e8.v       v0, (t0) vm");
-  COMPARE(vlseg3(v0, t0, 0, E8, Mask),
-          "40028007       vlseg3e8.v       v0, (t0) vm");
-  COMPARE(vlsseg3(v0, t0, t1, E8, Mask),
-          "48628007       vlsseg3e8.v       v0, (t0), t1 vm");
-  COMPARE(vlxseg3(v0, t0, v1, E8, Mask),
-          "4c128007       vlxseg3ei8.v       v0, (t0), v1 vm");
-  COMPARE(vsseg2(v0, t0, 0, E8, Mask),
-          "20028027       vsseg2e8.v       v0, (t0) vm");
-  COMPARE(vsseg3(v0, t0, 0, E8, Mask),
-          "40028027       vsseg3e8.v       v0, (t0) vm");
-  COMPARE(vssseg3(v0, t0, t1, E8, Mask),
-          "48628027       vssseg3e8.v       v0, (t0), t1 vm");
-  COMPARE(vsxseg3(v0, t0, v1, E8, Mask),
-          "4c128027       vsxseg3ei8.v       v0, (t0), v1 vm");
-  COMPARE(vmv_vv(v0, v1), "5e008057       vmv.vv       v0, v1");
-  COMPARE(vslidedown_vx(v0, a1, v2), "3e25c057       vslidedown.vx v0, v2, a1 ");
-  COMPARE(vslidedown_vi(v0, 5, v2), "3e22b057       vslidedown.vi v0, v2, 5 ");
-  COMPARE(vmv_xs(a1, v2), "422025d7       vmv.x.s       a1, v2");
-  COMPARE(vmv_sx(v2, a1), "4205e157       vmv.s.x       v2, a1");
+  COMPARE(vadd_vv(q0, q1, q2), "02208057       vadd.vv       q0, q2, q1  ");
+  COMPARE(vl(q0, t0, 0, E8, Mask), "00028007       vle8.v       q0, (t0) vm");
+  COMPARE(vs(q0, t0, 0, E8, Mask), "00028027       vse8.v       q0, (t0) vm");
+  COMPARE(vls(q0, t0, t1, E8, Mask),
+          "08628007       vlse8.v       q0, (t0), t1 vm");
+  COMPARE(vss(q0, t0, t1, E8, Mask),
+          "08628027       vsse8.v       q0, (t0), t1 vm");
+  COMPARE(vlx(q0, t0, q1, E8, Mask),
+          "0c128007       vlxei8.v       q0, (t0), q1 vm");
+  COMPARE(vsx(q0, t0, q1, E8, Mask),
+          "0c128027       vsxei8.v       q0, (t0), q1 vm");
+  COMPARE(vsu(q0, t0, q1, E8, Mask),
+          "04128027       vsuxei8.v       q0, (t0), q1 vm");
+  COMPARE(vsu(q0, t0, q1, E128, Mask),
+          "14128027       vsuxei128.v       q0, (t0), q1 vm");
+  COMPARE(vsu(q0, t0, q1, E256, Mask),
+          "1412d027       vsuxei256.v       q0, (t0), q1 vm");
+  COMPARE(vsu(q0, t0, q1, E256, NoMask),
+          "1612d027       vsuxei256.v       q0, (t0), q1 ");
+  COMPARE(vlseg2(q0, t0, 0, E8, Mask),
+          "20028007       vlseg2e8.v       q0, (t0) vm");
+  COMPARE(vlseg3(q0, t0, 0, E8, Mask),
+          "40028007       vlseg3e8.v       q0, (t0) vm");
+  COMPARE(vlsseg3(q0, t0, t1, E8, Mask),
+          "48628007       vlsseg3e8.v       q0, (t0), t1 vm");
+  COMPARE(vlxseg3(q0, t0, q1, E8, Mask),
+          "4c128007       vlxseg3ei8.v       q0, (t0), q1 vm");
+  COMPARE(vsseg2(q0, t0, 0, E8, Mask),
+          "20028027       vsseg2e8.v       q0, (t0) vm");
+  COMPARE(vsseg3(q0, t0, 0, E8, Mask),
+          "40028027       vsseg3e8.v       q0, (t0) vm");
+  COMPARE(vssseg3(q0, t0, t1, E8, Mask),
+          "48628027       vssseg3e8.v       q0, (t0), t1 vm");
+  COMPARE(vsxseg3(q0, t0, q1, E8, Mask),
+          "4c128027       vsxseg3ei8.v       q0, (t0), q1 vm");
+  COMPARE(vmv_vv(q0, q1), "5e008057       vmv.vv       q0, q1");
+  COMPARE(vslidedown_vx(q0, a1, q2), "3e25c057       vslidedown.vx q0, q2, a1 ");
+  COMPARE(vslidedown_vi(q0, 5, q2), "3e22b057       vslidedown.vi q0, q2, 5 ");
+  COMPARE(vmv_xs(a1, q2), "422025d7       vmv.x.s       a1, q2");
+  COMPARE(vmv_sx(q2, a1), "4205e157       vmv.s.x       q2, a1");
   VERIFY_RUN();
 }
 

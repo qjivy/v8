@@ -875,13 +875,14 @@ void InstructionSelector::InitializeCallBuffer(Node* call, CallBuffer* buffer,
                                                CallBufferFlags flags,
                                                bool is_tail_call,
                                                int stack_param_delta) {
+  std::cout<<"InitializeCallBuffer: ";
   OperandGenerator g(this);
   size_t ret_count = buffer->descriptor->ReturnCount();
   DCHECK_LE(call->op()->ValueOutputCount(), ret_count);
   DCHECK_EQ(
       call->op()->ValueInputCount(),
       static_cast<int>(buffer->input_count() + buffer->frame_state_count()));
-
+  std::cout<<"ret_count: "<<ret_count<<" input_count: "<<buffer->input_count()<<" frame_state_count: "<<buffer->frame_state_count()<<std::endl;
   if (ret_count > 0) {
     // Collect the projections that represent multiple outputs from this call.
     if (ret_count == 1) {
@@ -925,6 +926,7 @@ void InstructionSelector::InitializeCallBuffer(Node* call, CallBuffer* buffer,
         InstructionOperand op = output == nullptr
                                     ? g.TempLocation(location)
                                     : g.DefineAsLocation(output, location);
+	std::cout<<"ICB: output?null"<<(output == nullptr)<<op<<std::endl;
         MarkAsRepresentation(rep, op);
 
         if (!UnallocatedOperand::cast(op).HasFixedSlotPolicy()) {
@@ -3020,8 +3022,11 @@ void InstructionSelector::VisitCall(Node* node, BasicBlock* handler) {
     case CallDescriptor::kCallWasmCapiFunction:
     case CallDescriptor::kCallWasmFunction:
     case CallDescriptor::kCallWasmImportWrapper:
+    {
+      std::cout<<"emit kCallWasmFunction"<<std::endl;
       opcode = EncodeCallDescriptorFlags(kArchCallWasmFunction, flags);
       break;
+    }
     case CallDescriptor::kCallBuiltinPointer:
       opcode = EncodeCallDescriptorFlags(kArchCallBuiltinPointer, flags);
       break;

@@ -1122,6 +1122,12 @@ std::ostream& operator<<(std::ostream& os, const InstructionOperandAsJSON& o) {
              << "\"";
           break;
         }
+        case UnallocatedOperand::FIXED_V_REGISTER: {
+          os << ",\"tooltip\": \"FIXED_V_REGISTER: "
+             << DoubleRegister::from_code(unalloc->fixed_register_index())
+             << "\"";
+          break;
+        }
         case UnallocatedOperand::MUST_HAVE_REGISTER: {
           os << ",\"tooltip\": \"MUST_HAVE_REGISTER\"";
           break;

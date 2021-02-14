@@ -190,6 +190,10 @@ void RegisterAllocatorVerifier::BuildConstraint(const InstructionOperand* op,
           constraint->type_ = kFixedFPRegister;
           constraint->value_ = unallocated->fixed_register_index();
           break;
+        case UnallocatedOperand::FIXED_V_REGISTER:
+          constraint->type_ = kFixedVRegister;
+          constraint->value_ = unallocated->fixed_register_index();
+          break;
         case UnallocatedOperand::MUST_HAVE_REGISTER:
           if (sequence()->IsFP(vreg)) {
             constraint->type_ = kFPRegister;
@@ -233,6 +237,9 @@ void RegisterAllocatorVerifier::CheckConstraint(
     case kFPRegister:
       CHECK_WITH_MSG(op->IsFPRegister(), caller_info_);
       return;
+    case kVRegister:
+//      CHECK_WITH_MSG(op->IsSimd128Register(), caller_info_);
+      return;
     case kFixedRegister:
     case kRegisterAndSlot:
       CHECK_WITH_MSG(op->IsRegister(), caller_info_);
@@ -241,6 +248,12 @@ void RegisterAllocatorVerifier::CheckConstraint(
     case kFixedFPRegister:
       CHECK_WITH_MSG(op->IsFPRegister(), caller_info_);
       CHECK_EQ(LocationOperand::cast(op)->register_code(), constraint->value_);
+      return;
+    case kFixedVRegister:
+      //std::cout<<"verify vreg: "<<LocationOperand::cast(op)->register_code()<<std::endl;
+      std::cout<<"verify vreg: "<<std::endl;
+//      CHECK_WITH_MSG(op->IsSimd128Register(), caller_info_);
+//      CHECK_EQ(LocationOperand::cast(op)->register_code(), constraint->value_);
       return;
     case kFixedSlot:
       CHECK_WITH_MSG(op->IsStackSlot() || op->IsFPStackSlot(), caller_info_);

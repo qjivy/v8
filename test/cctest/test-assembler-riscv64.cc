@@ -1890,7 +1890,7 @@ TEST(RVV_assembler) {
   CcTest::InitializeVM();
   GenAndRunTest([](MacroAssembler& assm) {
     __ vsetvli(t0, zero_reg, E8, m1);
-    __ vadd_vv(v1, v2, v3);
+    __ vadd_vv(q1, q2, q3);
   });
 }
 

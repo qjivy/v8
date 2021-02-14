@@ -1595,6 +1595,11 @@ ConstraintBuilder::ConstraintBuilder(TopTierRegisterAllocationData* data)
 InstructionOperand* ConstraintBuilder::AllocateFixed(
     UnallocatedOperand* operand, int pos, bool is_tagged, bool is_input) {
   TRACE("Allocating fixed reg for op %d\n", operand->virtual_register());
+  {
+    Instruction* instr = code()->InstructionAt(pos);
+    std::cout<<"AllocateFixed for inst["<<pos<<"]: "<<*instr<<std::endl;
+    std::cout<<"Allocating fixed reg for op "<<operand<<" vr: "<<operand->virtual_register()<<std::endl;
+  }
   DCHECK(operand->HasFixedPolicy());
   InstructionOperand allocated;
   MachineRepresentation rep = InstructionSequence::DefaultRepresentation();
@@ -1607,12 +1612,21 @@ InstructionOperand* ConstraintBuilder::AllocateFixed(
                                  operand->fixed_slot_index());
   } else if (operand->HasFixedRegisterPolicy()) {
     DCHECK(!IsFloatingPoint(rep));
+    DCHECK(!IsSimd128(rep));
+    std::cout<<"RA1: "<<operand->fixed_register_index()<<std::endl;
+    std::cout<<"RA2: "<<data()->config()->allocatable_general_codes_mask()<<std::endl;
     DCHECK(data()->config()->IsAllocatableGeneralCode(
         operand->fixed_register_index()));
     allocated = AllocatedOperand(AllocatedOperand::REGISTER, rep,
                                  operand->fixed_register_index());
   } else if (operand->HasFixedFPRegisterPolicy()) {
     DCHECK(IsFloatingPoint(rep));
+    DCHECK_NE(InstructionOperand::kInvalidVirtualRegister, virtual_register);
+    allocated = AllocatedOperand(AllocatedOperand::REGISTER, rep,
+                                 operand->fixed_register_index());
+  } else if (operand->HasFixedVRegisterPolicy()) {
+    std::cout<<"RA3"<<std::endl;
+    DCHECK(IsSimd128(rep));
     DCHECK_NE(InstructionOperand::kInvalidVirtualRegister, virtual_register);
     allocated = AllocatedOperand(AllocatedOperand::REGISTER, rep,
                                  operand->fixed_register_index());
@@ -1645,6 +1659,10 @@ void ConstraintBuilder::MeetRegisterConstraints(const InstructionBlock* block) {
   int end = block->last_instruction_index();
   DCHECK_NE(-1, start);
   for (int i = start; i <= end; ++i) {
+  {
+    Instruction* temp = code()->InstructionAt(i);
+    std::cout<<std::endl<<"MeetRegisterConstraints for inst["<<i<<"]: "<<*temp<<std::endl;
+  }
     MeetConstraintsBefore(i);
     if (i != end) MeetConstraintsAfter(i);
   }
@@ -1708,6 +1726,7 @@ void ConstraintBuilder::MeetConstraintsAfter(int instr_index) {
   // Handle constant/fixed output operands.
   for (size_t i = 0; i < first->OutputCount(); i++) {
     InstructionOperand* output = first->OutputAt(i);
+    std::cout<<"in RA: Func output: "<<*output<<std::endl;
     if (output->IsConstant()) {
       int output_vreg = ConstantOperand::cast(output)->virtual_register();
       TopLevelLiveRange* range = data()->GetOrCreateLiveRangeFor(output_vreg);

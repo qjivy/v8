@@ -146,6 +146,11 @@ std::ostream& operator<<(std::ostream& os, const InstructionOperand& op) {
                     << DoubleRegister::from_code(
                            unalloc->fixed_register_index())
                     << ")";
+        case UnallocatedOperand::FIXED_V_REGISTER://qjtobefix
+          return os << "(="
+                    << Simd128Register::from_code(
+                           unalloc->fixed_register_index())
+                    << ")";
         case UnallocatedOperand::MUST_HAVE_REGISTER:
           return os << "(R)";
         case UnallocatedOperand::MUST_HAVE_SLOT:

@@ -2163,8 +2163,8 @@ void LiftoffAssembler::emit_i32x4_extract_lane(LiftoffRegister dst,
                                                LiftoffRegister lhs,
                                                uint8_t imm_lane_idx) {
   VU.set(E64, m1);
-  vslidedown_vi(v31, imm_lane_idx, lhs.vp());
-  vmv_xs(dst.gp(), v31);
+  vslidedown_vi(q31, imm_lane_idx, lhs.vp());
+  vmv_xs(dst.gp(), q31);
 }
 
 void LiftoffAssembler::emit_i64x2_extract_lane(LiftoffRegister dst,
@@ -2212,7 +2212,7 @@ void LiftoffAssembler::emit_i64x2_replace_lane(LiftoffRegister dst,
                                                uint8_t imm_lane_idx) {
   VU.set(E64, m1);
   li(t0, 0x1 << imm_lane_idx);
-  vmv_sx(v0, t0);
+  vmv_sx(q0, t0);
   vmerge_vx(dst.vp(), src2.gp(), src1.vp());
 }
 
