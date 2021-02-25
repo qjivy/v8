@@ -43,11 +43,15 @@ namespace internal {
   V(fa6) V(fa7)
 
 #define ALLOCATABLE_VECTOR_REGISTERS(V)                               \
+  V(q24) V(q25) V(q26) V(q27) V(q28) V(q29) V(q30) V(q31)
+
+#if 0
+#define ALLOCATABLE_VECTOR_REGISTERS(V)                               \
   V(q0)  V(q1)  V(q2)  V(q3)  V(q4)  V(q5)  V(q6)  V(q7)  \
   V(q8)  V(q9)  V(q10) V(q11) V(q12) V(q13) V(q14) V(q15) \
   V(q16) V(q17) V(q18) V(q19) V(q20) V(q21) V(q22) V(q23) \
   V(q24) V(q25) V(q26) V(q27) V(q28) V(q29) V(q30) V(q31)
-
+#endif
 
 // clang-format on
 

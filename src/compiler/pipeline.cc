@@ -2233,6 +2233,17 @@ struct AllocateGeneralRegistersPhase {
 };
 
 template <typename RegAllocator>
+struct AllocateSimd128RegistersPhase {
+  DECL_PIPELINE_PHASE_CONSTANTS(AllocateSimd128Registers)
+
+  void Run(PipelineData* data, Zone* temp_zone) {
+    RegAllocator allocator(data->top_tier_register_allocation_data(),
+                           RegisterKind::kSimd128, temp_zone);
+    allocator.AllocateRegisters();
+  }
+};
+
+template <typename RegAllocator>
 struct AllocateFPRegistersPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(AllocateFPRegisters)
 
@@ -3669,6 +3680,7 @@ void PipelineImpl::AllocateRegistersForTopTier(
 
   if (data->sequence()->HasVVirtualRegisters()) {
    std::cout<<"Need to allocate SIMD Vreg"<<std::endl;
+    Run<AllocateSimd128RegistersPhase<LinearScanAllocator>>();
   }
 
   if (data->sequence()->HasFPVirtualRegisters()) {

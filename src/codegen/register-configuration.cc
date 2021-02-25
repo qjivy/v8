@@ -18,6 +18,8 @@ static const int kMaxAllocatableGeneralRegisterCount =
     ALLOCATABLE_GENERAL_REGISTERS(REGISTER_COUNT) 0;
 static const int kMaxAllocatableDoubleRegisterCount =
     ALLOCATABLE_DOUBLE_REGISTERS(REGISTER_COUNT) 0;
+static const int kMaxAllocatableSimd128RegisterCount =
+    ALLOCATABLE_VECTOR_REGISTERS(REGISTER_COUNT) 0;
 
 static const int kAllocatableGeneralCodes[] = {
 #define REGISTER_CODE(R) kRegCode_##R,
@@ -33,6 +35,14 @@ static const int kAllocatableNoVFP32DoubleCodes[] = {
 #endif  // V8_TARGET_ARCH_ARM
 #undef REGISTER_CODE
 
+
+//qj: we call vector in RISCV backend, and call simd128 outside
+//kVRCode is from the define in register-riscv64
+#define REGISTER_CODE(R) kVRCode_##R,
+static const int kAllocatableSimd128Codes[] = {
+    ALLOCATABLE_VECTOR_REGISTERS(REGISTER_CODE)};
+#undef REGISTER_CODE
+
 STATIC_ASSERT(RegisterConfiguration::kMaxGeneralRegisters >=
               Register::kNumRegisters);
 STATIC_ASSERT(RegisterConfiguration::kMaxFPRegisters >=
@@ -44,7 +54,7 @@ STATIC_ASSERT(RegisterConfiguration::kMaxFPRegisters >= //qjfix
 
 // Callers on architectures other than Arm expect this to be be constant
 // between build and runtime. Avoid adding variability on other platforms.
-static int get_num_allocatable_double_registers() { //qjfix
+static int get_num_allocatable_double_registers() {
   return
 #if V8_TARGET_ARCH_IA32
       kMaxAllocatableDoubleRegisterCount;
@@ -73,6 +83,10 @@ static int get_num_allocatable_double_registers() { //qjfix
 #endif
 }
 
+static int get_num_allocatable_simd128_registers() { //qjfix
+  return kMaxAllocatableSimd128RegisterCount;
+}
+
 #undef REGISTER_COUNT
 
 // Callers on architectures other than Arm expect this to be be constant
@@ -87,8 +101,13 @@ static const int* get_allocatable_double_codes() {
 #endif
 }
 
+static const int* get_allocatable_simd128_codes() {
+  return kAllocatableSimd128Codes;
+}
+
 class ArchDefaultRegisterConfiguration : public RegisterConfiguration {
  public:
+#if !V8_TARGET_ARCH_RISCV64
   ArchDefaultRegisterConfiguration()
       : RegisterConfiguration(
             Register::kNumRegisters, DoubleRegister::kNumRegisters,
@@ -97,6 +116,19 @@ class ArchDefaultRegisterConfiguration : public RegisterConfiguration {
             get_allocatable_double_codes(),
             kSimpleFPAliasing ? AliasingKind::OVERLAP : AliasingKind::COMBINE) {
   }
+#else
+  ArchDefaultRegisterConfiguration()
+      : RegisterConfiguration(
+            Register::kNumRegisters, DoubleRegister::kNumRegisters, Simd128Register::kNumRegisters,
+            kMaxAllocatableGeneralRegisterCount,
+            get_num_allocatable_double_registers(),
+	    get_num_allocatable_simd128_registers(),
+	    kAllocatableGeneralCodes,
+            get_allocatable_double_codes(),
+            get_allocatable_simd128_codes(),
+            kSimpleFPAliasing ? AliasingKind::OVERLAP : AliasingKind::COMBINE) {
+  }
+#endif
 };
 
 DEFINE_LAZY_LEAKY_OBJECT_GETTER(ArchDefaultRegisterConfiguration,
@@ -105,6 +137,7 @@ DEFINE_LAZY_LEAKY_OBJECT_GETTER(ArchDefaultRegisterConfiguration,
 // Allocatable registers with the masking register removed.
 class ArchDefaultPoisoningRegisterConfiguration : public RegisterConfiguration {
  public:
+#if !V8_TARGET_ARCH_RISCV64 
   ArchDefaultPoisoningRegisterConfiguration()
       : RegisterConfiguration(
             Register::kNumRegisters, DoubleRegister::kNumRegisters,
@@ -113,7 +146,19 @@ class ArchDefaultPoisoningRegisterConfiguration : public RegisterConfiguration {
             InitializeGeneralRegisterCodes(), get_allocatable_double_codes(),
             kSimpleFPAliasing ? AliasingKind::OVERLAP : AliasingKind::COMBINE) {
   }
-
+#else  
+  ArchDefaultPoisoningRegisterConfiguration()
+      : RegisterConfiguration(
+            Register::kNumRegisters, DoubleRegister::kNumRegisters, Simd128Register::kNumRegisters,
+            kMaxAllocatableGeneralRegisterCount - 1,
+            get_num_allocatable_double_registers(),
+	    get_num_allocatable_simd128_registers(),
+            InitializeGeneralRegisterCodes(), 
+	    get_allocatable_double_codes(),
+	    get_allocatable_simd128_codes(),
+            kSimpleFPAliasing ? AliasingKind::OVERLAP : AliasingKind::COMBINE) {
+  }
+#endif
  private:
   static const int* InitializeGeneralRegisterCodes() {
     int filtered_index = 0;
@@ -276,6 +321,86 @@ RegisterConfiguration::RegisterConfiguration(
     }
     allocatable_float_codes_mask_ = allocatable_simd128_codes_mask_ =
         allocatable_double_codes_mask_;
+  }
+}
+//qj RISCV with vector extension should call here with explicit simd128 info
+//num_simd128_registers: 
+//num_allocatable_simd128_registers:
+//allocatable_simd128_codes:
+RegisterConfiguration::RegisterConfiguration(
+    int num_general_registers, int num_double_registers, int num_simd128_registers,
+    int num_allocatable_general_registers, int num_allocatable_double_registers, int num_allocatable_simd128_registers,
+    const int* allocatable_general_codes, const int* allocatable_double_codes, const int* allocatable_simd128_codes,
+    AliasingKind fp_aliasing_kind)
+    : num_general_registers_(num_general_registers),
+      num_float_registers_(0),
+      num_double_registers_(num_double_registers),
+      num_simd128_registers_(num_simd128_registers),
+      num_allocatable_general_registers_(num_allocatable_general_registers),
+      num_allocatable_float_registers_(0),
+      num_allocatable_double_registers_(num_allocatable_double_registers),
+      num_allocatable_simd128_registers_(num_allocatable_simd128_registers),
+      allocatable_general_codes_mask_(0),
+      allocatable_float_codes_mask_(0),
+      allocatable_double_codes_mask_(0),
+      allocatable_simd128_codes_mask_(0),
+      allocatable_general_codes_(allocatable_general_codes),
+      allocatable_double_codes_(allocatable_double_codes),
+      //allocatable_simd128_codes_(allocatable_simd128_codes),
+      fp_aliasing_kind_(fp_aliasing_kind) {
+      std::cout<<"RV RC init"<<std::endl;
+  DCHECK_LE(num_general_registers_,
+            RegisterConfiguration::kMaxGeneralRegisters);
+  DCHECK_LE(num_double_registers_, RegisterConfiguration::kMaxFPRegisters);
+  for (int i = 0; i < num_allocatable_general_registers_; ++i) {
+    allocatable_general_codes_mask_ |= (1 << allocatable_general_codes_[i]);
+  }
+  for (int i = 0; i < num_allocatable_double_registers_; ++i) {
+    allocatable_double_codes_mask_ |= (1 << allocatable_double_codes_[i]);
+  }
+
+  for (int i = 0; i < num_allocatable_simd128_registers_; ++i) {
+    allocatable_simd128_codes_[i] = allocatable_simd128_codes[i];
+    allocatable_simd128_codes_mask_ |= (1 << allocatable_simd128_codes_[i]);
+  }
+
+  if (fp_aliasing_kind_ == COMBINE) {
+    num_float_registers_ = num_double_registers_ * 2 <= kMaxFPRegisters
+                               ? num_double_registers_ * 2
+                               : kMaxFPRegisters;
+    num_allocatable_float_registers_ = 0;
+    for (int i = 0; i < num_allocatable_double_registers_; i++) {
+      int base_code = allocatable_double_codes_[i] * 2;
+      if (base_code >= kMaxFPRegisters) continue;
+      allocatable_float_codes_[num_allocatable_float_registers_++] = base_code;
+      allocatable_float_codes_[num_allocatable_float_registers_++] =
+          base_code + 1;
+      allocatable_float_codes_mask_ |= (0x3 << base_code);
+    }
+    #if 0
+    num_simd128_registers_ = num_double_registers_ / 2;
+    num_allocatable_simd128_registers_ = 0;
+    int last_simd128_code = allocatable_double_codes_[0] / 2;
+    for (int i = 1; i < num_allocatable_double_registers_; i++) {
+      int next_simd128_code = allocatable_double_codes_[i] / 2;
+      // This scheme assumes allocatable_double_codes_ are strictly increasing.
+      DCHECK_GE(next_simd128_code, last_simd128_code);
+      if (last_simd128_code == next_simd128_code) {
+        allocatable_simd128_codes_[num_allocatable_simd128_registers_++] =
+            next_simd128_code;
+        allocatable_simd128_codes_mask_ |= (0x1 << next_simd128_code);
+      }
+      last_simd128_code = next_simd128_code;
+    }
+    #endif
+  } else {
+    DCHECK(fp_aliasing_kind_ == OVERLAP);
+    num_float_registers_ = num_double_registers_;
+    num_allocatable_float_registers_ = num_allocatable_double_registers_;
+    for (int i = 0; i < num_allocatable_float_registers_; ++i) {
+      allocatable_float_codes_[i] = allocatable_double_codes_[i];
+    }
+    allocatable_float_codes_mask_ = allocatable_double_codes_mask_;
   }
 }
 

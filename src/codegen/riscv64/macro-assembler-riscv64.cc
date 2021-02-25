@@ -726,7 +726,7 @@ void TurboAssembler::Slt(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      BlockTrampolinePoolScope block_trampoline_pool(this);
+      BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove 
       RV_li(scratch, rt.immediate());
       slt(rd, rs, scratch);
     }
@@ -743,7 +743,7 @@ void TurboAssembler::Sltu(Register rd, Register rs, const Operand& rt) {
       // li handles the relocation.
       UseScratchRegisterScope temps(this);
       Register scratch = temps.Acquire();
-      BlockTrampolinePoolScope block_trampoline_pool(this);
+      BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove
       RV_li(scratch, rt.immediate());
       sltu(rd, rs, scratch);
     }
@@ -757,7 +757,7 @@ void TurboAssembler::Sle(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    BlockTrampolinePoolScope block_trampoline_pool(this);
+    BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove 
     RV_li(scratch, rt.immediate());
     slt(rd, scratch, rs);
   }
@@ -771,7 +771,7 @@ void TurboAssembler::Sleu(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    BlockTrampolinePoolScope block_trampoline_pool(this);
+    BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove
     RV_li(scratch, rt.immediate());
     sltu(rd, scratch, rs);
   }
@@ -780,7 +780,7 @@ void TurboAssembler::Sleu(Register rd, Register rs, const Operand& rt) {
 
 void TurboAssembler::Sge(Register rd, Register rs, const Operand& rt) {
   Slt(rd, rs, rt);
-  xori(rd, rd, 1);
+  xori(rd, rd, 1); //qj here should be neg? not it's same
 }
 
 void TurboAssembler::Sgeu(Register rd, Register rs, const Operand& rt) {
@@ -795,7 +795,7 @@ void TurboAssembler::Sgt(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    BlockTrampolinePoolScope block_trampoline_pool(this);
+    BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove
     RV_li(scratch, rt.immediate());
     slt(rd, scratch, rs);
   }
@@ -808,7 +808,7 @@ void TurboAssembler::Sgtu(Register rd, Register rs, const Operand& rt) {
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
-    BlockTrampolinePoolScope block_trampoline_pool(this);
+    BlockTrampolinePoolScope block_trampoline_pool(this); //qj remove
     RV_li(scratch, rt.immediate());
     sltu(rd, scratch, rs);
   }

@@ -1320,13 +1320,14 @@ TopTierRegisterAllocationData::TopTierRegisterAllocationData(
       delayed_references_(allocation_zone()),
       assigned_registers_(nullptr),
       assigned_double_registers_(nullptr),
+      assigned_simd128_registers_(nullptr),//qj add
       virtual_register_count_(code->VirtualRegisterCount()),
       preassigned_slot_ranges_(zone),
       spill_state_(code->InstructionBlockCount(), ZoneVector<LiveRange*>(zone),
                    zone),
       flags_(flags),
       tick_counter_(tick_counter) {
-  if (!kSimpleFPAliasing) {
+  if (!kSimpleFPAliasing) { //qj: rv false here
     fixed_float_live_ranges_.resize(
         kNumberOfFixedRangesPerRegister * this->config()->num_float_registers(),
         nullptr);
@@ -1340,6 +1341,9 @@ TopTierRegisterAllocationData::TopTierRegisterAllocationData(
       this->config()->num_general_registers(), code_zone());
   assigned_double_registers_ = code_zone()->New<BitVector>(
       this->config()->num_double_registers(), code_zone());
+  assigned_simd128_registers_ = code_zone()->New<BitVector>( //qj add
+      this->config()->num_simd128_registers(), code_zone());
+
   fixed_register_use_ = code_zone()->New<BitVector>(
       this->config()->num_general_registers(), code_zone());
   fixed_fp_register_use_ = code_zone()->New<BitVector>(
@@ -1347,6 +1351,7 @@ TopTierRegisterAllocationData::TopTierRegisterAllocationData(
 
   this->frame()->SetAllocatedRegisters(assigned_registers_);
   this->frame()->SetAllocatedDoubleRegisters(assigned_double_registers_);
+  this->frame()->SetAllocatedSimd128Registers(assigned_double_registers_); //qjadd 
 }
 
 MoveOperands* TopTierRegisterAllocationData::AddGapMove(
@@ -1615,6 +1620,8 @@ InstructionOperand* ConstraintBuilder::AllocateFixed(
     DCHECK(!IsSimd128(rep));
     std::cout<<"RA1: "<<operand->fixed_register_index()<<std::endl;
     std::cout<<"RA2: "<<data()->config()->allocatable_general_codes_mask()<<std::endl;
+    std::cout<<"RA3: "<<data()->config()->allocatable_double_codes_mask()<<std::endl;
+    std::cout<<"RA4: "<<data()->config()->allocatable_simd128_codes_mask()<<std::endl;
     DCHECK(data()->config()->IsAllocatableGeneralCode(
         operand->fixed_register_index()));
     allocated = AllocatedOperand(AllocatedOperand::REGISTER, rep,
@@ -3524,6 +3531,13 @@ void LinearScanAllocator::AllocateRegisters() {
         AddToInactive(current);
       }
     }
+   } else if (mode() == RegisterKind::kSimd128) {
+    for (TopLevelLiveRange* current : data()->fixed_simd128_live_ranges()) {
+      if (current != nullptr) {
+        if (current->IsDeferredFixed()) continue;
+        AddToInactive(current);
+      }
+    }  
   } else {
     for (TopLevelLiveRange* current : data()->fixed_double_live_ranges()) {
       if (current != nullptr) {
@@ -3538,12 +3552,14 @@ void LinearScanAllocator::AllocateRegisters() {
           AddToInactive(current);
         }
       }
+      #if   0
       for (TopLevelLiveRange* current : data()->fixed_simd128_live_ranges()) {
         if (current != nullptr) {
           if (current->IsDeferredFixed()) continue;
           AddToInactive(current);
         }
       }
+      #endif
     }
   }
 
