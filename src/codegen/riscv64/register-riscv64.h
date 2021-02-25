@@ -41,6 +41,10 @@ namespace internal {
   V(ft4)  V(ft5) V(ft6) V(ft7) V(fa0) V(fa1) V(fa2) V(fa3) V(fa4) V(fa5)  \
   V(fa6) V(fa7)
 
+#define ALLOCATABLE_VECTOR_REGISTERS(V)                               \
+  V(v16) V(v17) V(v18) V(v19) V(v20) V(v21) V(v22) V(v23) \
+  V(v24) V(v25) V(v26) V(v27) V(v28) V(v29) V(v30) V(v31)
+
 // clang-format on
 
 // Note that the bit values must match those used in actual instruction

@@ -28,8 +28,9 @@ class V8_EXPORT_PRIVATE RegisterConfiguration {
   // Architecture independent maxes.
   static constexpr int kMaxGeneralRegisters = 32;
   static constexpr int kMaxFPRegisters = 32;
+  static constexpr int kMaxSimd128Registers = 32;
   static constexpr int kMaxRegisters =
-      std::max(kMaxFPRegisters, kMaxGeneralRegisters);
+      std::max(std::max(kMaxFPRegisters, kMaxGeneralRegisters),kMaxSimd128Registers);
 
   // Default RegisterConfigurations for the target architecture.
   static const RegisterConfiguration* Default();
@@ -45,6 +46,16 @@ class V8_EXPORT_PRIVATE RegisterConfiguration {
                         int num_allocatable_double_registers,
                         const int* allocatable_general_codes,
                         const int* allocatable_double_codes,
+                        AliasingKind fp_aliasing_kind);
+
+  RegisterConfiguration(int num_general_registers, int num_double_registers,
+                        int num_simd128_registers,
+                        int num_allocatable_general_registers,
+                        int num_allocatable_double_registers,
+                        int num_allocatable_simd128_registers,
+                        const int* allocatable_general_codes,
+                        const int* allocatable_double_codes,
+                        const int* allocatable_simd128_codes,
                         AliasingKind fp_aliasing_kind);
 
   int num_general_registers() const { return num_general_registers_; }
@@ -72,6 +83,9 @@ class V8_EXPORT_PRIVATE RegisterConfiguration {
   }
   int32_t allocatable_double_codes_mask() const {
     return allocatable_double_codes_mask_;
+  }
+  int32_t allocatable_simd128_codes_mask() const {
+    return allocatable_simd128_codes_mask_;
   }
   int32_t allocatable_float_codes_mask() const {
     return allocatable_float_codes_mask_;
@@ -148,7 +162,11 @@ class V8_EXPORT_PRIVATE RegisterConfiguration {
   const int* allocatable_general_codes_;
   int allocatable_float_codes_[kMaxFPRegisters];
   const int* allocatable_double_codes_;
+#if V8_TARGET_ARCH_RISCV64
+  int allocatable_simd128_codes_[kMaxSimd128Registers];
+#else
   int allocatable_simd128_codes_[kMaxFPRegisters];
+#endif
   AliasingKind fp_aliasing_kind_;
 };
 
