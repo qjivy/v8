@@ -391,6 +391,7 @@ void TurboAssembler::Add32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     addw(rd, rs, rt.rm());
   } else {
+    std::cout<<"Add32:"<<rt.immediate()<<std::endl;
     if (is_int12(rt.immediate()) && !MustUseReg(rt.rmode())) {
       addiw(rd, rs, static_cast<int32_t>(rt.immediate()));
     } else {
@@ -407,6 +408,7 @@ void TurboAssembler::Add64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     add(rd, rs, rt.rm());
   } else {
+    std::cout<<"Add64:"<<rt.immediate()<<std::endl;
     if (is_int12(rt.immediate()) && !MustUseReg(rt.rmode())) {
       addi(rd, rs, static_cast<int32_t>(rt.immediate()));
     } else {
@@ -424,6 +426,7 @@ void TurboAssembler::Sub32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     subw(rd, rs, rt.rm());
   } else {
+    std::cout<<"Sub32:"<<rt.immediate()<<std::endl;
     DCHECK(is_int32(rt.immediate()));
     if (is_int12(-rt.immediate()) && !MustUseReg(rt.rmode())) {
       addiw(rd, rs,
@@ -446,6 +449,9 @@ void TurboAssembler::Sub32(Register rd, Register rs, const Operand& rt) {
 }
 
 void TurboAssembler::Sub64(Register rd, Register rs, const Operand& rt) {
+  if (!rt.is_reg()) {
+    std::cout<<"Sub64:"<<rt.immediate()<<std::endl;
+  }
   if (rt.is_reg()) {
     sub(rd, rs, rt.rm());
   } else if (is_int12(-rt.immediate()) && !MustUseReg(rt.rmode())) {
@@ -476,6 +482,7 @@ void TurboAssembler::Mul32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     mulw(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mul32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -488,6 +495,7 @@ void TurboAssembler::Mulh32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     mul(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mulh32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -500,10 +508,12 @@ void TurboAssembler::Mulh32(Register rd, Register rs, const Operand& rt) {
 void TurboAssembler::Mulhu32(Register rd, Register rs, const Operand& rt,
                              Register rsz, Register rtz) {
   slli(rsz, rs, 32);
-  if (rt.is_reg())
+  if (rt.is_reg()) {
     slli(rtz, rt.rm(), 32);
-  else
+  } else {
+    std::cout<<"Mulhu32:"<<rt.immediate()<<std::endl;
     RV_li(rtz, rt.immediate() << 32);
+  }
   mulhu(rd, rsz, rtz);
   srai(rd, rd, 32);
 }
@@ -512,6 +522,7 @@ void TurboAssembler::Mul64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     mul(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mul64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -524,6 +535,7 @@ void TurboAssembler::Mulh64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     mulh(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mulh64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -536,6 +548,7 @@ void TurboAssembler::Div32(Register res, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     divw(res, rs, rt.rm());
   } else {
+    std::cout<<"Div32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -548,6 +561,7 @@ void TurboAssembler::Mod32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     remw(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mod32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -560,6 +574,7 @@ void TurboAssembler::Modu32(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     remuw(rd, rs, rt.rm());
   } else {
+    std::cout<<"Modu32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -572,6 +587,7 @@ void TurboAssembler::Div64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     div(rd, rs, rt.rm());
   } else {
+    std::cout<<"Div64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -584,6 +600,7 @@ void TurboAssembler::Divu32(Register res, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     divuw(res, rs, rt.rm());
   } else {
+    std::cout<<"Divu32:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -596,6 +613,7 @@ void TurboAssembler::Divu64(Register res, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     divu(res, rs, rt.rm());
   } else {
+    std::cout<<"Divu64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -608,6 +626,7 @@ void TurboAssembler::Mod64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     rem(rd, rs, rt.rm());
   } else {
+    std::cout<<"Mod64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -620,6 +639,7 @@ void TurboAssembler::Modu64(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     remu(rd, rs, rt.rm());
   } else {
+    std::cout<<"Modu64:"<<rt.immediate()<<std::endl;
     // li handles the relocation.
     UseScratchRegisterScope temps(this);
     Register scratch = temps.Acquire();
@@ -632,6 +652,7 @@ void TurboAssembler::And(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     and_(rd, rs, rt.rm());
   } else {
+    std::cout<<"And:"<<rt.immediate()<<std::endl;
     if (is_int12(rt.immediate()) && !MustUseReg(rt.rmode())) {
       andi(rd, rs, static_cast<int32_t>(rt.immediate()));
     } else {
@@ -648,6 +669,7 @@ void TurboAssembler::Or(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     or_(rd, rs, rt.rm());
   } else {
+    std::cout<<"Or:"<<rt.immediate()<<std::endl;
     if (is_int12(rt.immediate()) && !MustUseReg(rt.rmode())) {
       ori(rd, rs, static_cast<int32_t>(rt.immediate()));
     } else {
@@ -664,6 +686,7 @@ void TurboAssembler::Xor(Register rd, Register rs, const Operand& rt) {
   if (rt.is_reg()) {
     xor_(rd, rs, rt.rm());
   } else {
+    std::cout<<"Xor:"<<rt.immediate()<<std::endl;
     if (is_int12(rt.immediate()) && !MustUseReg(rt.rmode())) {
       xori(rd, rs, static_cast<int32_t>(rt.immediate()));
     } else {
@@ -681,6 +704,7 @@ void TurboAssembler::Nor(Register rd, Register rs, const Operand& rt) {
     or_(rd, rs, rt.rm());
     not_(rd, rd);
   } else {
+    std::cout<<"Nor:"<<rt.immediate()<<std::endl;
     Or(rd, rs, rt);
     not_(rd, rd);
   }
