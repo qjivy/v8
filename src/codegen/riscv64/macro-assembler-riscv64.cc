@@ -1474,12 +1474,14 @@ int TurboAssembler::InstrCountForLi64Bit(int64_t value) {
   return INT_MAX;
 }
 
+#if 0
 void TurboAssembler::li_optimized(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   DCHECK(!MustUseReg(j.rmode()));
   DCHECK(mode == OPTIMIZE_SIZE);
   RV_li(rd, j.immediate());
 }
+#endif
 
 void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
