@@ -1270,7 +1270,7 @@ void Assembler::GenInstrMsaVec(SecondaryField operation, MSARegister wt,
 
 void Assembler::GenInstrMsaMI10(SecondaryField operation, int32_t s10,
                                 Register rs, MSARegister wd) {
-  DCHECK(IsEnabled(MIPS_SIMD));
+//  DCHECK(IsEnabled(MIPS_SIMD));
   DCHECK(rs.is_valid() && wd.is_valid() && is_int10(s10));
   Instr instr = MSA | operation | ((s10 & kImm10Mask) << kWtShift) |
                 (rs.code() << kWsShift) | (wd.code() << kWdShift);
