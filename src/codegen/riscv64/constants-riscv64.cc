@@ -106,8 +106,15 @@ int FPURegisters::Number(const char* name) {
 }
 
 InstructionBase::Type InstructionBase::InstructionType() const {
+  // start instrument
+  if (IsStart()) {
+    return kStartType;
+  }
+  else if (IsEnd()) {
+    return kEndType;
+  }
   // RV64C Instruction
-  if (IsShortInstruction()) {
+  else if (IsShortInstruction()) {
     switch (InstructionBits() & kRvcOpcodeMask) {
       case RO_C_ADDI4SPN:
         return kCIWType;

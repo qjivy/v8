@@ -3338,6 +3338,12 @@ void Simulator::InstructionDecode(Instruction* instr) {
 
   instr_ = instr;
   switch (instr_.InstructionType()) {
+    case Instruction::kStartType:
+//      Format(instr, "start ");
+      break;
+    case Instruction::kEndType:
+ //     Format(instr, "end ");
+      break;
     case Instruction::kRType:
       DecodeRVRType();
       break;

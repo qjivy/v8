@@ -356,7 +356,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   };
 
   // RISC-V Instructions Emited to a buffer
-
+  void start();
+  void end();
   void lui(Register rd, int32_t imm20);
   void auipc(Register rd, int32_t imm20);
 

@@ -1736,10 +1736,17 @@ void Decoder::DecodeCJType(Instruction* instr) {
 // size larger than one kInstrSize.
 int Decoder::InstructionDecode(byte* instr_ptr) {
   Instruction* instr = Instruction::At(instr_ptr);
+//  std::cout<<"instrqj: "<<instr<<std::endl;
   // Print raw instruction bytes.
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%08x       ",
                               instr->InstructionBits());
   switch (instr->InstructionType()) {
+    case Instruction::kStartType:
+      Format(instr, "start ");
+      break;
+    case Instruction::kEndType:
+      Format(instr, "end ");
+      break;
     case Instruction::kRType:
       DecodeRType(instr);
       break;

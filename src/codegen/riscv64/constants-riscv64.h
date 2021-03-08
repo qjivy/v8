@@ -724,8 +724,20 @@ class InstructionBase {
     kCAType,
     kCBType,
     kCJType,
+    kStartType,
+    kEndType,
     kUnsupported = -1
   };
+
+  inline bool IsStart() const {
+    uint32_t inst = *reinterpret_cast<const uint32_t*>(this);
+    return inst==0x67;
+  }
+
+  inline bool IsEnd() const {
+    uint32_t inst = *reinterpret_cast<const uint32_t*>(this);
+    return inst==0xd7;
+  }
 
   inline bool IsShortInstruction() const {
     uint8_t FirstByte = *reinterpret_cast<const uint8_t*>(this);

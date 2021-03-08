@@ -1262,6 +1262,11 @@ void Assembler::label_at_put(Label* L, int at_offset) {
 // Instructions
 //===----------------------------------------------------------------------===//
 
+// instrumentation inst
+void Assembler::start() {emit(0x67);}
+//void Assembler::start() {emit(0x06);}
+void Assembler::end() {emit(0xd7);}
+
 void Assembler::lui(Register rd, int32_t imm20) { GenInstrU(LUI, rd, imm20); }
 
 void Assembler::auipc(Register rd, int32_t imm20) {
