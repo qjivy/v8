@@ -1281,7 +1281,7 @@ class InstructionBase {
   };
 
   // Instruction type.
-  enum Type { kRegisterType, kImmediateType, kJumpType, kUnsupported = -1 };
+  enum Type { kRegisterType, kImmediateType, kJumpType, kStartType, kEndType, kUnsupported = -1 };
 
   // Get the raw instruction bits.
   inline Instr InstructionBits() const {
@@ -1763,6 +1763,14 @@ const int kBranchReturnOffset = 2 * kInstrSize;
 static const int kNegOffset = 0x00008000;
 
 InstructionBase::Type InstructionBase::InstructionType() const {
+  // start instrument
+  if (*reinterpret_cast<const uint32_t*>(this) == 0x28) {
+    return kStartType;
+  }
+  else if (*reinterpret_cast<const uint32_t*>(this) == 0x68) {
+    return kEndType;
+  }
+  else {
   switch (OpcodeFieldRaw()) {
     case SPECIAL:
       if (FunctionFieldToBitNumber(FunctionFieldRaw()) &
@@ -1889,6 +1897,7 @@ InstructionBase::Type InstructionBase::InstructionType() const {
 
     default:
       return kImmediateType;
+  }
   }
   return kUnsupported;
 }

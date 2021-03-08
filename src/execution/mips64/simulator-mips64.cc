@@ -7328,6 +7328,12 @@ void Simulator::InstructionDecode(Instruction* instr) {
 
   instr_ = instr;
   switch (instr_.InstructionType()) {
+    case Instruction::kStartType:
+      SNPrintF(trace_buf_,"start ");
+      break;
+    case Instruction::kEndType:
+      SNPrintF(trace_buf_,"end ");
+      break;
     case Instruction::kRegisterType:
       DecodeTypeRegister();
       break;

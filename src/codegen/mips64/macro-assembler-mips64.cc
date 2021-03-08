@@ -1902,6 +1902,7 @@ void TurboAssembler::li_optimized(Register rd, Operand j, LiFlags mode) {
 void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   BlockTrampolinePoolScope block_trampoline_pool(this);
+  instrustart();
   if (!MustUseReg(j.rmode()) && mode == OPTIMIZE_SIZE) {
     int li_count = InstrCountForLi64Bit(j.immediate());
     int li_neg_count = InstrCountForLi64Bit(-j.immediate());
@@ -1959,6 +1960,7 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
       ori(rd, rd, j.immediate() & kImm16Mask);
     }
   }
+  instruend();
 }
 
 void TurboAssembler::MultiPush(RegList regs) {

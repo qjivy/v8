@@ -382,7 +382,8 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     Register nop_rt_reg = (type == 0) ? zero_reg : at;
     sll(zero_reg, nop_rt_reg, type, true);
   }
-
+  void instrustart();
+  void instruend();
   // --------Branch-and-jump-instructions----------
   // We don't use likely variant of instructions.
   void b(int16_t offset);

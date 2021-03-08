@@ -1434,6 +1434,10 @@ void Assembler::label_at_put(Label* L, int at_offset) {
   }
 }
 
+// instrumentation inst
+void Assembler::instrustart() {emit(0x28);}
+void Assembler::instruend() {emit(0x68);}
+
 //------- Branch and jump instructions --------
 
 void Assembler::b(int16_t offset) { beq(zero_reg, zero_reg, offset); }
