@@ -2375,6 +2375,8 @@ void Assembler::stop(uint32_t code) {
   break_(0x54321);
 #else  // V8_HOST_ARCH_MIPS
   break_(code, true);
+  nop();
+  nop();
 #endif
 }
 

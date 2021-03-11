@@ -2406,15 +2406,28 @@ void Simulator::DecodeRVRFPType() {
     case RO_FLE_S: {  // RO_FEQ_S RO_FLT_S RO_FLE_S
       switch (instr_.Funct3Value()) {
         case 0b010: {  // RO_FEQ_S
-          set_rd(CompareFHelper(frs1(), frs2(), EQ));
+          if ((frs1 == std::numeric_limits<T>::signaling_NaN()) ||
+              (frs2 == std::numeric_limits<T>::signaling_NaN())) {
+            set_csr_bits(csr_fflags, kInvalidOperation);
+            set_rd(0);
+          }
+          else set_rd(CompareFHelper(frs1(), frs2(), EQ));
           break;
         }
         case 0b001: {  // RO_FLT_S
-          set_rd(CompareFHelper(frs1(), frs2(), LT));
+          if((std::isnan(frs1) || std::isnan(frs2)) {
+            set_csr_bits(csr_fflags, kInvalidOperation);
+            set_rd(0);
+          }
+          else set_rd(CompareFHelper(frs1(), frs2(), LT));
           break;
         }
         case 0b000: {  // RO_FLE_S
-          set_rd(CompareFHelper(frs1(), frs2(), LE));
+          if((std::isnan(frs1) || std::isnan(frs2)) {
+            set_csr_bits(csr_fflags, kInvalidOperation);
+            set_rd(0);
+          }
+          else set_rd(CompareFHelper(frs1(), frs2(), LE));
           break;
         }
         default: {
