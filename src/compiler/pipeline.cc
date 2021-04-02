@@ -2942,7 +2942,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
     CodeTracer::StreamScope tracing_scope(data.GetCodeTracer());
     tracing_scope.stream()
         << "---------------------------------------------------\n"
-        << "Begin compiling " << debug_name << " using TurboFan" << std::endl;
+        << "Begin compiling code stub" << debug_name << " using TurboFan" << std::endl;
     if (info.trace_turbo_json()) {
       TurboJsonFile json_of(&info, std::ios_base::trunc);
       json_of << "{\"function\" : ";

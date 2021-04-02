@@ -759,6 +759,7 @@ TF_BUILTIN(AdaptorWithBuiltinExitFrame, CodeStubAssembler) {
   // instead of the callee, due to the way that [[Construct]] is defined for
   // ordinary functions).
   TNode<Context> context = LoadJSFunctionContext(target);
+  Comment("seg1");
 
   auto actual_argc =
       UncheckedParameter<Int32T>(Descriptor::kActualArgumentsCount);

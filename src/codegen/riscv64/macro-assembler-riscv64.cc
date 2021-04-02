@@ -3030,6 +3030,10 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
   bool target_is_isolate_independent_builtin =
       isolate()->builtins()->IsBuiltinHandle(code, &builtin_index) &&
       Builtins::IsIsolateIndependent(builtin_index);
+  std::ostringstream str;
+  str << "[ Builtins name:" <<isolate()->builtins()->name(builtin_index)<<"]";
+  RecordComment(str.str().c_str());
+
   if (target_is_isolate_independent_builtin &&
       options().use_pc_relative_calls_and_jumps) {
     int32_t code_target_index = AddCodeTarget(code);
@@ -4345,6 +4349,7 @@ void TurboAssembler::PrepareCallCFunction(int num_reg_arguments,
   int stack_passed_arguments =
       CalculateStackPassedDWords(num_reg_arguments, num_double_arguments);
   if (frame_alignment > kPointerSize) {
+    RecordComment("PrepareCallCFunction1");
     // Make stack end at alignment and make room for stack arguments and the
     // original value of sp.
     mv(scratch, sp);
@@ -4352,7 +4357,9 @@ void TurboAssembler::PrepareCallCFunction(int num_reg_arguments,
     DCHECK(base::bits::IsPowerOfTwo(frame_alignment));
     And(sp, sp, Operand(-frame_alignment));
     Sd(scratch, MemOperand(sp, stack_passed_arguments * kPointerSize));
+    RecordComment("PrepareCallCFunction1 end");
   } else {
+    RecordComment("PrepareCallCFunction2");
     Sub64(sp, sp, Operand(stack_passed_arguments * kPointerSize));
   }
 }
@@ -4368,7 +4375,11 @@ void TurboAssembler::CallCFunction(ExternalReference function,
   UseScratchRegisterScope temps(this);
   Register scratch = temps.Acquire();
   BlockTrampolinePoolScope block_trampoline_pool(this);
+  RecordComment("CallCFunction1");
   li(scratch, function);
+  RecordComment("CallCFunction2");
+//  RecordComment(reinterpret_cast<const char*>(num_reg_arguments));
+//  RecordComment(reinterpret_cast<const char*>(num_double_arguments));
   CallCFunctionHelper(scratch, num_reg_arguments, num_double_arguments);
 }
 
@@ -4399,6 +4410,8 @@ void TurboAssembler::CallCFunctionHelper(Register function,
 
 #if V8_HOST_ARCH_RISCV64
   if (emit_debug_code()) {
+
+    RecordComment("CallCFunctionHelper1");
     int frame_alignment = base::OS::ActivationFrameAlignment();
     int frame_alignment_mask = frame_alignment - 1;
     if (frame_alignment > kPointerSize) {

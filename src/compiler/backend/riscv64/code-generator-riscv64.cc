@@ -668,6 +668,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     }
     case kArchPrepareCallCFunction: {
       int const num_parameters = MiscField::decode(instr->opcode());
+      std::ostringstream str;
+      str << "[ kArchPrepareCallCFunction num_param:" << num_parameters;
+      __ RecordComment(str.str().c_str());
+
+
       __ PrepareCallCFunction(num_parameters, kScratchReg);
       // Frame alignment requires using FP-relative frame addressing.
       frame_access_state()->SetFrameAccessToFP();
@@ -703,6 +708,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     case kArchCallCFunction: {
       int const num_parameters = MiscField::decode(instr->opcode());
+
+      std::ostringstream str;
+      str << "[ kArchCallCFunction num_param:" << num_parameters;
+      __ RecordComment(str.str().c_str());
+
       Label after_call;
       bool isWasmCapiFunction =
           linkage()->GetIncomingDescriptor()->IsWasmCapiFunction();
