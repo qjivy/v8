@@ -1509,7 +1509,6 @@ static RegList s_regs =
     Register::ListOf(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11);
 
 void TurboAssembler::MultiPush(RegList regs) {
-
   int16_t num_to_push = base::bits::CountPopulation(regs);
   int16_t stack_offset = num_to_push * kPointerSize;
   std::ostringstream str;
@@ -1605,11 +1604,11 @@ void TurboAssembler::MultiPop(RegList regs) {
 
 void TurboAssembler::MultiPushFPU(RegList regs) {
   int16_t num_to_push = base::bits::CountPopulation(regs);
-  int16_t stack_offset = num_to_push * kDoubleSize;
+  //int16_t stack_offset = num_to_push * kDoubleSize;
   std::ostringstream str;
   str << "[ MultiPushFPU: " << regs <<" total: "<<num_to_push;
   RecordComment(str.str().c_str());
-
+#if 0
   Sub64(sp, sp, Operand(stack_offset));
   for (int16_t i = kNumRegisters - 1; i >= 0; i--) {
     if ((regs & (1 << i)) != 0) {
@@ -1617,6 +1616,7 @@ void TurboAssembler::MultiPushFPU(RegList regs) {
       StoreDouble(FPURegister::from_code(i), MemOperand(sp, stack_offset));
     }
   }
+#endif
   RecordComment(" endMultiPushFPU ]");
 }
 
@@ -1625,7 +1625,7 @@ void TurboAssembler::MultiPopFPU(RegList regs) {
   std::ostringstream str;
   str << "[ MultiPopFPU: " << regs <<" total: "<<num_to_pop;
   RecordComment(str.str().c_str());
-
+#if 0
   int16_t stack_offset = 0;
 
   for (int16_t i = 0; i < kNumRegisters; i++) {
@@ -1635,6 +1635,7 @@ void TurboAssembler::MultiPopFPU(RegList regs) {
     }
   }
   addi(sp, sp, stack_offset);
+#endif
   RecordComment(" endMultiPopFPU ]");
 }
 
