@@ -2296,6 +2296,17 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
         UNREACHABLE();
     }
     return;
+  } else if (instr->arch_opcode() == kArchStackPointerGreaterThan) {
+    cc = FlagsConditionToConditionCmp(condition);
+    Register lhs_register = sp;
+    uint32_t offset;
+    // if (gen->ShouldApplyOffsetToStackCheck(instr, &offset)) {
+    if (ShouldApplyOffsetToStackCheck(instr, &offset)) {
+      lhs_register = i.TempRegister(0);
+      __ Sub64(lhs_register, sp, offset);
+    }
+    __ Sgt(result, lhs_register, Operand(i.InputRegister(0)));
+    return;
   } else if (instr->arch_opcode() == kRiscvCmpD ||
              instr->arch_opcode() == kRiscvCmpS) {
     FPURegister left = i.InputOrZeroDoubleRegister(0);
