@@ -904,6 +904,7 @@ void PrintParticipatingSource(OptimizedCompilationInfo* info,
 // Print the code after compiling it.
 void PrintCode(Isolate* isolate, Handle<Code> code,
                OptimizedCompilationInfo* info) {
+  std::cout<<"CodeSize: "<<code->InstructionSize()<<std::endl;
   if (FLAG_print_opt_source && info->IsOptimizing()) {
     PrintParticipatingSource(info, isolate);
   }

@@ -333,7 +333,7 @@ Simulator::Simulator()
 
 void Simulator::Init(FILE* stream) {
   ResetState();
-
+  icount = 0;
   // Allocate and setup the simulator stack.
   stack_size_ = (FLAG_sim_stack_size * KB) + (2 * stack_protection_size_);
   stack_ = reinterpret_cast<uintptr_t>(new byte[stack_size_]);
@@ -408,6 +408,7 @@ void Simulator::Run() {
       ExecuteInstruction();
     }
   }
+  std::cout << "QJ ARM icount_:" << icount << std::endl;
 }
 
 void Simulator::RunFrom(Instruction* start) {
