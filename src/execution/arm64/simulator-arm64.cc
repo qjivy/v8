@@ -408,7 +408,7 @@ void Simulator::Run() {
       ExecuteInstruction();
     }
   }
-  std::cout << "QJ ARM icount_:" << icount << std::endl;
+  std::cout << "QJ ARM icount_: " << icount << std::endl;
 }
 
 void Simulator::RunFrom(Instruction* start) {

@@ -827,7 +827,7 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate), builtins_(isolate) {
 }
 
 Simulator::~Simulator() {
-  std::cout << "QJ RISCV icount:" << icount_ << std::endl;
+  std::cout << "QJ RISCV icount: " << icount_ << std::endl;
   GlobalMonitor::Get()->RemoveLinkedAddress(&global_monitor_thread_);
   free(stack_);
 }

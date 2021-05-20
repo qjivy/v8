@@ -1326,7 +1326,7 @@ DEFINE_BOOL(riscv_trap_to_simulator_debugger, false,
             "enable simulator trap to debugger")
 DEFINE_BOOL(riscv_debug, false, "enable debug prints")
 
-DEFINE_BOOL(riscv_constant_pool, true,
+DEFINE_BOOL(riscv_constant_pool, false,
             "enable constant pool (RISCV only)")
 #endif
 

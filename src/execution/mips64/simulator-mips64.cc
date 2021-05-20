@@ -837,6 +837,7 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate) {
 }
 
 Simulator::~Simulator() {
+  std::cout << "QJ MIPS icount: " << icount_ << std::endl;
   GlobalMonitor::Get()->RemoveLinkedAddress(&global_monitor_thread_);
   base::Free(stack_);
 }
