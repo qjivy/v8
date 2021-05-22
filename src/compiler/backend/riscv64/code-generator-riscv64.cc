@@ -580,11 +580,14 @@ void CodeGenerator::AssembleRegisterArgumentPoisoning() {
 // Assembles an instruction after register allocation, producing machine code.
 CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     Instruction* instr) {
+  // qj1
+  int startpcoff = __ pc_offset();
   RiscvOperandConverter i(this, instr);
   InstructionCode opcode = instr->opcode();
   ArchOpcode arch_opcode = ArchOpcodeField::decode(opcode);
   switch (arch_opcode) {
     case kArchCallCodeObject: {
+      __ RecordComment("[kArchCallCodeObject: ");
       if (instr->InputAt(0)->IsImmediate()) {
         __ Call(i.InputCode(0), RelocInfo::CODE_TARGET);
       } else {
@@ -596,6 +599,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       }
       RecordCallPosition(instr);
       frame_access_state()->ClearSPDelta();
+      __ RecordComment("]");
       break;
     }
     case kArchCallBuiltinPointer: {
@@ -812,6 +816,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                            i.InputDoubleRegister(0), DetermineStubCallMode());
       break;
     case kArchStoreWithWriteBarrier: {
+      __ RecordComment("[kArchStoreWithWriteBarrier: ");
       RecordWriteMode mode =
           static_cast<RecordWriteMode>(MiscField::decode(instr->opcode()));
       Register object = i.InputRegister(0);
@@ -828,6 +833,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                        MemoryChunk::kPointersFromHereAreInterestingMask, ne,
                        ool->entry());
       __ bind(ool->exit());
+      __ RecordComment("]");
       break;
     }
     case kArchStackSlot: {
@@ -1851,6 +1857,10 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     default:
       UNIMPLEMENTED();
   }
+  // qj1 end
+  int endpcoff = __ pc_offset();
+  std::cout << "archop: " << arch_opcode
+            << " pc_delta: " << endpcoff - startpcoff << std::endl;
   return kSuccess;
 }
 
@@ -1864,6 +1874,8 @@ void AssembleBranchToLabels(CodeGenerator* gen, TurboAssembler* tasm,
                             Label* tlabel, Label* flabel, bool fallthru) {
 #undef __
 #define __ tasm->
+  // qj2
+  int startpcoff = __ pc_offset();
   RiscvOperandConverter i(gen, instr);
 
   Condition cc = kNoCondition;
@@ -1941,6 +1953,10 @@ void AssembleBranchToLabels(CodeGenerator* gen, TurboAssembler* tasm,
     UNIMPLEMENTED();
   }
   if (!fallthru) __ Branch(flabel);  // no fallthru to flabel.
+                                     // qj2 end
+  int endpcoff = __ pc_offset();
+  std::cout << "archop: " << instr->arch_opcode()
+            << " pc_delta: " << endpcoff - startpcoff << std::endl;
 #undef __
 #define __ tasm()->
 }
@@ -1960,6 +1976,9 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
   if (condition == kUnorderedEqual || condition == kUnorderedNotEqual) {
     return;
   }
+  // qj3
+  int startpcoff = __ pc_offset();
+  int endpcoff;
 
   RiscvOperandConverter i(this, instr);
   condition = NegateFlagsCondition(condition);
@@ -1970,12 +1989,20 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
                   FlagsConditionToConditionCmp(condition));
       __ LoadZeroIfConditionNotZero(kSpeculationPoisonRegister, kScratchReg);
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvCmpZero: {
       __ CompareI(kScratchReg, i.InputRegister(0), Operand(zero_reg),
                   FlagsConditionToConditionCmp(condition));
       __ LoadZeroIfConditionNotZero(kSpeculationPoisonRegister, kScratchReg);
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvTst: {
       switch (condition) {
@@ -1990,6 +2017,10 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
           UNREACHABLE();
       }
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvAdd64:
     case kRiscvSub64: {
@@ -2009,6 +2040,10 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
           UNSUPPORTED_COND(instr->arch_opcode(), condition);
       }
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvAddOvf64:
     case kRiscvSubOvf64: {
@@ -2026,6 +2061,10 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
           UNSUPPORTED_COND(instr->arch_opcode(), condition);
       }
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvMulOvf32: {
       // Overflow occurs if overflow register is not zero
@@ -2041,6 +2080,10 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
           UNSUPPORTED_COND(instr->arch_opcode(), condition);
       }
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     case kRiscvCmpS:
     case kRiscvCmpD: {
@@ -2052,6 +2095,10 @@ void CodeGenerator::AssembleBranchPoisoning(FlagsCondition condition,
         __ LoadZeroIfConditionZero(kSpeculationPoisonRegister, kScratchReg);
       }
     }
+      // qj3 end
+      endpcoff = __ pc_offset();
+      std::cout << "archop: " << instr->arch_opcode()
+                << " pc_delta: " << endpcoff - startpcoff << std::endl;
       return;
     default:
       UNREACHABLE();
@@ -2123,6 +2170,9 @@ void CodeGenerator::AssembleArchTrap(Instruction* instr,
 // Assembles boolean materializations after an instruction.
 void CodeGenerator::AssembleArchBoolean(Instruction* instr,
                                         FlagsCondition condition) {
+  // qj4
+  int startpcoff = __ pc_offset();
+  int endpcoff;
   RiscvOperandConverter i(this, instr);
 
   // Materialize a full 32-bit 1 or 0 value. The result register is always the
@@ -2141,6 +2191,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
     } else {
       __ Sltu(result, zero_reg, kScratchReg);
     }
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else if (instr->arch_opcode() == kRiscvAdd64 ||
              instr->arch_opcode() == kRiscvSub64) {
@@ -2151,6 +2205,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
     __ Xor(result, kScratchReg, kScratchReg2);
     if (cc == eq)  // Toggle result for not overflow.
       __ Xor(result, result, 1);
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else if (instr->arch_opcode() == kRiscvAddOvf64 ||
              instr->arch_opcode() == kRiscvSubOvf64) {
@@ -2243,6 +2301,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
       default:
         UNREACHABLE();
     }
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else if (instr->arch_opcode() == kRiscvCmpZero) {
     cc = FlagsConditionToConditionCmp(condition);
@@ -2295,6 +2357,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
       default:
         UNREACHABLE();
     }
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else if (instr->arch_opcode() == kArchStackPointerGreaterThan) {
     cc = FlagsConditionToConditionCmp(condition);
@@ -2306,6 +2372,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
       __ Sub64(lhs_register, sp, offset);
     }
     __ Sgt(result, lhs_register, Operand(i.InputRegister(0)));
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else if (instr->arch_opcode() == kRiscvCmpD ||
              instr->arch_opcode() == kRiscvCmpS) {
@@ -2329,6 +2399,10 @@ void CodeGenerator::AssembleArchBoolean(Instruction* instr,
     } else {
       __ Xor(result, kScratchReg, 1);
     }
+    // qj4 end
+    endpcoff = __ pc_offset();
+    std::cout << "archop: " << instr->arch_opcode()
+              << " pc_delta: " << endpcoff - startpcoff << std::endl;
     return;
   } else {
     PrintF("AssembleArchBranch Unimplemented arch_opcode is : %d\n",

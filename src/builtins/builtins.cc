@@ -244,7 +244,7 @@ void Builtins::PrintBuiltinCode() {
 }
 
 void Builtins::PrintBuiltinSize() {
-//  DCHECK(FLAG_print_builtin_size);
+  //  DCHECK(FLAG_print_builtin_size);
   for (int i = 0; i < builtin_count; i++) {
     const char* builtin_name = name(i);
     const char* kind = KindNameOf(i);
