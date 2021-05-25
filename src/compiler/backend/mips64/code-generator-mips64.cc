@@ -610,6 +610,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
   MipsOperandConverter i(this, instr);
   InstructionCode opcode = instr->opcode();
   ArchOpcode arch_opcode = ArchOpcodeField::decode(opcode);
+  {
+    std::ostringstream str;
+    str << "[ " <<arch_opcode <<" :";
+    __ RecordComment(str.str().c_str());
+  }
   switch (arch_opcode) {
     case kArchCallCodeObject: {
       __ RecordComment("[kArchCallCodeObject mips64: ");
@@ -3834,6 +3839,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
   int endpcoff = __ pc_offset();
   std::cout << "archop: " << arch_opcode
             << " pc_delta: " << endpcoff - startpcoff << std::endl;
+{
+    std::ostringstream str;
+    str << "end " <<arch_opcode<<" : "<<endpcoff - startpcoff<<" ]";
+    __ RecordComment(str.str().c_str());
+  }
+
   return kSuccess;
 }
 
