@@ -1287,11 +1287,11 @@ DEFINE_BOOL(debug_code, DEBUG_BOOL,
 DEFINE_BOOL_READONLY(debug_code, false, "")
 #endif
 #ifdef V8_CODE_COMMENTS
-DEFINE_BOOL(code_comments, false,
+DEFINE_BOOL(code_comments, true,
             "emit comments in code disassembly; for more readable source "
             "positions you should add --no-concurrent_recompilation")
 #else
-DEFINE_BOOL_READONLY(code_comments, false, "")
+DEFINE_BOOL_READONLY(code_comments, true, "")
 #endif
 DEFINE_BOOL(enable_sse3, true, "enable use of SSE3 instructions if available")
 DEFINE_BOOL(enable_ssse3, true, "enable use of SSSE3 instructions if available")
