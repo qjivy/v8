@@ -186,7 +186,7 @@ struct V8_EXPORT_PRIVATE AssemblerOptions {
   // on a function prologue/epilogue.
   bool collect_win64_unwind_info = false;
   // Whether to emit code comments.
-  bool emit_code_comments = FLAG_code_comments;
+  bool emit_code_comments = true;
 
   static AssemblerOptions Default(Isolate* isolate);
   static AssemblerOptions DefaultForOffHeapTrampoline(Isolate* isolate);
@@ -291,13 +291,10 @@ class V8_EXPORT_PRIVATE AssemblerBase : public Malloced {
   V8_INLINE void RecordComment(const char* msg) {
     // Set explicit dependency on --code-comments for dead-code elimination in
     // release builds.
-#if 0
     if (!FLAG_code_comments) return;
     if (options().emit_code_comments) {
       code_comments_writer_.Add(pc_offset(), std::string(msg));
     }
-#endif
-    code_comments_writer_.Add(pc_offset(), std::string(msg));
   }
 
   // The minimum buffer size. Should be at least two times the platform-specific
