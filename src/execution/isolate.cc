@@ -3799,7 +3799,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 #endif  // V8_TARGET_ARCH_ARM
 
   if (FLAG_print_builtin_code) builtins()->PrintBuiltinCode();
-  if (FLAG_print_builtin_size) builtins()->PrintBuiltinSize();
+  if (1) builtins()->PrintBuiltinSize();
 
   // Finish initialization of ThreadLocal after deserialization is done.
   clear_pending_exception();
