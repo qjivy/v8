@@ -359,6 +359,10 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
     FIRST_IC_MARKER = PROPERTY_ACCESS_INLINED,
   };
 
+  // qj instrumentation inst ICS ICE
+  void start();
+  void end(Register rd, int32_t imm20);
+
   // RISC-V Instructions Emited to a buffer
 
   void lui(Register rd, int32_t imm20);

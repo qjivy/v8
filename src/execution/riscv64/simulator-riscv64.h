@@ -627,6 +627,7 @@ class Simulator : public SimulatorBase {
   void DecodeCLType();
   void DecodeCSType();
   void DecodeCJType();
+  void DecodeICEType();
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();

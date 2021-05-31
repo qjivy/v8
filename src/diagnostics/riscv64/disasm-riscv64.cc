@@ -119,6 +119,9 @@ class Decoder {
   void DecodeCSType(Instruction* instr);
   void DecodeCJType(Instruction* instr);
 
+  //qj add for ICE 
+  void DecodeICEType(Instruction* instr);
+
   // Printing of instruction name.
   void PrintInstructionName(Instruction* instr);
 
@@ -744,6 +747,11 @@ void Decoder::Format(Instruction* instr, const char* format) {
 // For currently unimplemented decodings the disassembler calls Unknown(instr)
 // which will just print "unknown" of the instruction bits.
 void Decoder::Unknown(Instruction* instr) { Format(instr, "unknown"); }
+
+void Decoder::DecodeICEType(Instruction* instr) {
+   Format(instr, "end     'rd, 'imm20U");
+}
+
 
 // RISCV Instruction Decode Routine
 void Decoder::DecodeRType(Instruction* instr) {
@@ -1762,6 +1770,12 @@ int Decoder::InstructionDecode(byte* instr_ptr) {
   out_buffer_pos_ += SNPrintF(out_buffer_ + out_buffer_pos_, "%08x       ",
                               instr->InstructionBits());
   switch (instr->InstructionType()) {
+    case Instruction::kStartType:
+      Format(instr, "start ");
+      break;
+    case Instruction::kEndType:
+     DecodeICEType(instr);
+      break;
     case Instruction::kRType:
       DecodeRType(instr);
       break;

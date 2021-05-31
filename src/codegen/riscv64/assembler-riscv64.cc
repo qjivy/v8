@@ -1294,6 +1294,18 @@ void Assembler::label_at_put(Label* L, int at_offset) {
 // Instructions
 //===----------------------------------------------------------------------===//
 
+//qj instrumentation inst ICS ICE
+void Assembler::start() {emit(0x67);}
+
+void Assembler::end(Register rd, int32_t imm20) {
+//  std::cout<<"imm20: "<<imm20<<std::endl;
+  DCHECK(imm20%4==0);
+  //here  (((imm20/4)-1) to get the actual instruction count
+  Instr instr = END | (rd.code() << kRdShift)| (((imm20/4)-1) << 12);
+  emit(instr);
+}
+
+
 void Assembler::lui(Register rd, int32_t imm20) { GenInstrU(LUI, rd, imm20); }
 
 void Assembler::auipc(Register rd, int32_t imm20) {
@@ -2226,7 +2238,18 @@ void Assembler::sfence_vma(Register rs1, Register rs2) {
 
 void Assembler::nop() { addi(ToRegister(0), ToRegister(0), 0); }
 
+#define STARTIS() \
+  int startpcoffset = pc_offset(); \
+  start();
+
+#define ENDIS(i) \
+{ \
+  int endpcoffset = pc_offset();\
+  end(ToRegister(i),int32_t(endpcoffset-startpcoffset));\
+}
+
 void Assembler::RV_li(Register rd, int64_t imm) {
+   STARTIS()
   // 64-bit imm is put in the register rd.
   // In most cases the imm is 32 bit and 2 instructions are generated. If a
   // temporary register is available, in the worst case, 6 instructions are
@@ -2252,6 +2275,7 @@ void Assembler::RV_li(Register rd, int64_t imm) {
     } else {
       addi(rd, zero_reg, low_12);
     }
+    ENDIS(0);
     return;
   } else {
     // 64-bit case: divide imm into two 32-bit parts, upper and lower
@@ -2293,12 +2317,14 @@ void Assembler::RV_li(Register rd, int64_t imm) {
           // Positive number, but overflow because of the add 0x800
           slli(rd, rd, 32);
           srli(rd, rd, 32);
+          ENDIS(1);
           return;
         }
         // low_32 is a negative 64 bit after the build
         up_32 = (up_32 - 0xffffffff) & 0xffffffff;
       }
       if (up_32 == 0) {
+        ENDIS(2);
         return;
       }
       // Build upper part in a temporary register
@@ -2323,6 +2349,7 @@ void Assembler::RV_li(Register rd, int64_t imm) {
       if (low_32 != 0) {
         add(rd, rd, temp_reg);
       }
+      ENDIS(3);
       return;
     }
     // No temp register. Build imm in rd.
@@ -2375,6 +2402,7 @@ void Assembler::RV_li(Register rd, int64_t imm) {
       }
       shift_val = 0;
     }
+    ENDIS(4);
   }
 }
 

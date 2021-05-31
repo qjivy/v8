@@ -826,8 +826,19 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate), builtins_(isolate) {
   last_debugger_input_ = nullptr;
 }
 
+static int icsum[32]; //sum of one type(from the same call site)
+static int iccount[32];//count of one type
+static int iclength[4096];
 Simulator::~Simulator() {
   std::cout << "QJ RISCV icount: " << icount_ << std::endl;
+  for(int i=0;i<32;i++) {
+    std::cout<<"type: "<<i<<" total: "<<icsum[i]<<" site: "<<iccount[i]<<std::endl;
+  }
+  std::cout<<std::endl;
+  for(int i=0;i<4096;i++) {
+    if(iclength[i]!=0) std::cout<<"slot["<<i<<"]: "<<iclength[i]<<std::endl;
+  }
+
   GlobalMonitor::Get()->RemoveLinkedAddress(&global_monitor_thread_);
   free(stack_);
 }
@@ -1643,6 +1654,21 @@ void Simulator::PrintStopInfo(uint64_t code) {
 
 void Simulator::SignalException(Exception e) {
   FATAL("Error: Exception %i raised.", static_cast<int>(e));
+}
+
+void Simulator::DecodeICEType() {
+  int type = ((instr_.InstructionBits()>>7) & 0x1f);
+  int count = instr_.InstructionBits()>>12;
+  //std::cout<<"type: "<<type<<" count: "<<count<<std::endl;
+#if 0
+  if (::v8::internal::FLAG_trace_sim) {
+        SNPrintF(trace_buf_, "RUNICE" PRIu32 " Type: " PRIu32 " Count: " PRIu32,
+                 type, count);
+}
+#endif
+  icsum[type]+=count;
+  iccount[type]++;
+  iclength[count]++;
 }
 
 // RISCV Instruction Decode Routine
@@ -3370,6 +3396,13 @@ void Simulator::InstructionDecode(Instruction* instr) {
 
   instr_ = instr;
   switch (instr_.InstructionType()) {
+    case Instruction::kStartType:
+      icount_--;
+      break;
+    case Instruction::kEndType:
+      icount_--;
+      DecodeICEType();
+      break;
     case Instruction::kRType:
       DecodeRVRType();
       break;
