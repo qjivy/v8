@@ -1479,6 +1479,16 @@ void TurboAssembler::li_optimized(Register rd, Operand j, LiFlags mode) {
   RV_li(rd, j.immediate());
 }
 
+#define STARTIS() \
+  int startpcoffset = pc_offset(); \
+  start();
+
+#define ENDIS(i) \
+{ \
+  int endpcoffset = pc_offset();\
+  end(ToRegister(i),int32_t(endpcoffset-startpcoffset));\
+}
+
 void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -1488,14 +1498,18 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
     int reverse_count = li_estimate(~j.immediate(), temps.hasAvailable());
     if (FLAG_riscv_constant_pool && count >= 4 && reverse_count >= 4) {
       // Ld a Address from a constant pool.
+      //STARTIS();
       RecordEntry((uint64_t)j.immediate(), j.rmode());
       auipc(rd, 0);
       // Record a value into constant pool.
       ld(rd, rd, 0);
+      //ENDIS(5);
     } else {
       if ((count - reverse_count) > 1) {
         RV_li(rd, ~j.immediate());
+        //STARTIS();
         not_(rd, rd);
+        //ENDIS(6);
       } else {
         RV_li(rd, j.immediate());
       }
@@ -1508,17 +1522,22 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
     } else {
       immediate = j.immediate();
     }
-
+    STARTIS();
     RecordRelocInfo(j.rmode(), immediate);
     li_ptr(rd, immediate);
+    ENDIS(31);
   } else if (mode == ADDRESS_LOAD) {
     // We always need the same number of instructions as we may need to patch
     // this code to load another value which may need all 6 instructions.
+    STARTIS();
     RecordRelocInfo(j.rmode());
     li_ptr(rd, j.immediate());
+    ENDIS(30);
   } else {  // Always emit the same 48 bit instruction
             // sequence.
+    STARTIS();
     li_ptr(rd, j.immediate());
+    ENDIS(29);
   }
 }
 

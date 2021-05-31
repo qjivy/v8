@@ -2238,15 +2238,18 @@ void Assembler::sfence_vma(Register rs1, Register rs2) {
 
 void Assembler::nop() { addi(ToRegister(0), ToRegister(0), 0); }
 
-#define STARTIS() \
-  int startpcoffset = pc_offset(); \
-  start();
+#define STARTIS() ;
 
-#define ENDIS(i) \
+//  int startpcoffset = pc_offset(); \
+//  start();
+
+#define ENDIS(i) ;
+#if 0
 { \
   int endpcoffset = pc_offset();\
   end(ToRegister(i),int32_t(endpcoffset-startpcoffset));\
 }
+#endif
 
 void Assembler::RV_li(Register rd, int64_t imm) {
    STARTIS()
@@ -2536,6 +2539,7 @@ int Assembler::li_estimate(int64_t imm, bool is_get_temp_reg) {
 }
 
 void Assembler::li_ptr(Register rd, int64_t imm) {
+//  STARTIS();
   // Initialize rd with an address
   // Pointers are 48 bits
   // 6 fixed instructions are generated
@@ -2551,9 +2555,11 @@ void Assembler::li_ptr(Register rd, int64_t imm) {
   ori(rd, rd, b11);      // 11 bits are put in. 42 bit in rd
   slli(rd, rd, 6);       // Space for next 6 bits
   ori(rd, rd, a6);       // 6 bits are put in. 48 bis in rd
+//  ENDIS(7);
 }
 
 void Assembler::li_constant(Register rd, int64_t imm) {
+//  STARTIS();
   DEBUG_PRINTF("li_constant(%d, %lx <%ld>)\n", ToNumber(rd), imm, imm);
   lui(rd, (imm + (1LL << 47) + (1LL << 35) + (1LL << 23) + (1LL << 11)) >>
               48);  // Bits 63:48
@@ -2566,6 +2572,7 @@ void Assembler::li_constant(Register rd, int64_t imm) {
   addi(rd, rd, (imm + (1LL << 11)) << 40 >> 52);  // Bits 23:12
   slli(rd, rd, 12);
   addi(rd, rd, imm << 52 >> 52);  // Bits 11:0
+  //ENDIS(8);
 }
 
 // Break / Trap instructions.
