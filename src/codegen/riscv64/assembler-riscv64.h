@@ -980,6 +980,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   bool is_buffer_growth_blocked() const { return block_buffer_growth_; }
 
   void CheckTrampolinePoolQuick(int extra_instructions = 0) {
+    //std::cout <<"CheckTrampolinePoolQuick:"<< pc_offset()  << " " << next_buffer_check_ - extra_instructions * kInstrSize << std::endl;
     DEBUG_PRINTF("\tpc_offset:%d %d\n", pc_offset(),
                  next_buffer_check_ - extra_instructions * kInstrSize);
     if (pc_offset() >= next_buffer_check_ - extra_instructions * kInstrSize) {

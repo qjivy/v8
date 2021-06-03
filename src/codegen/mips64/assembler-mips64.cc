@@ -3853,11 +3853,15 @@ void Assembler::CheckTrampolinePool() {
 
   DCHECK(!trampoline_emitted_);
   DCHECK_GE(unbound_labels_count_, 0);
+//  std::cout <<"unbound_labels_count_:"<< unbound_labels_count_ << std::endl;
   if (unbound_labels_count_ > 0) {
     // First we emit jump (2 instructions), then we emit trampoline pool.
     {
       BlockTrampolinePoolScope block_trampoline_pool(this);
-      Label after_pool;
+      Label after_pool, test;
+      bind(&test);
+      std::cout << "inserting trampoline pool: " << unbound_labels_count_ << std::endl;
+
       if (kArchVariant == kMips64r6) {
         bc(&after_pool);
       } else {
@@ -3894,6 +3898,7 @@ void Assembler::CheckTrampolinePool() {
       bind(&after_pool);
 
       trampoline_emitted_ = true;
+      std::cout << "end trampoline pool: " << InstructionsGeneratedSince(&test) << std::endl;
       // As we are only going to emit trampoline once, we need to prevent any
       // further emission.
       next_buffer_check_ = kMaxInt;

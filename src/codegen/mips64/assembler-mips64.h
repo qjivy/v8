@@ -1657,6 +1657,7 @@ class V8_EXPORT_PRIVATE Assembler : public AssemblerBase {
   }
 
   void CheckTrampolinePoolQuick(int extra_instructions = 0) {
+    //std::cout <<"CheckTrampolinePoolQuick:"<< pc_offset()  << " " << next_buffer_check_ - extra_instructions * kInstrSize << std::endl;
     if (pc_offset() >= next_buffer_check_ - extra_instructions * kInstrSize) {
       CheckTrampolinePool();
     }
