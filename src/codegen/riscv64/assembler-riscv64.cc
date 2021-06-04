@@ -2791,8 +2791,21 @@ void Assembler::CheckTrampolinePool() {
                    reinterpret_cast<Instr*>(buffer_start_ + pc_offset()),
                    pc_offset());
       BlockTrampolinePoolScope block_trampoline_pool(this);
+#if 0
+<<<<<<< HEAD
       Label after_pool, test;
       bind(&test);
+=======
+#endif
+      Label after_pool;
+      Label mark;
+      bind(&mark);
+      {
+        std::ostringstream str;
+        str << "[ trampoline start "  <<" :";
+        RecordComment(str.str().c_str()); //trampoline start
+      }
+//>>>>>>> dcb9574ab0... [riscv64][mips64] add comment to print rv64 trampoline.
       j(&after_pool);
 
       int pool_start = pc_offset();
@@ -2811,7 +2824,11 @@ void Assembler::CheckTrampolinePool() {
       // information.
       trampoline_ = Trampoline(pool_start, unbound_labels_count_);
       bind(&after_pool);
-
+      {
+        std::ostringstream str;
+        str << "end trampoline count: "<< InstructionsGeneratedSince(&mark)*4  <<" ]";
+        RecordComment(str.str().c_str()); //trampoline end
+      }
       trampoline_emitted_ = true;
       std::cout << "end trampoline pool: " << InstructionsGeneratedSince(&test) << std::endl;
       // As we are only going to emit trampoline once, we need to prevent any

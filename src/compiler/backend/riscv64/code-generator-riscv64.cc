@@ -592,7 +592,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
   }
   switch (arch_opcode) {
     case kArchCallCodeObject: {
-      __ RecordComment("[kArchCallCodeObject: ");
       if (instr->InputAt(0)->IsImmediate()) {
         __ Call(i.InputCode(0), RelocInfo::CODE_TARGET);
       } else {
@@ -604,7 +603,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       }
       RecordCallPosition(instr);
       frame_access_state()->ClearSPDelta();
-      __ RecordComment("]");
       break;
     }
     case kArchCallBuiltinPointer: {

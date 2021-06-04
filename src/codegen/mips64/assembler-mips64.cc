@@ -3858,10 +3858,23 @@ void Assembler::CheckTrampolinePool() {
     // First we emit jump (2 instructions), then we emit trampoline pool.
     {
       BlockTrampolinePoolScope block_trampoline_pool(this);
+#if 0
+<<<<<<< HEAD
       Label after_pool, test;
       bind(&test);
       std::cout << "inserting trampoline pool: " << unbound_labels_count_ << std::endl;
 
+=======
+#endif
+      Label after_pool;
+      Label mark;
+      bind(&mark);
+      {
+        std::ostringstream str;
+        str << "[ trampoline start "  <<" :";
+        RecordComment(str.str().c_str());
+      }
+//>>>>>>> dcb9574ab0... [riscv64][mips64] add comment to print rv64 trampoline.
       if (kArchVariant == kMips64r6) {
         bc(&after_pool);
       } else {
@@ -3896,6 +3909,11 @@ void Assembler::CheckTrampolinePool() {
       // information.
       trampoline_ = Trampoline(pool_start, unbound_labels_count_);
       bind(&after_pool);
+      {
+        std::ostringstream str;
+        str << "end trampoline count: "<< InstructionsGeneratedSince(&mark)*4  <<" ]";
+        RecordComment(str.str().c_str());
+      }
 
       trampoline_emitted_ = true;
       std::cout << "end trampoline pool: " << InstructionsGeneratedSince(&test) << std::endl;
