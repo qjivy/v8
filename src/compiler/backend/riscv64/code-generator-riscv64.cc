@@ -574,6 +574,7 @@ void CodeGenerator::AssembleRegisterArgumentPoisoning() {
 // Assembles an instruction after register allocation, producing machine code.
 CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     Instruction* instr) {
+  int startpcoff = __ pc_offset();
   RiscvOperandConverter i(this, instr);
   InstructionCode opcode = instr->opcode();
   ArchOpcode arch_opcode = ArchOpcodeField::decode(opcode);
@@ -1840,6 +1841,9 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     default:
       UNIMPLEMENTED();
   }
+  int endpcoff = __ pc_offset();
+  std::cout << "archop: " << arch_opcode
+            << " pc_delta: " << endpcoff - startpcoff << std::endl;
   return kSuccess;
 }  // NOLINT(readability/fn_size)
 

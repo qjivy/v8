@@ -1262,10 +1262,14 @@ void Assembler::label_at_put(Label* L, int at_offset) {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-// instrumentation inst
-void Assembler::start() {emit(0x67);}
-//void Assembler::start() {emit(0x06);}
-void Assembler::end() {emit(0xd7);}
+// qj instrumentation inst ICS ICE
+void Assembler::start() { emit(0x67); }
+void Assembler::end(Register rd, int32_t imm20) {
+  DCHECK(imm20 % 4 == 0);
+  // here  (((imm20/4)-1) to get the actual instruction count
+  Instr instr = END | (((imm20 / 4) - 1) << 12);
+  emit(instr);
+}
 
 void Assembler::lui(Register rd, int32_t imm20) { GenInstrU(LUI, rd, imm20); }
 

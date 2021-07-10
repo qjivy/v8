@@ -1461,7 +1461,14 @@ void TurboAssembler::li_optimized(Register rd, Operand j, LiFlags mode) {
 void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
   DCHECK(!j.is_reg());
   BlockTrampolinePoolScope block_trampoline_pool(this);
-  //start();
+  Instruction* startpc = pc();
+  int startpcoffset = pc_offset();
+  start();
+  {
+    std::ostringstream str;
+    str << "[ICS start: " << startpc << " PCoffset: " << startpcoffset;
+    RecordComment(str.str().c_str());
+  }
   if (!MustUseReg(j.rmode()) && mode == OPTIMIZE_SIZE) {
     UseScratchRegisterScope temps(this);
     int count = li_estimate(j.immediate(), temps.hasAvailable());
@@ -1500,7 +1507,18 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
             // sequence.
     li_ptr(rd, j.immediate());
   }
-  //end();
+  Instruction* endpc = pc();
+  int endpcoffset = pc_offset();
+  // std::cout<<"in li start pc: "<<startpc<<" endpc: "<<endpc<<" delta:
+  // "<<endpc-startpc<<std::endl;
+  {
+    std::ostringstream str;
+    str << "[ICE end: " << endpc << " delta: " << (endpc - startpc)
+        << " pc_offset: " << endpcoffset
+        << " delta1: " << endpcoffset - startpcoffset;
+    RecordComment(str.str().c_str());
+  }
+  end(zero_reg, int32_t(endpcoffset - startpcoffset));
 }
 
 static RegList t_regs = Register::ListOf(t0, t1, t2, t3, t4, t5, t6);
@@ -1512,9 +1530,8 @@ void TurboAssembler::MultiPush(RegList regs) {
   int16_t num_to_push = base::bits::CountPopulation(regs);
   int16_t stack_offset = num_to_push * kPointerSize;
   std::ostringstream str;
-  str << "[ MultiPushGPR: " << regs <<" total: "<<num_to_push;
+  str << "[ MultiPushGPR: " << regs << " total: " << num_to_push;
   RecordComment(str.str().c_str());
-
 
 #define TEST_AND_PUSH_REG(reg)             \
   if ((regs & reg.bit()) != 0) {           \
@@ -1559,7 +1576,7 @@ void TurboAssembler::MultiPush(RegList regs) {
 void TurboAssembler::MultiPop(RegList regs) {
   int16_t num_to_pop = base::bits::CountPopulation(regs);
   std::ostringstream str;
-  str << "[ MultiPopGPR: " << regs <<" total: "<<num_to_pop;
+  str << "[ MultiPopGPR: " << regs << " total: " << num_to_pop;
   RecordComment(str.str().c_str());
 
   int16_t stack_offset = 0;
@@ -1604,9 +1621,9 @@ void TurboAssembler::MultiPop(RegList regs) {
 
 void TurboAssembler::MultiPushFPU(RegList regs) {
   int16_t num_to_push = base::bits::CountPopulation(regs);
-  //int16_t stack_offset = num_to_push * kDoubleSize;
+  // int16_t stack_offset = num_to_push * kDoubleSize;
   std::ostringstream str;
-  str << "[ MultiPushFPU: " << regs <<" total: "<<num_to_push;
+  str << "[ MultiPushFPU: " << regs << " total: " << num_to_push;
   RecordComment(str.str().c_str());
 #if 0
   Sub64(sp, sp, Operand(stack_offset));
@@ -1623,7 +1640,7 @@ void TurboAssembler::MultiPushFPU(RegList regs) {
 void TurboAssembler::MultiPopFPU(RegList regs) {
   int16_t num_to_pop = base::bits::CountPopulation(regs);
   std::ostringstream str;
-  str << "[ MultiPopFPU: " << regs <<" total: "<<num_to_pop;
+  str << "[ MultiPopFPU: " << regs << " total: " << num_to_pop;
   RecordComment(str.str().c_str());
 #if 0
   int16_t stack_offset = 0;
@@ -2264,7 +2281,7 @@ void TurboAssembler::Clz32(Register rd, Register xx) {
   //  y = x >> 2; if (y != 0) { n = n - 2; x = y; }
   //  y = x >> 1; if (y != 0) {rd = n - 2; return;}
   //  rd = n - x;
-  start();
+  // start();
   Label L0, L1, L2, L3, L4;
   UseScratchRegisterScope temps(this);
   BlockTrampolinePoolScope block_trampoline_pool(this);
@@ -2299,7 +2316,7 @@ void TurboAssembler::Clz32(Register rd, Register xx) {
   Branch(&L4, eq, y, Operand(zero_reg));
   addiw(rd, n, -2);
   bind(&L4);
-  end();
+  // end();
 }
 
 void TurboAssembler::Clz64(Register rd, Register xx) {

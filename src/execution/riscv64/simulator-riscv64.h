@@ -627,6 +627,13 @@ class Simulator : public SimulatorBase {
   void DecodeCLType();
   void DecodeCSType();
   void DecodeCJType();
+  // qj
+  void DecodeICEType();
+  /*
+    struct ICPoint {
+      int count[32];
+    }
+  */
 
   // Used for breakpoints and traps.
   void SoftwareInterrupt();

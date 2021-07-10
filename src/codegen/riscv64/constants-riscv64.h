@@ -525,6 +525,8 @@ enum Opcode : uint32_t {
   RO_C_FSDSP = C2 | (0b101 << kRvcFunct3Shift),
   RO_C_SWSP = C2 | (0b110 << kRvcFunct3Shift),
   RO_C_SDSP = C2 | (0b111 << kRvcFunct3Shift),
+  // qj add for instrument
+  END = 0b0001011,
 };
 
 // ----- Emulated conditions.
@@ -731,12 +733,12 @@ class InstructionBase {
 
   inline bool IsStart() const {
     uint32_t inst = *reinterpret_cast<const uint32_t*>(this);
-    return inst==0x67;
+    return inst == 0x67;
   }
 
   inline bool IsEnd() const {
     uint32_t inst = *reinterpret_cast<const uint32_t*>(this);
-    return inst==0xd7;
+    return (inst & 0b1111111) == END;
   }
 
   inline bool IsShortInstruction() const {
@@ -857,7 +859,8 @@ class InstructionGetters : public T {
            this->InstructionType() == InstructionBase::kR4Type ||
            this->InstructionType() == InstructionBase::kIType ||
            this->InstructionType() == InstructionBase::kUType ||
-           this->InstructionType() == InstructionBase::kJType);
+           this->InstructionType() == InstructionBase::kJType ||
+           this->InstructionType() == InstructionBase::kEndType);
     return this->Bits(kRdShift + kRdBits - 1, kRdShift);
   }
 
@@ -976,7 +979,8 @@ class InstructionGetters : public T {
   }
 
   inline int Imm20UValue() const {
-    DCHECK(this->InstructionType() == InstructionBase::kUType);
+    DCHECK(this->InstructionType() == InstructionBase::kUType ||
+           this->InstructionType() == InstructionBase::kEndType);
     // | imm[31:12] | rd | opcode |
     //  31        12
     int32_t Bits = this->InstructionBits();

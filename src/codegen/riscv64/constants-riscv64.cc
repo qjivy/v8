@@ -109,8 +109,7 @@ InstructionBase::Type InstructionBase::InstructionType() const {
   // start instrument
   if (IsStart()) {
     return kStartType;
-  }
-  else if (IsEnd()) {
+  } else if (IsEnd()) {
     return kEndType;
   }
   // RV64C Instruction

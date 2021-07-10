@@ -822,7 +822,11 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate) {
   last_debugger_input_ = nullptr;
 }
 
+static int icpoint[32];
 Simulator::~Simulator() {
+  for (int i = 0; i < 32; i++)
+    std::cout << "icpoint[" << i << "]:" << icpoint[i] << std::endl;
+
   GlobalMonitor::Get()->RemoveLinkedAddress(&global_monitor_thread_);
   free(stack_);
 }
@@ -1638,6 +1642,19 @@ void Simulator::PrintStopInfo(uint64_t code) {
 
 void Simulator::SignalException(Exception e) {
   FATAL("Error: Exception %i raised.", static_cast<int>(e));
+}
+
+void Simulator::DecodeICEType() {
+  int type = ((instr_.InstructionBits() >> 7) & 0x1f);
+  int count = instr_.InstructionBits() >> 12;
+#if 0
+  if (::v8::internal::FLAG_trace_sim) {
+        SNPrintF(trace_buf_, "RUNICE" PRIu32 " Type: " PRIu32 " Count: " PRIu32,
+                 type, count);
+}
+#endif
+  //  std::cout<<"ICE type: "<<type<<" count: "<<count<<std::endl;
+  icpoint[type] += count;
 }
 
 // RISCV Instruction Decode Routine
@@ -3339,10 +3356,11 @@ void Simulator::InstructionDecode(Instruction* instr) {
   instr_ = instr;
   switch (instr_.InstructionType()) {
     case Instruction::kStartType:
-//      Format(instr, "start ");
+      //      Format(instr, "start ");
       break;
     case Instruction::kEndType:
- //     Format(instr, "end ");
+      //     Format(instr, "end ");
+      DecodeICEType();
       break;
     case Instruction::kRType:
       DecodeRVRType();
