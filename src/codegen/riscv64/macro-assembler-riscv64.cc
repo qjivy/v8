@@ -4271,6 +4271,7 @@ void MacroAssembler::AssertConstructor(Register object) {
 }
 
 void MacroAssembler::AssertFunction(Register object) {
+  RecordComment("[ AssertFunction");
   if (FLAG_debug_code) {
     BlockTrampolinePoolScope block_trampoline_pool(this);
     STATIC_ASSERT(kSmiTag == 0);
@@ -4287,6 +4288,7 @@ void MacroAssembler::AssertFunction(Register object) {
           Operand(LAST_JS_FUNCTION_TYPE - FIRST_JS_FUNCTION_TYPE));
     pop(object);
   }
+  RecordComment("]");
 }
 
 void MacroAssembler::AssertBoundFunction(Register object) {
