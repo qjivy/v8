@@ -23,7 +23,7 @@ void Builtins::Generate_LoadIC_Noninlined(compiler::CodeAssemblerState* state) {
   AccessorAssembler assembler(state);
   assembler.GenerateLoadIC_Noninlined();
 }
-void Builtins::Generate_LoadIC_NoFeedback(compiler::CodeAssemblerState* state) {
+void Builtins::Generate_LoadIC_NoFeedback(compiler::CodeAssemblerState* state) { //qj
   AccessorAssembler assembler(state);
   assembler.GenerateLoadIC_NoFeedback();
 }
@@ -78,7 +78,7 @@ void Builtins::Generate_KeyedLoadICTrampoline_Megamorphic(
   AccessorAssembler assembler(state);
   assembler.GenerateKeyedLoadICTrampoline_Megamorphic();
 }
-void Builtins::Generate_LoadGlobalIC_NoFeedback(
+void Builtins::Generate_LoadGlobalIC_NoFeedback(//qj
     compiler::CodeAssemblerState* state) {
   AccessorAssembler assembler(state);
   assembler.GenerateLoadGlobalIC_NoFeedback();
@@ -167,7 +167,7 @@ void Builtins::Generate_KeyedHasIC_PolymorphicName(
   assembler.GenerateKeyedHasIC_PolymorphicName();
 }
 
-void Builtins::Generate_LoadGlobalIC(compiler::CodeAssemblerState* state) {
+void Builtins::Generate_LoadGlobalIC(compiler::CodeAssemblerState* state) { //qj
   AccessorAssembler assembler(state);
   assembler.GenerateLoadGlobalIC(TypeofMode::kNotInside);
 }

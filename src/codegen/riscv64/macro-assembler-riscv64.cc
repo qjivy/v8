@@ -3033,7 +3033,7 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
   } else if (options().inline_offheap_trampolines &&
              target_is_isolate_independent_builtin) {
     // Inline the trampoline.
-    RecordCommentForOffHeapTrampoline(builtin);
+    RecordCommentForOffHeapTrampoline(builtin); //here Jump is to a off heap builtin code 
     li(t6, Operand(BuiltinEntry(builtin), RelocInfo::OFF_HEAP_TARGET));
     Jump(t6, cond, rs, rt);
     return;
@@ -3093,7 +3093,7 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
     int32_t code_target_index = AddCodeTarget(code);
     Label skip;
     BlockTrampolinePoolScope block_trampoline_pool(this);
-    RecordCommentForOffHeapTrampoline(builtin);
+    RecordCommentForOffHeapTrampoline(builtin); //here call is to a off heap builtin code
     if (cond != al) {
       Branch(&skip, NegateCondition(cond), rs, rt);
     }
@@ -3530,6 +3530,7 @@ void MacroAssembler::StackOverflowCheck(Register num_args, Register scratch1,
 void MacroAssembler::InvokePrologue(Register expected_parameter_count,
                                     Register actual_parameter_count,
                                     Label* done, InvokeType type) {
+  RecordComment("[InvokePrologue: ");
   Label regular_invoke;
 
   //  a0: actual arguments count
@@ -3596,6 +3597,7 @@ void MacroAssembler::InvokePrologue(Register expected_parameter_count,
     break_(0xCC);
   }
   bind(&regular_invoke);
+  RecordComment("]");
 }
 
 void MacroAssembler::CheckDebugHook(Register fun, Register new_target,
@@ -3649,6 +3651,7 @@ void MacroAssembler::InvokeFunctionCode(Register function, Register new_target,
                                         Register expected_parameter_count,
                                         Register actual_parameter_count,
                                         InvokeType type) {
+  RecordComment("[MacroAssembler::InvokeFunctionCode: ");
   // You can't call a function without a valid frame.
   DCHECK_IMPLIES(type == InvokeType::kCall, has_frame());
   DCHECK_EQ(function, a1);
@@ -3683,6 +3686,7 @@ void MacroAssembler::InvokeFunctionCode(Register function, Register new_target,
   // Continue here if InvokePrologue does handle the invocation due to
   // mismatched parameter counts.
   bind(&done);
+  RecordComment("]");
 }
 
 void MacroAssembler::InvokeFunctionWithNewTarget(
@@ -3853,20 +3857,24 @@ void MacroAssembler::CallRuntime(const Runtime::Function* f, int num_arguments,
   Call(code, RelocInfo::CODE_TARGET);
 }
 
-void MacroAssembler::TailCallRuntime(Runtime::FunctionId fid) {
+void MacroAssembler::TailCallRuntime(Runtime::FunctionId fid) { //qj
+  RecordComment("[TailCallRuntime: ");
   const Runtime::Function* function = Runtime::FunctionForId(fid);
   DCHECK_EQ(1, function->result_size);
   if (function->nargs >= 0) {
     PrepareCEntryArgs(function->nargs);
   }
   JumpToExternalReference(ExternalReference::Create(fid));
+  RecordComment("]");
 }
 
 void MacroAssembler::JumpToExternalReference(const ExternalReference& builtin,
-                                             bool builtin_exit_frame) {
+                                             bool builtin_exit_frame) { //qj
   PrepareCEntryFunction(builtin);
+  RecordComment("{123CEntry:");
   Handle<Code> code = CodeFactory::CEntry(isolate(), 1, SaveFPRegsMode::kIgnore,
-                                          ArgvMode::kStack, builtin_exit_frame);
+                                          ArgvMode::kStack, builtin_exit_frame); //qj see here how to gen CEntry
+  RecordComment("}");
   Jump(code, RelocInfo::CODE_TARGET, al, zero_reg, Operand(zero_reg));
 }
 
@@ -3934,7 +3942,7 @@ void TurboAssembler::Assert(Condition cc, AbortReason reason, Register rs,
 void TurboAssembler::Check(Condition cc, AbortReason reason, Register rs,
                            Operand rt) {
   Label L;
-  Branch(&L, cc, rs, rt);
+  BranchShort(&L, cc, rs, rt);
   Abort(reason);
   // Will not return here.
   bind(&L);

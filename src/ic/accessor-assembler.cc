@@ -3129,7 +3129,7 @@ void AccessorAssembler::LoadIC_Noninlined(const LoadICParameters* p,
   }
 }
 
-void AccessorAssembler::LoadIC_NoFeedback(const LoadICParameters* p,
+void AccessorAssembler::LoadIC_NoFeedback(const LoadICParameters* p, //qj
                                           TNode<Smi> ic_kind) {
   Label miss(this, Label::kDeferred);
   TNode<Object> lookup_start_object = p->receiver_and_lookup_start_object();
@@ -3158,7 +3158,9 @@ void AccessorAssembler::LoadIC_NoFeedback(const LoadICParameters* p,
 
   BIND(&miss);
   {
-    TailCallRuntime(Runtime::kLoadNoFeedbackIC_Miss, p->context(),
+    Comment("QQ start to runtime call");
+    //Print("QQ CSA print LoadIC_NoFeedback");
+    TailCallRuntime(Runtime::kLoadNoFeedbackIC_Miss, p->context(), //qj see here why
                     p->receiver(), p->name(), ic_kind);
   }
 }
@@ -3184,6 +3186,7 @@ void AccessorAssembler::LoadSuperIC_NoFeedback(const LoadICParameters* p) {
   }
 }
 
+//qj
 void AccessorAssembler::LoadGlobalIC(TNode<HeapObject> maybe_feedback_vector,
                                      const LazyNode<TaggedIndex>& lazy_slot,
                                      const LazyNode<Context>& lazy_context,
@@ -3209,7 +3212,7 @@ void AccessorAssembler::LoadGlobalIC(TNode<HeapObject> maybe_feedback_vector,
 
     BIND(&miss);
     {
-      Comment("LoadGlobalIC_MissCase");
+      Comment("qq LoadGlobalIC_MissCase");
       TNode<Context> context = lazy_context();
       TNode<Name> name = lazy_name();
       exit_point->ReturnCallRuntime(Runtime::kLoadGlobalIC_Miss, context, name,
@@ -3220,11 +3223,13 @@ void AccessorAssembler::LoadGlobalIC(TNode<HeapObject> maybe_feedback_vector,
 
   BIND(&no_feedback);
   {
+    Comment("qq LoadGlobalIC_NoFeedback");
     int ic_kind =
         static_cast<int>((typeof_mode == TypeofMode::kInside)
                              ? FeedbackSlotKind::kLoadGlobalInsideTypeof
                              : FeedbackSlotKind::kLoadGlobalNotInsideTypeof);
-    exit_point->ReturnCallStub(
+//      Print("QQ CSA print LoadGlobalIC callableFor");
+    exit_point->ReturnCallStub( //qj
         Builtins::CallableFor(isolate(), Builtin::kLoadGlobalIC_NoFeedback),
         lazy_context(), lazy_name(), SmiConstant(ic_kind));
   }
@@ -3334,7 +3339,8 @@ void AccessorAssembler::ScriptContextTableLookup(
 
 void AccessorAssembler::LoadGlobalIC_NoFeedback(TNode<Context> context,
                                                 TNode<Object> name,
-                                                TNode<Smi> smi_typeof_mode) {
+                                                TNode<Smi> smi_typeof_mode) { //qj
+  //Print("QQ CSA print LoadGlobalIC_NoFeedback");
   TNode<NativeContext> native_context = LoadNativeContext(context);
   Label regular_load(this), throw_reference_error(this, Label::kDeferred);
 
@@ -3348,7 +3354,8 @@ void AccessorAssembler::LoadGlobalIC_NoFeedback(TNode<Context> context,
   BIND(&regular_load);
   TNode<JSGlobalObject> global_object =
       CAST(LoadContextElement(native_context, Context::EXTENSION_INDEX));
-  TailCallStub(Builtins::CallableFor(isolate(), Builtin::kLoadIC_NoFeedback),
+  //Print("QQ CSA callable for LoadIC_NoFeedback");
+  TailCallStub(Builtins::CallableFor(isolate(), Builtin::kLoadIC_NoFeedback), //qj
                context, global_object, name, smi_typeof_mode);
 }
 
@@ -4064,18 +4071,19 @@ void AccessorAssembler::GenerateLoadIC_Noninlined() {
                                 slot, vector);
 }
 
-void AccessorAssembler::GenerateLoadIC_NoFeedback() {
+void AccessorAssembler::GenerateLoadIC_NoFeedback() { //qj
   using Descriptor = LoadNoFeedbackDescriptor;
 
   auto receiver = Parameter<Object>(Descriptor::kReceiver);
   auto name = Parameter<Object>(Descriptor::kName);
   auto context = Parameter<Context>(Descriptor::kContext);
   auto ic_kind = Parameter<Smi>(Descriptor::kICKind);
+  //Print("QQ CSA print GenerateLoadIC_NoFeedback");
 
   LoadICParameters p(context, receiver, name,
                      TaggedIndexConstant(FeedbackSlot::Invalid().ToInt()),
                      UndefinedConstant());
-  LoadIC_NoFeedback(&p, ic_kind);
+  LoadIC_NoFeedback(&p, ic_kind); //qj
 }
 
 void AccessorAssembler::GenerateLoadICTrampoline() {
@@ -4154,7 +4162,7 @@ void AccessorAssembler::GenerateLoadGlobalIC_NoFeedback() {
   LoadGlobalIC_NoFeedback(context, name, ic_kind);
 }
 
-void AccessorAssembler::GenerateLoadGlobalIC(TypeofMode typeof_mode) {
+void AccessorAssembler::GenerateLoadGlobalIC(TypeofMode typeof_mode) { //qj
   using Descriptor = LoadGlobalWithVectorDescriptor;
 
   auto name = Parameter<Name>(Descriptor::kName);

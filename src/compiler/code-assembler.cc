@@ -1051,15 +1051,27 @@ void CodeAssembler::TailCallRuntimeImpl(
     Runtime::FunctionId function, TNode<Int32T> arity, TNode<Object> context,
     std::initializer_list<TNode<Object>> args) {
   int result_size = Runtime::FunctionForId(function)->result_size;
+  std::ostringstream str;
+
   TNode<Code> centry =
       HeapConstant(CodeFactory::RuntimeCEntry(isolate(), result_size));
+  Handle<Code> code = CodeFactory::RuntimeCEntry(isolate(), result_size);
+
+  Builtin builtin = Builtin::kNoBuiltinId;
+  isolate()->builtins()->IsBuiltinHandle(code,&builtin);
+  const char* builtin_name = Builtins::name(builtin);
+
   constexpr size_t kMaxNumArgs = 6;
   DCHECK_GE(kMaxNumArgs, args.size());
   int argc = static_cast<int>(args.size());
+  str <<"[ result_size: "<<result_size <<" argc: "<<argc<<" Centry: "<<builtin_name;
+
   auto call_descriptor = Linkage::GetRuntimeCallDescriptor(
       zone(), function, argc, Operator::kNoProperties,
       CallDescriptor::kNoFlags);
-
+  str <<"[ call_desc name: "<< call_descriptor->debug_name();
+  Comment(str.str().c_str());
+  Comment("QQ get ref in TailCallRuntimeImpl");
   TNode<ExternalReference> ref =
       ExternalConstant(ExternalReference::Create(function));
 
@@ -1069,7 +1081,8 @@ void CodeAssembler::TailCallRuntimeImpl(
   inputs.Add(ref);
   inputs.Add(arity);
   inputs.Add(context);
-
+  
+  Comment("QQ gert TailCallN");
   raw_assembler()->TailCallN(call_descriptor, inputs.size(), inputs.data());
 }
 

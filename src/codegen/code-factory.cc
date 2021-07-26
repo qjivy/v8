@@ -24,7 +24,7 @@ Handle<Code> CodeFactory::RuntimeCEntry(Isolate* isolate, int result_size) {
 // static
 Handle<Code> CodeFactory::CEntry(Isolate* isolate, int result_size,
                                  SaveFPRegsMode save_doubles,
-                                 ArgvMode argv_mode, bool builtin_exit_frame) {
+                                 ArgvMode argv_mode, bool builtin_exit_frame) { //qj
   // Aliases for readability below.
   const int rs = result_size;
   const SaveFPRegsMode sd = save_doubles;

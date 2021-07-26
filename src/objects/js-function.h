@@ -303,6 +303,7 @@ class JSFunction : public JSFunctionOrBoundFunction {
     DEFINE_FIELD_OFFSET_CONSTANTS(JSFunctionOrBoundFunction::kHeaderSize,
                                   TORQUE_GENERATED_JS_FUNCTION_FIELDS)
   };
+//qj : here the offset
   static constexpr int kSharedFunctionInfoOffset =
       FieldOffsets::kSharedFunctionInfoOffset;
   static constexpr int kContextOffset = FieldOffsets::kContextOffset;

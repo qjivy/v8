@@ -176,28 +176,41 @@ class InterpreterLoadGlobalAssembler : public InterpreterAssembler {
 
   void LdaGlobal(int slot_operand_index, int name_operand_index,
                  TypeofMode typeof_mode) {
+    Comment("======== LdaGlobal-1");
     TNode<HeapObject> maybe_feedback_vector = LoadFeedbackVector();
 
+    Comment("======== LdaGlobal-2");
     AccessorAssembler accessor_asm(state());
+    //Comment("======== LdaGlobal-3");
     ExitPoint exit_point(this, [=](TNode<Object> result) {
       SetAccumulator(result);
+    //Comment("======== LdaGlobal-4 to be Dispatch");
       Dispatch();
+    //Comment("======== LdaGlobal-5 to be Dispatch");
     });
 
+    //Comment("======== LdaGlobal-6");
     LazyNode<TaggedIndex> lazy_slot = [=] {
+   // Comment("======== LdaGlobal-7");
       return BytecodeOperandIdxTaggedIndex(slot_operand_index);
     };
 
+    //Comment("======== LdaGlobal-9");
     LazyNode<Context> lazy_context = [=] { return GetContext(); };
 
+    //Comment("======== LdaGlobal-10");
     LazyNode<Name> lazy_name = [=] {
+    //Comment("======== LdaGlobal-11");
       TNode<Name> name =
           CAST(LoadConstantPoolEntryAtOperandIndex(name_operand_index));
+    //Comment("======== LdaGlobal-12");
       return name;
     };
 
+    //Comment("======== LdaGlobal-14");
     accessor_asm.LoadGlobalIC(maybe_feedback_vector, lazy_slot, lazy_context,
                               lazy_name, typeof_mode, &exit_point);
+    //Comment("======== LdaGlobal-15");
   }
 };
 

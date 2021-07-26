@@ -1131,6 +1131,7 @@ void InterpreterAssembler::JumpIfTaggedNotEqual(TNode<Object> lhs,
 
 TNode<WordT> InterpreterAssembler::LoadBytecode(
     TNode<IntPtrT> bytecode_offset) {
+  Comment("QQ Load Byecode");
   TNode<Uint8T> bytecode =
       Load<Uint8T>(BytecodeArrayTaggedPointer(), bytecode_offset);
   return ChangeUint32ToWord(bytecode);
@@ -1194,15 +1195,19 @@ void InterpreterAssembler::Dispatch() {
   Comment("========= Dispatch");
   DCHECK_IMPLIES(Bytecodes::MakesCallAlongCriticalPath(bytecode_), made_call_);
   TNode<IntPtrT> target_offset = Advance();
+  Comment("========= Dispatch1");
   TNode<WordT> target_bytecode = LoadBytecode(target_offset);
   DispatchToBytecodeWithOptionalStarLookahead(target_bytecode);
 }
 
 void InterpreterAssembler::DispatchToBytecodeWithOptionalStarLookahead(
     TNode<WordT> target_bytecode) {
+  Comment("QQ DispatchToBytecodeWithOptionalStarLookahead");
   if (Bytecodes::IsStarLookahead(bytecode_, operand_scale_)) {
+    Comment("QQ StarDispatchLookahead");
     StarDispatchLookahead(target_bytecode);
   }
+  Comment("QQ DispatchToBytecode");
   DispatchToBytecode(target_bytecode, BytecodeOffset());
 }
 
