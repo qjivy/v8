@@ -1108,6 +1108,7 @@ void InterpreterAssembler::JumpBackward(TNode<IntPtrT> jump_offset) {
 
 void InterpreterAssembler::JumpConditional(TNode<BoolT> condition,
                                            TNode<IntPtrT> jump_offset) {
+  Print("QQ JumpConditional");
   Label match(this), no_match(this);
 
   Branch(condition, &match, &no_match);
@@ -1131,13 +1132,15 @@ void InterpreterAssembler::JumpIfTaggedNotEqual(TNode<Object> lhs,
 
 TNode<WordT> InterpreterAssembler::LoadBytecode(
     TNode<IntPtrT> bytecode_offset) {
-  Comment("QQ Load Byecode");
+  Print("QQ LoadBytecode");
+  Comment("QQ LoadBytecode");
   TNode<Uint8T> bytecode =
       Load<Uint8T>(BytecodeArrayTaggedPointer(), bytecode_offset);
   return ChangeUint32ToWord(bytecode);
 }
 
 void InterpreterAssembler::StarDispatchLookahead(TNode<WordT> target_bytecode) {
+  Print("QQ StarDispatchLookahead");
   Label do_inline_star(this), done(this);
 
   // Check whether the following opcode is one of the short Star codes. All
@@ -1168,6 +1171,7 @@ void InterpreterAssembler::StarDispatchLookahead(TNode<WordT> target_bytecode) {
 }
 
 void InterpreterAssembler::InlineShortStar(TNode<WordT> target_bytecode) {
+  Print("QQ InlineShortStar");
   Bytecode previous_bytecode = bytecode_;
   ImplicitRegisterUse previous_acc_use = implicit_register_use_;
 
@@ -1192,6 +1196,8 @@ void InterpreterAssembler::InlineShortStar(TNode<WordT> target_bytecode) {
 }
 
 void InterpreterAssembler::Dispatch() {
+  Print("QQ Dispatch");
+//  Print(bytecode_);
   Comment("========= Dispatch");
   DCHECK_IMPLIES(Bytecodes::MakesCallAlongCriticalPath(bytecode_), made_call_);
   TNode<IntPtrT> target_offset = Advance();
@@ -1202,9 +1208,11 @@ void InterpreterAssembler::Dispatch() {
 
 void InterpreterAssembler::DispatchToBytecodeWithOptionalStarLookahead(
     TNode<WordT> target_bytecode) {
+  Print("QQ DispatchToBytecodeWithOptionalStarLookahead");
   Comment("QQ DispatchToBytecodeWithOptionalStarLookahead");
   if (Bytecodes::IsStarLookahead(bytecode_, operand_scale_)) {
     Comment("QQ StarDispatchLookahead");
+    Print("QQ with StarLookahead");
     StarDispatchLookahead(target_bytecode);
   }
   Comment("QQ DispatchToBytecode");
@@ -1213,6 +1221,7 @@ void InterpreterAssembler::DispatchToBytecodeWithOptionalStarLookahead(
 
 void InterpreterAssembler::DispatchToBytecode(
     TNode<WordT> target_bytecode, TNode<IntPtrT> new_bytecode_offset) {
+  Print("QQ DispatchToBytecode");
   if (V8_IGNITION_DISPATCH_COUNTING_BOOL) {
     TraceBytecodeDispatch(target_bytecode);
   }
@@ -1225,6 +1234,7 @@ void InterpreterAssembler::DispatchToBytecode(
 
 void InterpreterAssembler::DispatchToBytecodeHandlerEntry(
     TNode<RawPtrT> handler_entry, TNode<IntPtrT> bytecode_offset) {
+  Print("QQ DispatchToBytecodeHandlerEntry");
   // Propagate speculation poisoning.
   TNode<RawPtrT> poisoned_handler_entry =
       UncheckedCast<RawPtrT>(WordPoisonOnSpeculation(handler_entry));
@@ -1235,6 +1245,7 @@ void InterpreterAssembler::DispatchToBytecodeHandlerEntry(
 }
 
 void InterpreterAssembler::DispatchWide(OperandScale operand_scale) {
+  Print("QQ DispatchWide");
   // Dispatching a wide bytecode requires treating the prefix
   // bytecode a base pointer into the dispatch table and dispatching
   // the bytecode that follows relative to this base.

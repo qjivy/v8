@@ -38,7 +38,7 @@ class SimulatorBase {
 
  protected:
   template <typename Return, typename SimT, typename CallImpl, typename... Args>
-  static Return VariadicCall(SimT* sim, CallImpl call, Address entry,
+  static Return VariadicCall(SimT* sim, CallImpl call, Address entry, //qj: here into CallImpl
                              Args... args) {
     // Convert all arguments to intptr_t. Fails if any argument is not integral
     // or pointer.

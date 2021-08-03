@@ -4152,7 +4152,7 @@ void AccessorAssembler::GenerateLoadSuperICBaseline() {
                   name, slot, vector);
 }
 
-void AccessorAssembler::GenerateLoadGlobalIC_NoFeedback() {
+void AccessorAssembler::GenerateLoadGlobalIC_NoFeedback() { //qj
   using Descriptor = LoadGlobalNoFeedbackDescriptor;
 
   auto name = Parameter<Object>(Descriptor::kName);

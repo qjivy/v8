@@ -597,7 +597,7 @@ template <>
 MaybeLocal<Script> Compile(Local<Context> context,
                            ScriptCompiler::Source* source,
                            ScriptCompiler::CompileOptions options) {
-  return ScriptCompiler::Compile(context, source, options);
+  return ScriptCompiler::Compile(context, source, options); //qj:here
 }
 
 template <>
@@ -632,14 +632,14 @@ MaybeLocal<T> Shell::CompileString(Isolate* isolate, Local<Context> context,
   }
   ScriptCompiler::Source script_source(source, origin, cached_code);
   MaybeLocal<T> result =
-      Compile<T>(context, &script_source,
+      Compile<T>(context, &script_source, //qj: here go compiler
                  cached_code ? ScriptCompiler::kConsumeCodeCache
                              : ScriptCompiler::kNoCompileOptions);
   if (cached_code) CHECK(!cached_code->rejected);
   return result;
 }
 
-// Executes a string within the current v8 context.
+// Executes a string within the current v8 context. //qj
 bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
                           Local<Value> name, PrintResult print_result,
                           ReportExceptions report_exceptions,
@@ -698,8 +698,8 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
         return false;
       }
     }
-    Local<Script> script;
-    if (!CompileString<Script>(isolate, context, source, origin)
+    Local<Script> script; //qj Script compile
+    if (!CompileString<Script>(isolate, context, source, origin) //qj
              .ToLocal(&script)) {
       return false;
     }
@@ -715,7 +715,7 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
     if (options.compile_only) {
       return true;
     }
-    maybe_result = script->Run(realm);
+    maybe_result = script->Run(realm); //qj
     if (options.code_cache_options ==
         ShellOptions::CodeCacheOptions::kProduceCacheAfterExecute) {
       // Serialize and store it in memory for the next execution.

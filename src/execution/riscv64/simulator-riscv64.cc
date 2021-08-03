@@ -3567,7 +3567,7 @@ void Simulator::CallInternal(Address entry) {
 }
 
 intptr_t Simulator::CallImpl(Address entry, int argument_count,
-                             const intptr_t* arguments) {
+                             const intptr_t* arguments) { //qj: here into Simulation
   constexpr int kRegisterPassedArguments = 8;
   // Set up arguments.
 

@@ -365,7 +365,7 @@ class Simulator : public SimulatorBase {
   void Execute();
 
   template <typename Return, typename... Args>
-  Return Call(Address entry, Args... args) {
+  Return Call(Address entry, Args... args) { //qj: here from the execution.cc and go to CallImpl
     return VariadicCall<Return>(this, &Simulator::CallImpl, entry, args...);
   }
 

@@ -1332,7 +1332,7 @@ Handle<SharedFunctionInfo> CreateTopLevelSharedFunctionInfo(
 MaybeHandle<SharedFunctionInfo> CompileToplevel(
     ParseInfo* parse_info, Handle<Script> script,
     MaybeHandle<ScopeInfo> maybe_outer_scope_info, Isolate* isolate,
-    IsCompiledScope* is_compiled_scope) {
+    IsCompiledScope* is_compiled_scope) { //qj top compiler to get bytecode in SFI
   TimerEventScope<TimerEventCompileCode> top_level_timer(isolate);
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"), "V8.CompileCode");
   DCHECK_EQ(ThreadId::Current(), isolate->thread_id());
@@ -1344,7 +1344,7 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
                          : RuntimeCallCounterId::kCompileScript);
   VMState<BYTECODE_COMPILER> state(isolate);
   if (parse_info->literal() == nullptr &&
-      !parsing::ParseProgram(parse_info, script, maybe_outer_scope_info,
+      !parsing::ParseProgram(parse_info, script, maybe_outer_scope_info, //qj: here ParseProgram to get ast
                              isolate, parsing::ReportStatisticsMode::kYes)) {
     FailWithPendingException(isolate, script, parse_info,
                              Compiler::ClearExceptionFlag::KEEP_EXCEPTION);
@@ -1364,15 +1364,15 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
 
   // Create the SharedFunctionInfo and add it to the script's list.
   Handle<SharedFunctionInfo> shared_info =
-      CreateTopLevelSharedFunctionInfo(parse_info, script, isolate);
+      CreateTopLevelSharedFunctionInfo(parse_info, script, isolate); //qj: Gen bytecode from here
 
   FinalizeUnoptimizedCompilationDataList
       finalize_unoptimized_compilation_data_list;
 
-  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
+  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs( //qj: here Finalize job? Finalize what
           isolate, shared_info, script, parse_info, isolate->allocator(),
           is_compiled_scope, &finalize_unoptimized_compilation_data_list,
-          nullptr)) {
+          nullptr)) { //qj: here finalize
     FailWithPendingException(isolate, script, parse_info,
                              Compiler::ClearExceptionFlag::KEEP_EXCEPTION);
     return MaybeHandle<SharedFunctionInfo>();
@@ -2797,7 +2797,7 @@ MaybeHandle<SharedFunctionInfo> CompileScriptOnBothBackgroundAndMainThread(
 }  // namespace
 
 // static
-MaybeHandle<SharedFunctionInfo> Compiler::GetSharedFunctionInfoForScript(
+MaybeHandle<SharedFunctionInfo> Compiler::GetSharedFunctionInfoForScript( //qj: here get the SFI
     Isolate* isolate, Handle<String> source,
     const Compiler::ScriptDetails& script_details,
     ScriptOriginOptions origin_options, v8::Extension* extension,
@@ -2883,7 +2883,7 @@ MaybeHandle<SharedFunctionInfo> Compiler::GetSharedFunctionInfoForScript(
 
       flags.set_is_eager(compile_options == ScriptCompiler::kEagerCompile);
 
-      maybe_result = CompileScriptOnMainThread(
+      maybe_result = CompileScriptOnMainThread( //qj: here into Bytecode generate
           flags, source, script_details, origin_options, natives, extension,
           isolate, &is_compiled_scope);
     }

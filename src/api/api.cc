@@ -2386,7 +2386,7 @@ i::Compiler::ScriptDetails GetScriptDetails(
 
 MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
     Isolate* v8_isolate, Source* source, CompileOptions options,
-    NoCacheReason no_cache_reason) {
+    NoCacheReason no_cache_reason) { //qj: here compile
   auto isolate = reinterpret_cast<i::Isolate*>(v8_isolate);
   TRACE_EVENT_CALL_STATS_SCOPED(isolate, "v8", "V8.ScriptCompiler");
   ENTER_V8_NO_SCRIPT(isolate, v8_isolate->GetCurrentContext(), ScriptCompiler,
@@ -2409,7 +2409,7 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
       source->resource_column_offset, source->source_map_url,
       source->host_defined_options);
   i::MaybeHandle<i::SharedFunctionInfo> maybe_function_info =
-      i::Compiler::GetSharedFunctionInfoForScript(
+      i::Compiler::GetSharedFunctionInfoForScript( //qj: here go into compile and get SFI
           isolate, str, script_details, source->resource_options, nullptr,
           script_data, options, no_cache_reason, i::NOT_NATIVES_CODE);
   if (options == kConsumeCodeCache) {
@@ -2440,7 +2440,7 @@ MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
       "v8::ScriptCompiler::CompileModule must be used to compile modules");
   auto isolate = context->GetIsolate();
   auto maybe =
-      CompileUnboundInternal(isolate, source, options, no_cache_reason);
+      CompileUnboundInternal(isolate, source, options, no_cache_reason); //qj: here go to compile
   Local<UnboundScript> result;
   if (!maybe.ToLocal(&result)) return MaybeLocal<Script>();
   v8::Context::Scope scope(context);

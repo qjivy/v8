@@ -320,7 +320,7 @@ Address Code::raw_instruction_start() const {
   return field_address(kHeaderSize);
 }
 
-Address Code::InstructionStart() const {
+Address Code::InstructionStart() const { //qj
   return V8_UNLIKELY(is_off_heap_trampoline()) ? OffHeapInstructionStart()
                                                : raw_instruction_start();
 }
@@ -594,6 +594,12 @@ inline void Code::set_is_exception_caught(bool value) {
 
 inline bool Code::is_off_heap_trampoline() const {
   const uint32_t flags = RELAXED_READ_UINT32_FIELD(*this, kFlagsOffset);
+  #if 0
+  if(IsOffHeapTrampoline::decode(flags))
+  {
+  std::cout<<"is_off_heap_trampoline:"<<(bool)IsOffHeapTrampoline::decode(flags)<<std::endl;
+  }
+#endif
   return IsOffHeapTrampoline::decode(flags);
 }
 

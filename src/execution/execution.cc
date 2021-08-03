@@ -270,10 +270,12 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   // api callbacks can be called directly, unless we want to take the detour
   // through JS to set up a frame for break-at-entry.
   if (params.target->IsJSFunction()) {
+    std::cout<<"params.target is JSFunction"<<std::endl;
     Handle<JSFunction> function = Handle<JSFunction>::cast(params.target);
     if ((!params.is_construct || function->IsConstructor()) &&
         function->shared().IsApiFunction() &&
         !function->shared().BreakAtEntry()) {
+      std::cout<<"invoke1"<<std::endl;
       SaveAndSwitchContext save(isolate, function->context());
       DCHECK(function->context().global_object().IsJSGlobalObject());
 
@@ -298,6 +300,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
 
     // Set up a ScriptContext when running scripts that need it.
     if (function->shared().needs_script_context()) {
+      std::cout<<"invoke2"<<std::endl;
       Handle<Context> context;
       if (!NewScriptContext(isolate, function).ToHandle(&context)) {
         if (params.message_handling == Execution::MessageHandling::kReport) {
@@ -317,6 +320,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   VMState<JS> state(isolate);
   CHECK(AllowJavascriptExecution::IsAllowed(isolate));
   if (!ThrowOnJavascriptExecution::IsAllowed(isolate)) {
+    std::cout<<"invoke3"<<std::endl;
     isolate->ThrowIllegalOperation();
     if (params.message_handling == Execution::MessageHandling::kReport) {
       isolate->ReportPendingMessages();
@@ -329,8 +333,10 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   }
 
   if (params.execution_target == Execution::Target::kCallable) {
+    std::cout<<"invoke4"<<std::endl;
     Handle<Context> context = isolate->native_context();
     if (!context->script_execution_callback().IsUndefined(isolate)) {
+      std::cout<<"invoke5"<<std::endl;
       v8::Context::AbortScriptExecutionCallback callback =
           v8::ToCData<v8::Context::AbortScriptExecutionCallback>(
               context->script_execution_callback());
@@ -348,7 +354,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   Object value;
 
   Handle<Code> code =
-      JSEntry(isolate, params.execution_target, params.is_construct);
+      JSEntry(isolate, params.execution_target, params.is_construct); //qj: here the code is not releted to any script related thing
   {
     // Save and restore context around invocation and block the
     // allocation of handles without explicit handle scopes.

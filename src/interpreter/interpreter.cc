@@ -124,6 +124,7 @@ void Interpreter::SetBytecodeHandler(Bytecode bytecode,
   DCHECK(handler.is_off_heap_trampoline());
   DCHECK(handler.kind() == CodeKind::BYTECODE_HANDLER);
   size_t index = GetDispatchTableIndex(bytecode, operand_scale);
+//  std::cout<<"init dpt index: "<<index<<" address: "<<(void*)handler.InstructionStart()<<std::endl;
   dispatch_table_[index] = handler.InstructionStart();
 }
 
@@ -198,7 +199,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::ExecuteJobImpl() {
   base::Optional<ParkedScope> parked_scope;
   if (local_isolate_) parked_scope.emplace(local_isolate_);
 
-  generator()->GenerateBytecode(stack_limit());
+  generator()->GenerateBytecode(stack_limit()); //qj: here gen bytecode
 
   if (generator()->HasStackOverflow()) {
     return FAILED;
@@ -267,6 +268,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::DoFinalizeJobImpl(
     Handle<SharedFunctionInfo> shared_info, IsolateT* isolate) {
   Handle<BytecodeArray> bytecodes = compilation_info_.bytecode_array();
   if (bytecodes.is_null()) {
+    std::cout<<"DoFinalizeJobImpl: null bcs"<<std::endl;
     bytecodes = generator()->FinalizeBytecode(
         isolate, handle(Script::cast(shared_info->script()), isolate));
     if (generator()->HasStackOverflow()) {
@@ -360,7 +362,17 @@ void Interpreter::Initialize() {
                : Bytecodes::ToString(bytecode, operand_scale, "")) +
           "Handler";
       DCHECK_EQ(expected_name, builtin_name);
+      std::cout<<GetDispatchTableIndex(bytecode, operand_scale)<<":"<<bytecode<<" : "<<builtin_name<<":"<<expected_name<<":"<<operand_scale<<":"<<(void*)handler.InstructionStart()<<std::endl;
 #endif
+    }
+    else { 
+      std::string builtin_name(Builtins::name(builtin));
+      std::string expected_name =
+          (Bytecodes::IsShortStar(bytecode)
+               ? "ShortStar"
+               : Bytecodes::ToString(bytecode, operand_scale, "")) +
+          "Handler";
+      std::cout<<GetDispatchTableIndex(bytecode, operand_scale)<<":"<<bytecode<<" : "<<builtin_name<<":"<<expected_name<<":"<<operand_scale<<":"<<(void*)handler.InstructionStart()<<"::NoHandler"<<std::endl;
     }
 
     SetBytecodeHandler(bytecode, operand_scale, handler);
