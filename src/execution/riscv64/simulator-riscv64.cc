@@ -3587,7 +3587,7 @@ intptr_t Simulator::CallImpl(Address entry, int argument_count,
 
   if (::v8::internal::FLAG_trace_sim) {
     std::cout << "CallImpl: reg_arg_count = " << reg_arg_count << std::hex
-              << " entry-pc (JSEntry) = 0x" << entry << " a0 (Isolate) = 0x"
+              << " entry-pc (JSEntry) = 0x" << entry << " a0 (Isolate root) = 0x"
               << get_register(a0) << " a1 (orig_func/new_target) = 0x"
               << get_register(a1) << " a2 (func/target) = 0x"
               << get_register(a2) << " a3 (receiver) = 0x" << get_register(a3)
