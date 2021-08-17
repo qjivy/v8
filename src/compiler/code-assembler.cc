@@ -1072,6 +1072,7 @@ void CodeAssembler::TailCallRuntimeImpl(
   str <<"[ call_desc name: "<< call_descriptor->debug_name();
   Comment(str.str().c_str());
   Comment("QQ get ref in TailCallRuntimeImpl");
+  std::cout<<"QQ get ref in TailCallRuntimeImpl"<<std::endl;
   TNode<ExternalReference> ref =
       ExternalConstant(ExternalReference::Create(function));
 
@@ -1082,7 +1083,8 @@ void CodeAssembler::TailCallRuntimeImpl(
   inputs.Add(arity);
   inputs.Add(context);
   
-  Comment("QQ gert TailCallN");
+  Comment("QQ get TailCallN");
+  std::cout<<"QQ get TailCallN"<<std::endl;
   raw_assembler()->TailCallN(call_descriptor, inputs.size(), inputs.data());
 }
 

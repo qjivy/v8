@@ -1202,11 +1202,12 @@ class V8_EXPORT_PRIVATE CodeAssembler {
   template <class... TArgs>
   void TailCallBytecodeDispatch(const CallInterfaceDescriptor& descriptor,
                                 TNode<RawPtrT> target, TArgs... args);
-
+//qj
   template <class... TArgs>
   void TailCallStubThenBytecodeDispatch(
       const CallInterfaceDescriptor& descriptor, Node* target, Node* context,
       TArgs... args) {
+    std::cout<<"QQ TailCallStubThenBytecodeDispatch "<<std::endl;
     TailCallStubThenBytecodeDispatchImpl(descriptor, target, context,
                                          {args...});
   }

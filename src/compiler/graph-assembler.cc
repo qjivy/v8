@@ -271,6 +271,7 @@ void GraphAssembler::BasicBlockUpdater::AddGoto(BasicBlock* from,
 }
 
 void GraphAssembler::BasicBlockUpdater::AddTailCall(Node* node) {
+  std::cout<<"QQ AddTailCall"<<std::endl;
   DCHECK_EQ(node->opcode(), IrOpcode::kTailCall);
   DCHECK_NOT_NULL(current_block_);
 

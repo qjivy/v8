@@ -152,7 +152,7 @@ IGNITION_HANDLER(Star, InterpreterAssembler) {
 //
 // Even though this handler is declared as Star0, multiple entries in
 // the jump table point to this handler.
-IGNITION_HANDLER(Star0, InterpreterAssembler) {
+IGNITION_HANDLER(Star0, InterpreterAssembler) { //qj star0 handler is all star* handler
   TNode<Object> accumulator = GetAccumulator();
   TNode<WordT> opcode = LoadBytecode(BytecodeOffset());
   StoreRegisterForShortStar(accumulator, opcode);
@@ -1449,14 +1449,17 @@ IGNITION_HANDLER(CallUndefinedReceiver, InterpreterJSCallAssembler) {
 }
 
 IGNITION_HANDLER(CallUndefinedReceiver0, InterpreterJSCallAssembler) {
+  std::cout<<"Gen handler for CallUndefinedReceiver0" <<std::endl;
   JSCallN(0, ConvertReceiverMode::kNullOrUndefined);
 }
 
-IGNITION_HANDLER(CallUndefinedReceiver1, InterpreterJSCallAssembler) {
+IGNITION_HANDLER(CallUndefinedReceiver1, InterpreterJSCallAssembler) { 
+  std::cout<<"Gen handler for CallUndefinedReceiver1" <<std::endl;
   JSCallN(1, ConvertReceiverMode::kNullOrUndefined);
 }
 
 IGNITION_HANDLER(CallUndefinedReceiver2, InterpreterJSCallAssembler) {
+  std::cout<<"Gen handler for CallUndefinedReceiver2" <<std::endl;
   JSCallN(2, ConvertReceiverMode::kNullOrUndefined);
 }
 
@@ -1466,6 +1469,7 @@ IGNITION_HANDLER(CallUndefinedReceiver2, InterpreterJSCallAssembler) {
 // register |first_arg| and |arg_count| arguments in subsequent
 // registers.
 IGNITION_HANDLER(CallRuntime, InterpreterAssembler) {
+  std::cout<<"Gen handler for CallRuntime" <<std::endl;
   TNode<Uint32T> function_id = BytecodeOperandRuntimeId(0);
   RegListNodePair args = GetRegisterListAtOperandIndex(1);
   TNode<Context> context = GetContext();

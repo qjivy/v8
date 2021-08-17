@@ -300,6 +300,7 @@ void InterpreterAssembler::StoreRegister(TNode<Object> value,
 
 void InterpreterAssembler::StoreRegisterForShortStar(TNode<Object> value,
                                                      TNode<WordT> opcode) {
+  Print("StoreRegisterForShortStar");
   DCHECK(Bytecodes::IsShortStar(bytecode_));
   implicit_register_use_ =
       implicit_register_use_ | ImplicitRegisterUse::kWriteShortStar;
@@ -728,6 +729,7 @@ void InterpreterAssembler::CallEpilogue() {}
 void InterpreterAssembler::CallJSAndDispatch(
     TNode<Object> function, TNode<Context> context, const RegListNodePair& args,
     ConvertReceiverMode receiver_mode) {
+  Print("CallJSAndDispatch 0");
   DCHECK(Bytecodes::MakesCallAlongCriticalPath(bytecode_));
   DCHECK(Bytecodes::IsCallOrConstruct(bytecode_) ||
          bytecode_ == Bytecode::kInvokeIntrinsic);
@@ -761,19 +763,72 @@ void InterpreterAssembler::CallJSAndDispatch(TNode<Object> function,
                                              TNode<Word32T> arg_count,
                                              ConvertReceiverMode receiver_mode,
                                              TArgs... args) {
+  Print("CallJSAndDispatch not0");
+  std::cout<<"QQ CallJSAndDispatch"<<std::endl;
+  if(receiver_mode == ConvertReceiverMode::kNullOrUndefined)
+  {
+    std::cout<<"rv mode kNullOrUndefined"<<std::endl;
+  }
   DCHECK(Bytecodes::MakesCallAlongCriticalPath(bytecode_));
   DCHECK(Bytecodes::IsCallOrConstruct(bytecode_) ||
          bytecode_ == Bytecode::kInvokeIntrinsic);
   DCHECK_EQ(Bytecodes::GetReceiverMode(bytecode_), receiver_mode);
   Callable callable = CodeFactory::Call(isolate());
+/*
+qj here :
+0.  static ConvertReceiverMode GetReceiverMode(Bytecode bytecode) {
+    ((void) 0);
+
+    switch (bytecode) {
+      case Bytecode::kCallProperty:
+      case Bytecode::kCallProperty0:
+      case Bytecode::kCallProperty1:
+      case Bytecode::kCallProperty2:
+        return ConvertReceiverMode::kNotNullOrUndefined;
+      case Bytecode::kCallUndefinedReceiver:
+      case Bytecode::kCallUndefinedReceiver0:
+      case Bytecode::kCallUndefinedReceiver1:
+      case Bytecode::kCallUndefinedReceiver2:
+      case Bytecode::kCallJSRuntime:
+        return ConvertReceiverMode::kNullOrUndefined;
+      case Bytecode::kCallAnyReceiver:
+      case Bytecode::kConstruct:
+      case Bytecode::kCallWithSpread:
+      case Bytecode::kConstructWithSpread:
+      case Bytecode::kInvokeIntrinsic:
+        return ConvertReceiverMode::kAny;
+      default:
+        V8_Fatal("unreachable code");
+    }
+  }
+
+
+1.// static
+Callable CodeFactory::Call(Isolate* isolate, ConvertReceiverMode mode) {
+  return Callable(isolate->builtins()->Call(mode), CallTrampolineDescriptor{});
+}
+2.Handle<Code> Builtins::Call(ConvertReceiverMode mode) {
+  switch (mode) {
+    case ConvertReceiverMode::kNullOrUndefined:
+      return code_handle(Builtin::kCall_ReceiverIsNullOrUndefined);
+    case ConvertReceiverMode::kNotNullOrUndefined:
+      return code_handle(Builtin::kCall_ReceiverIsNotNullOrUndefined);
+    case ConvertReceiverMode::kAny:
+      return code_handle(Builtin::kCall_ReceiverIsAny);
+  }
+  UNREACHABLE();
+}
+*/
   TNode<Code> code_target = HeapConstant(callable.code());
 
   if (receiver_mode == ConvertReceiverMode::kNullOrUndefined) {
     // The first argument parameter (the receiver) is implied to be undefined.
+    Print("CallJSAndDispatch undefined receiver");
     TailCallStubThenBytecodeDispatch(callable.descriptor(), code_target,
                                      context, function, arg_count, args...,
                                      UndefinedConstant());
   } else {
+    Print("CallJSAndDispatch defined receiver");
     TailCallStubThenBytecodeDispatch(callable.descriptor(), code_target,
                                      context, function, arg_count, args...);
   }
@@ -784,15 +839,19 @@ void InterpreterAssembler::CallJSAndDispatch(TNode<Object> function,
 
 // Instantiate CallJSAndDispatch() for argument counts used by interpreter
 // generator.
+// qj:0
 template V8_EXPORT_PRIVATE void InterpreterAssembler::CallJSAndDispatch(
     TNode<Object> function, TNode<Context> context, TNode<Word32T> arg_count,
     ConvertReceiverMode receiver_mode);
+// qj:1 
 template V8_EXPORT_PRIVATE void InterpreterAssembler::CallJSAndDispatch(
     TNode<Object> function, TNode<Context> context, TNode<Word32T> arg_count,
     ConvertReceiverMode receiver_mode, TNode<Object>);
+// qj:2
 template V8_EXPORT_PRIVATE void InterpreterAssembler::CallJSAndDispatch(
     TNode<Object> function, TNode<Context> context, TNode<Word32T> arg_count,
     ConvertReceiverMode receiver_mode, TNode<Object>, TNode<Object>);
+// qj:3
 template V8_EXPORT_PRIVATE void InterpreterAssembler::CallJSAndDispatch(
     TNode<Object> function, TNode<Context> context, TNode<Word32T> arg_count,
     ConvertReceiverMode receiver_mode, TNode<Object>, TNode<Object>,
@@ -1189,7 +1248,7 @@ void InterpreterAssembler::InlineShortStar(TNode<WordT> target_bytecode) {
 
   DCHECK_EQ(implicit_register_use_,
             Bytecodes::GetImplicitRegisterUse(bytecode_));
-
+  Print("QQ Advance from InlineShortStar");
   Advance();
   bytecode_ = previous_bytecode;
   implicit_register_use_ = previous_acc_use;
@@ -1200,6 +1259,7 @@ void InterpreterAssembler::Dispatch() {
 //  Print(bytecode_);
   Comment("========= Dispatch");
   DCHECK_IMPLIES(Bytecodes::MakesCallAlongCriticalPath(bytecode_), made_call_);
+  Print("QQ Advance in Dispatch");
   TNode<IntPtrT> target_offset = Advance();
   Comment("========= Dispatch1");
   TNode<WordT> target_bytecode = LoadBytecode(target_offset);
@@ -1215,7 +1275,7 @@ void InterpreterAssembler::DispatchToBytecodeWithOptionalStarLookahead(
     Print("QQ with StarLookahead");
     StarDispatchLookahead(target_bytecode);
   }
-  Comment("QQ DispatchToBytecode");
+  Comment("QQ DispatchToBytecode no lookahead");
   DispatchToBytecode(target_bytecode, BytecodeOffset());
 }
 
@@ -1254,6 +1314,7 @@ void InterpreterAssembler::DispatchWide(OperandScale operand_scale) {
   //   Indices 256-511 correspond to bytecodes with operand_scale == 1
   //   Indices 512-767 correspond to bytecodes with operand_scale == 2
   DCHECK_IMPLIES(Bytecodes::MakesCallAlongCriticalPath(bytecode_), made_call_);
+  Print("QQ DispatchWide Advance1");
   TNode<IntPtrT> next_bytecode_offset = Advance(1);
   TNode<WordT> next_bytecode = LoadBytecode(next_bytecode_offset);
 

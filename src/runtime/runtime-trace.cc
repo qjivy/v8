@@ -46,7 +46,7 @@ void PrintRegisters(UnoptimizedFrame* frame, std::ostream& os, bool is_input,
   static const char* kInputColourCode = "\033[0;36m";
   static const char* kOutputColourCode = "\033[0;35m";
   static const char* kNormalColourCode = "\033[0;m";
-  const char* kArrowDirection = is_input ? " -> " : " <- ";
+  const char* kArrowDirection = is_input ? " --> " : " <-- ";
   if (FLAG_log_colour) {
     os << (is_input ? kInputColourCode : kOutputColourCode);
   }
@@ -127,9 +127,9 @@ RUNTIME_FUNCTION(Runtime_TraceUnoptimizedBytecodeEntry) {
     const uint8_t* bytecode_address = base_address + offset;
 
     if (frame->is_baseline()) {
-      os << "B-> ";
+      os << "TraceEntry B-> ";
     } else {
-      os << " -> ";
+      os << "TraceEntry-> ";
     }
     os << static_cast<const void*>(bytecode_address) << " @ " << std::setw(4)
        << offset << " : ";
@@ -176,7 +176,7 @@ RUNTIME_FUNCTION(Runtime_TraceUnoptimizedBytecodeExit) {
           interpreter::OperandScale::kSingle ||
       offset > bytecode_iterator.current_offset()) {
     StdoutStream os;
-
+    os <<"TraceExit "<<std::endl;
     // Print all output registers and accumulator.
     PrintRegisters(frame, os, false, bytecode_iterator, accumulator);
     os << std::flush;

@@ -273,6 +273,7 @@ void Schedule::AddSwitch(BasicBlock* block, Node* sw, BasicBlock** succ_blocks,
 }
 
 void Schedule::AddTailCall(BasicBlock* block, Node* input) {
+  std::cout<<"QQ Schedule add tailcall"<<std::endl;
   CHECK_EQ(BasicBlock::kNone, block->control());
   block->set_control(BasicBlock::kTailCall);
   SetControlInput(block, input);
