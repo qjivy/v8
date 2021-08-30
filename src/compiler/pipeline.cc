@@ -3092,7 +3092,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
     data.set_profile_data(profile_data);
   }
 
-  pipeline.ComputeScheduledGraph();
+  pipeline.ComputeScheduledGraph(); //qj here for code stub compiler
   DCHECK_NOT_NULL(data.schedule());
 
   // First run code generation on a copy of the pipeline, in order to be able to

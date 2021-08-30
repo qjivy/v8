@@ -332,10 +332,10 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
     return isolate->factory()->undefined_value();
   }
 
-  if (params.execution_target == Execution::Target::kCallable) {
+  if (params.execution_target == Execution::Target::kCallable) {//qj here
     std::cout<<"invoke4"<<std::endl;
     Handle<Context> context = isolate->native_context();
-    if (!context->script_execution_callback().IsUndefined(isolate)) {
+    if (!context->script_execution_callback().IsUndefined(isolate)) { //qj not here
       std::cout<<"invoke5"<<std::endl;
       v8::Context::AbortScriptExecutionCallback callback =
           v8::ToCData<v8::Context::AbortScriptExecutionCallback>(
@@ -380,7 +380,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       Address** argv = reinterpret_cast<Address**>(params.argv);
       RCS_SCOPE(isolate, RuntimeCallCounterId::kJS_Execution);
       value = Object(stub_entry.Call(isolate->isolate_data()->isolate_root(),
-                                     orig_func, func, recv, params.argc, argv));
+                                     orig_func, func, recv, params.argc, argv)); //qj here call out
     } else {
       DCHECK_EQ(Execution::Target::kRunMicrotasks, params.execution_target);
 
@@ -472,7 +472,7 @@ MaybeHandle<Object> InvokeWithTryCatch(Isolate* isolate,
 // static
 MaybeHandle<Object> Execution::Call(Isolate* isolate, Handle<Object> callable,
                                     Handle<Object> receiver, int argc,
-                                    Handle<Object> argv[]) {
+                                    Handle<Object> argv[]) { //qj
   return Invoke(isolate, InvokeParams::SetUpForCall(isolate, callable, receiver,
                                                     argc, argv));
 }

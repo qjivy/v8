@@ -1959,7 +1959,7 @@ Local<Value> UnboundScript::GetSourceMappingURL() {
   }
 }
 
-MaybeLocal<Value> Script::Run(Local<Context> context) {
+MaybeLocal<Value> Script::Run(Local<Context> context) { //qj: run a compiled script
   auto isolate = reinterpret_cast<i::Isolate*>(context->GetIsolate());
   TRACE_EVENT_CALL_STATS_SCOPED(isolate, "v8", "V8.Execute");
   ENTER_V8(isolate, context, Script, Run, MaybeLocal<Value>(),
@@ -1968,7 +1968,7 @@ MaybeLocal<Value> Script::Run(Local<Context> context) {
   i::AggregatingHistogramTimerScope histogram_timer(
       isolate->counters()->compile_lazy());
   i::TimerEventScope<i::TimerEventExecute> timer_scope(isolate);
-  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this));
+  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this));//a script local to a JSFunction by OpenHandle
 
   // TODO(crbug.com/1193459): remove once ablation study is completed
   base::ElapsedTimer timer;
@@ -1989,10 +1989,10 @@ MaybeLocal<Value> Script::Run(Local<Context> context) {
     }
   }
 
-  i::Handle<i::Object> receiver = isolate->global_proxy();
+  i::Handle<i::Object> receiver = isolate->global_proxy();//qj: here for a script reciever is global_proxy
   Local<Value> result;
   has_pending_exception = !ToLocal<Value>(
-      i::Execution::Call(isolate, fun, receiver, 0, nullptr), &result);
+      i::Execution::Call(isolate, fun, receiver, 0, nullptr), &result);//qj:fun is a JSFunction handle
 
   if (i::FLAG_script_delay_fraction > 0.0) {
     delta = v8::base::TimeDelta::FromMillisecondsD(
@@ -2434,13 +2434,13 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundScript(
 MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
                                            Source* source,
                                            CompileOptions options,
-                                           NoCacheReason no_cache_reason) {
+                                           NoCacheReason no_cache_reason) { //qj compiler3
   Utils::ApiCheck(
       !source->GetResourceOptions().IsModule(), "v8::ScriptCompiler::Compile",
       "v8::ScriptCompiler::CompileModule must be used to compile modules");
   auto isolate = context->GetIsolate();
   auto maybe =
-      CompileUnboundInternal(isolate, source, options, no_cache_reason); //qj: here go to compile
+      CompileUnboundInternal(isolate, source, options, no_cache_reason); //qj: go to compile4
   Local<UnboundScript> result;
   if (!maybe.ToLocal(&result)) return MaybeLocal<Script>();
   v8::Context::Scope scope(context);

@@ -603,8 +603,8 @@ MaybeLocal<Script> Compile(Local<Context> context,
 template <>
 MaybeLocal<Module> Compile(Local<Context> context,
                            ScriptCompiler::Source* source,
-                           ScriptCompiler::CompileOptions options) {
-  return ScriptCompiler::CompileModule(context->GetIsolate(), source, options);
+                           ScriptCompiler::CompileOptions options) { //qj compile2
+  return ScriptCompiler::CompileModule(context->GetIsolate(), source, options); //qj goto compile3
 }
 
 }  // namespace
@@ -612,7 +612,7 @@ MaybeLocal<Module> Compile(Local<Context> context,
 template <class T>
 MaybeLocal<T> Shell::CompileString(Isolate* isolate, Local<Context> context,
                                    Local<String> source,
-                                   const ScriptOrigin& origin) {
+                                   const ScriptOrigin& origin) { //qj compile-1
   if (options.streaming_compile) {
     v8::ScriptCompiler::StreamedSource streamed_source(
         std::make_unique<DummySourceStream>(source),
@@ -632,7 +632,7 @@ MaybeLocal<T> Shell::CompileString(Isolate* isolate, Local<Context> context,
   }
   ScriptCompiler::Source script_source(source, origin, cached_code);
   MaybeLocal<T> result =
-      Compile<T>(context, &script_source, //qj: here go compiler
+      Compile<T>(context, &script_source, //qj goto compier-2
                  cached_code ? ScriptCompiler::kConsumeCodeCache
                              : ScriptCompiler::kNoCompileOptions);
   if (cached_code) CHECK(!cached_code->rejected);
@@ -3827,7 +3827,7 @@ bool SourceGroup::Execute(Isolate* isolate) {
     Shell::update_script_size(source->Length());
     if (!Shell::ExecuteString(isolate, source, file_name, Shell::kNoPrintResult,
                               Shell::kReportExceptions,
-                              Shell::kProcessMessageQueue)) {
+                              Shell::kProcessMessageQueue)) { //qj
       success = false;
       break;
     }
@@ -4465,7 +4465,7 @@ int Shell::RunMain(Isolate* isolate, bool last_run) {
       Context::Scope cscope(context);
       InspectorClient inspector_client(context, options.enable_inspector);
       PerIsolateData::RealmScope realm_scope(PerIsolateData::Get(isolate));
-      if (!options.isolate_sources[0].Execute(isolate)) success = false;
+      if (!options.isolate_sources[0].Execute(isolate)) success = false; //qj
       if (!CompleteMessageLoop(isolate)) success = false;
     }
     if (!use_existing_context) {
