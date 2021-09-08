@@ -333,6 +333,7 @@ void Interpreter::ForEachBytecode(
 
   for (OperandScale operand_scale : kOperandScales) {
     for (int i = 0; i < Bytecodes::kBytecodeCount; i++) {
+      std::cout<<"in functor i:"<<i<<" name:"<<Bytecodes::ToString(Bytecodes::FromByte(i))<<std::endl;
       f(Bytecodes::FromByte(i), operand_scale);
     }
   }
