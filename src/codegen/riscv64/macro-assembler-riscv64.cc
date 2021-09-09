@@ -3671,9 +3671,12 @@ void MacroAssembler::InvokeFunctionCode(Register function, Register new_target,
   // We call indirectly through the code field in the function to
   // allow recompilation to take effect without changing any of the
   // call sites.
+  RecordComment("[MacroAssembler::regular invoke ");
   Register code = kJavaScriptCallCodeStartRegister;
   LoadTaggedPointerField(code,
                          FieldMemOperand(function, JSFunction::kCodeOffset));
+
+  RecordComment("[MacroAssembler:: now a2 has code ");
   switch (type) {
     case InvokeType::kCall:
       CallCodeObject(code);
@@ -4665,6 +4668,7 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
   //   targets are usually generated code and not builtin Code objects.
 
   if (options().isolate_independent_code) {
+  RecordComment("[MacroAssembler:: LoadCodeObjectEntry IIC");
     DCHECK(root_array_available());
     Label if_code_is_off_heap, out;
 
@@ -4697,6 +4701,7 @@ void TurboAssembler::LoadCodeObjectEntry(Register destination,
 
     bind(&out);
   } else {
+  RecordComment("[MacroAssembler:: LoadCodeObjectEntry noIIC");
     Add64(destination, code_object, Code::kHeaderSize - kHeapObjectTag);
   }
 }
@@ -4707,6 +4712,7 @@ void TurboAssembler::CallCodeObject(Register code_object) {
 }
 
 void TurboAssembler::JumpCodeObject(Register code_object, JumpMode jump_mode) {
+  RecordComment("[MacroAssembler:: JumpCodeObject");
   DCHECK_EQ(JumpMode::kJump, jump_mode);
   LoadCodeObjectEntry(code_object, code_object);
   Jump(code_object);

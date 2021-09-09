@@ -1892,7 +1892,7 @@ Local<Script> UnboundScript::BindToCurrentContext() {
   i::Handle<i::JSFunction> function =
       i::Factory::JSFunctionBuilder{isolate, function_info,
                                     isolate->native_context()}
-          .Build();
+          .Build(); //qj: here build a JS function
   return ToApiHandle<Script>(function);
 }
 
@@ -1968,7 +1968,7 @@ MaybeLocal<Value> Script::Run(Local<Context> context) { //qj: run a compiled scr
   i::AggregatingHistogramTimerScope histogram_timer(
       isolate->counters()->compile_lazy());
   i::TimerEventScope<i::TimerEventExecute> timer_scope(isolate);
-  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this));//a script local to a JSFunction by OpenHandle
+  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this));//qj:a script local to a JSFunction by OpenHandle
 
   // TODO(crbug.com/1193459): remove once ablation study is completed
   base::ElapsedTimer timer;
@@ -2444,7 +2444,7 @@ MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
   Local<UnboundScript> result;
   if (!maybe.ToLocal(&result)) return MaybeLocal<Script>();
   v8::Context::Scope scope(context);
-  return result->BindToCurrentContext();
+  return result->BindToCurrentContext(); //qj: set GetCode
 }
 
 MaybeLocal<Module> ScriptCompiler::CompileModule(

@@ -80,6 +80,7 @@ Code SharedFunctionInfo::GetCode() const {
     return isolate->builtins()->code(builtin_id());
   }
   if (data.IsBytecodeArray()) {
+    std::cout<<"GetCode to InterpreterEntryTrampoline"<<std::endl;
     // Having a bytecode array means we are a compiled, interpreted function.
     DCHECK(HasBytecodeArray());
     return isolate->builtins()->code(Builtin::kInterpreterEntryTrampoline);

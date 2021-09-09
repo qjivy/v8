@@ -295,6 +295,7 @@ bool Builtins::IsIsolateIndependentBuiltin(const Code code) {
 void Builtins::InitializeBuiltinEntryTable(Isolate* isolate) {
   EmbeddedData d = EmbeddedData::FromBlob(isolate);
   Address* builtin_entry_table = isolate->builtin_entry_table();
+  std::cout<<"address of builtin_entry_table is: "<<builtin_entry_table<<std::endl;
   for (Builtin builtin = Builtins::kFirst; builtin <= Builtins::kLast;
        ++builtin) {
     // TODO(jgruber,chromium:1020986): Remove the CHECK once the linked issue is
@@ -302,6 +303,7 @@ void Builtins::InitializeBuiltinEntryTable(Isolate* isolate) {
     CHECK(
         Builtins::IsBuiltinId(isolate->heap()->builtin(builtin).builtin_id()));
     DCHECK(isolate->heap()->builtin(builtin).is_off_heap_trampoline());
+    std::cout<<Builtins::name(builtin)<<"["<<static_cast<int>(builtin)<<"]: address: "<<(Address*)d.InstructionStartOfBuiltin(builtin)<<" kind: "<<Builtins::KindNameOf(builtin)<<"table-add:"<<(Address*)&builtin_entry_table[static_cast<int>(builtin)]<<std::endl;
     builtin_entry_table[static_cast<int>(builtin)] =
         d.InstructionStartOfBuiltin(builtin);
   }

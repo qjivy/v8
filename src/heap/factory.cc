@@ -3774,7 +3774,7 @@ Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
   PrepareMap();
   PrepareFeedbackCell();
 
-  Handle<Code> code = handle(sfi_->GetCode(), isolate_);
+  Handle<Code> code = handle(sfi_->GetCode(), isolate_); //qj: here GetCode with InterpreterEntryTrampoline
   Handle<JSFunction> result = BuildRaw(code);
 
   if (code->kind() == CodeKind::BASELINE) {
