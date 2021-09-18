@@ -246,6 +246,7 @@ MaybeHandle<Context> NewScriptContext(Isolate* isolate,
   return result;
 }
 
+//qj Invoke
 V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
                                                  const InvokeParams& params) {
   RCS_SCOPE(isolate, RuntimeCallCounterId::kInvoke);
@@ -373,9 +374,10 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       // clang-format on
       JSEntryFunction stub_entry =
           JSEntryFunction::FromAddress(isolate, code->InstructionStart());
-
+      std::cout<<"in Invoke code->InstructionStart(): "<<(Address)code->InstructionStart()<<std::endl; //qj: JSEntry Builtin
       Address orig_func = params.new_target->ptr();
       Address func = params.target->ptr();
+      std::cout<<"in Invoke func: "<<(Address)func<<std::endl;
       Address recv = params.receiver->ptr();
       Address** argv = reinterpret_cast<Address**>(params.argv);
       RCS_SCOPE(isolate, RuntimeCallCounterId::kJS_Execution);
