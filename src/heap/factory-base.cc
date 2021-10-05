@@ -551,7 +551,7 @@ MaybeHandle<SeqOneByteString> FactoryBase<Impl>::NewRawOneByteString(
   DCHECK_GE(SeqOneByteString::kMaxSize, size);
 
   SeqOneByteString string = SeqOneByteString::cast(AllocateRawWithImmortalMap(
-      size, allocation, read_only_roots().one_byte_string_map()));
+      size, allocation, read_only_roots().one_byte_string_map())); //qj
   DisallowGarbageCollection no_gc;
   string.set_length(length);
   string.set_raw_hash_field(String::kEmptyHashField);

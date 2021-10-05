@@ -113,6 +113,7 @@ void LazyBuiltinsAssembler::MaybeTailCallOptimizedCodeSlot(
 }
 
 void LazyBuiltinsAssembler::CompileLazy(TNode<JSFunction> function) {
+  Print("HH: Enter CompileLazy");
   // First lookup code, maybe we don't need to compile!
   Label compile_function(this, Label::kDeferred);
 

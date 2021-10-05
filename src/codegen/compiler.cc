@@ -747,6 +747,7 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
   functions_to_compile.push_back(parse_info->literal());
 
   while (!functions_to_compile.empty()) {
+     std::cout<<"functions to compile"<<std::endl;
     FunctionLiteral* literal = functions_to_compile.back();
     functions_to_compile.pop_back();
     Handle<SharedFunctionInfo> shared_info =
@@ -1369,7 +1370,7 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
   FinalizeUnoptimizedCompilationDataList
       finalize_unoptimized_compilation_data_list;
 
-  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs( //qj: here Finalize job? Finalize what
+  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs( //qj: here Finalize job? Finalize what //non-toplevl part
           isolate, shared_info, script, parse_info, isolate->allocator(),
           is_compiled_scope, &finalize_unoptimized_compilation_data_list,
           nullptr)) { //qj: here finalize
@@ -2003,7 +2004,7 @@ bool Compiler::CompileBaseline(Isolate* isolate, Handle<JSFunction> function,
 }
 
 // static
-MaybeHandle<SharedFunctionInfo> Compiler::CompileToplevel(
+MaybeHandle<SharedFunctionInfo> Compiler::CompileToplevel( //qj: here outter API
     ParseInfo* parse_info, Handle<Script> script, Isolate* isolate,
     IsCompiledScope* is_compiled_scope) {
   return v8::internal::CompileToplevel(parse_info, script, kNullMaybeHandle,

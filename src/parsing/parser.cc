@@ -638,7 +638,7 @@ FunctionLiteral* Parser::DoParseProgram(Isolate* isolate, ParseInfo* info) {
       // Don't count the mode in the use counters--give the program a chance
       // to enable script-wide strict mode below.
       this->scope()->SetLanguageMode(info->language_mode());
-      ParseStatementList(&body, Token::EOS);
+      ParseStatementList(&body, Token::EOS);//qj here statement
     }
 
     // The parser will peek but not consume EOS.  Our scope logically goes all
