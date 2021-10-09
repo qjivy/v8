@@ -14,6 +14,7 @@
 #include "src/handles/handles.h"
 #include "src/objects/feedback-cell.h"
 #include "src/zone/zone.h"
+#include "src/compiler/opcodes.h"
 
 namespace v8 {
 namespace internal {
@@ -199,7 +200,8 @@ class Operator1 : public Operator {
   }
 
   void PrintToImpl(std::ostream& os, PrintVerbosity verbose) const override {
-    os << mnemonic();
+  //  os << mnemonic();
+  os << IrOpcode::Mnemonic(opcode());
     PrintParameter(os, verbose);
   }
 

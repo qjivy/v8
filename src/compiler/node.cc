@@ -366,7 +366,7 @@ void Node::Print(std::ostream& os, int depth) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Node& n) {
-  os << n.id() << ": " << *n.op();
+  os << n.id() << ": " << IrOpcode::Mnemonic(n.opcode());
   if (n.InputCount() > 0) {
     os << "(";
     for (int i = 0; i < n.InputCount(); ++i) {

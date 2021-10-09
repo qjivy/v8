@@ -951,7 +951,7 @@ bool PrepareJobWithHandleScope(OptimizedCompilationJob* job, Isolate* isolate,
   CompilationHandleScope compilation(isolate, compilation_info);
   CanonicalHandleScope canonical(isolate, compilation_info);
   compilation_info->ReopenHandlesInNewHandleScope(isolate);
-  return job->PrepareJob(isolate) == CompilationJob::SUCCEEDED;
+  return job->PrepareJob(isolate) == CompilationJob::SUCCEEDED; //qj: call TF from here Prepare
 }
 
 bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
@@ -961,7 +961,7 @@ bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
                "V8.OptimizeNonConcurrent");
 
-  if (!PrepareJobWithHandleScope(job, isolate, compilation_info)) {
+  if (!PrepareJobWithHandleScope(job, isolate, compilation_info)) { //qj: TF called here by "Prepare"
     CompilerTracer::TraceAbortedJob(isolate, compilation_info);
     return false;
   }
@@ -970,14 +970,14 @@ bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
     // Park main thread here to be in the same state as background threads.
     ParkedScope parked_scope(isolate->main_thread_local_isolate());
     if (job->ExecuteJob(isolate->counters()->runtime_call_stats(),
-                        isolate->main_thread_local_isolate())) {
+                        isolate->main_thread_local_isolate())) { //qj: here ExecuteJob
       UnparkedScope unparked_scope(isolate->main_thread_local_isolate());
       CompilerTracer::TraceAbortedJob(isolate, compilation_info);
       return false;
     }
   }
 
-  if (job->FinalizeJob(isolate) != CompilationJob::SUCCEEDED) {
+  if (job->FinalizeJob(isolate) != CompilationJob::SUCCEEDED) { //qj: here Finalize
     CompilerTracer::TraceAbortedJob(isolate, compilation_info);
     return false;
   }
@@ -1154,11 +1154,11 @@ MaybeHandle<Code> GetOptimizedCode(
   if (mode == ConcurrencyMode::kConcurrent) {
     if (GetOptimizedCodeLater(std::move(job), isolate, compilation_info,
                               code_kind, function)) {
-      return ContinuationForConcurrentOptimization(isolate, function);
+      return ContinuationForConcurrentOptimization(isolate, function); //qj: what if concurrent
     }
   } else {
     DCHECK_EQ(mode, ConcurrencyMode::kNotConcurrent);
-    if (GetOptimizedCodeNow(job.get(), isolate, compilation_info)) {
+    if (GetOptimizedCodeNow(job.get(), isolate, compilation_info)) { //qj: what of non concurrent
       return compilation_info->code();
     }
   }
@@ -2056,7 +2056,7 @@ bool Compiler::FinalizeBackgroundCompileTask(
 
 // static
 bool Compiler::CompileOptimized(Isolate* isolate, Handle<JSFunction> function,
-                                ConcurrencyMode mode, CodeKind code_kind) {
+                                ConcurrencyMode mode, CodeKind code_kind) { //qj:here come from runtime func and goto JIT compile
   DCHECK(CodeKindIsOptimizedJSFunction(code_kind));
   DCHECK(AllowCompilation::IsAllowed(isolate));
 
@@ -2069,7 +2069,7 @@ bool Compiler::CompileOptimized(Isolate* isolate, Handle<JSFunction> function,
   }
 
   Handle<Code> code;
-  if (!GetOptimizedCode(isolate, function, mode, code_kind).ToHandle(&code)) {
+  if (!GetOptimizedCode(isolate, function, mode, code_kind).ToHandle(&code)) { //qj: call
     // Optimization failed, get the existing code. We could have optimized code
     // from a lower tier here. Unoptimized code must exist already if we are
     // optimizing.

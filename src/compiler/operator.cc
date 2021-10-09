@@ -43,7 +43,11 @@ std::ostream& operator<<(std::ostream& os, const Operator& op) {
 }
 
 void Operator::PrintToImpl(std::ostream& os, PrintVerbosity verbose) const {
-  os << mnemonic();
+  //os << mnemonic();
+  //os << IrOpcode::Mnemonic(opcode());
+  //IrOpcode::Value op = static_cast<int>(opcode());
+  //os << IrOpcode::Mnemonic(reinterpret_cast<uint32_t>(opcode()));
+  os << IrOpcode::Mnemonic(opcode());
 }
 
 void Operator::PrintPropsTo(std::ostream& os) const {

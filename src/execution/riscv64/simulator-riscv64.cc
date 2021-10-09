@@ -2975,7 +2975,7 @@ void Simulator::DecodeRVIType() {
       break;
     }
     case RO_ECALL: {                   // RO_EBREAK
-      if (instr_.Imm12Value() == 0) {  // ECALL
+      if (instr_.Imm12Value() == 0) {  // ECALL //qj: here call runtime func
         SoftwareInterrupt();
       } else if (instr_.Imm12Value() == 1) {  // EBREAK
         SoftwareInterrupt();

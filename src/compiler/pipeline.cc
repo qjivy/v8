@@ -1218,7 +1218,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl(
   pipeline_.Serialize();
 
   if (!data_.broker()->is_concurrent_inlining()) {
-    if (!pipeline_.CreateGraph()) {
+    if (!pipeline_.CreateGraph()) { //qj: here first GreatGraph
       CHECK(!isolate->has_pending_exception());
       return AbortOptimization(BailoutReason::kGraphBuildingFailed);
     }
@@ -1264,6 +1264,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::FinalizeJobImpl(
     Isolate* isolate) {
   // Ensure that the RuntimeCallStats table of main thread is available for
   // phases happening during PrepareJob.
+  std::cout<<"TF PP FinalizeJobImpl"<<std::endl;
   PipelineJobScope scope(&data_, isolate->counters()->runtime_call_stats());
   RCS_SCOPE(isolate, RuntimeCallCounterId::kOptimizeFinalizePipelineJob);
   MaybeHandle<Code> maybe_code = pipeline_.FinalizeCode();

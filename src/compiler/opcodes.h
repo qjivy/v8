@@ -1006,6 +1006,1002 @@
   CONTROL_OP_LIST(V)   \
   VALUE_OP_LIST(V)
 
+
+#define CONTROL_OP_LIST_N(V)           \
+  V(Start_control)                           \
+  V(Loop_control)                            \
+  V(Branch_control)                          \
+  V(Switch_control)                          \
+  V(IfTrue_control)                          \
+  V(IfFalse_control)                         \
+  V(IfSuccess_control)                       \
+  V(IfException_control)                     \
+  V(IfValue_control)                         \
+  V(IfDefault_control)                       \
+  V(Merge_control)                           \
+  V(Deoptimize_control)                      \
+  V(DeoptimizeIf_control)                    \
+  V(DeoptimizeUnless_control)                \
+  V(DynamicCheckMapsWithDeoptUnless_control) \
+  V(TrapIf_control)                          \
+  V(TrapUnless_control)                      \
+  V(Return_control)                          \
+  V(TailCall_control)                        \
+  V(Terminate_control)                       \
+  V(Throw_control)                           \
+  V(End_control)
+
+// Opcodes for constant operators.
+#define CONSTANT_OP_LIST_N(V)   \
+  V(Int32Constant_common_constant)            \
+  V(Int64Constant_common_constant)            \
+  V(TaggedIndexConstant_common_constant)      \
+  V(Float32Constant_common_constant)          \
+  V(Float64Constant_common_constant)          \
+  V(ExternalConstant_common_constant)         \
+  V(NumberConstant_common_constant)           \
+  V(PointerConstant_common_constant)          \
+  V(HeapConstant_common_constant)             \
+  V(CompressedHeapConstant_common_constant)   \
+  V(RelocatableInt32Constant_common_constant) \
+  V(RelocatableInt64Constant_common_constant)
+
+#define INNER_OP_LIST_N(V)    \
+  V(Select_common_innner)                 \
+  V(Phi_common_innner)                    \
+  V(EffectPhi_common_innner)              \
+  V(InductionVariablePhi_common_innner)   \
+  V(Checkpoint_common_innner)             \
+  V(BeginRegion_common_innner)            \
+  V(FinishRegion_common_innner)           \
+  V(FrameState_common_innner)             \
+  V(StateValues_common_innner)            \
+  V(TypedStateValues_common_innner)       \
+  V(ArgumentsElementsState_common_innner) \
+  V(ArgumentsLengthState_common_innner)   \
+  V(ObjectState_common_innner)            \
+  V(ObjectId_common_innner)               \
+  V(TypedObjectState_common_innner)       \
+  V(Call_common_innner)                   \
+  V(Parameter_common_innner)              \
+  V(OsrValue_common_innner)               \
+  V(LoopExit_common_innner)               \
+  V(LoopExitValue_common_innner)          \
+  V(LoopExitEffect_common_innner)         \
+  V(Projection_common_innner)             \
+  V(Retain_common_innner)                 \
+  V(MapGuard_common_innner)               \
+  V(FoldConstant_common_innner)           \
+  V(TypeGuard_common_innner)
+
+#define COMMON_OP_LIST_N(V) \
+  CONSTANT_OP_LIST_N(V)     \
+  INNER_OP_LIST_N(V)        \
+  V(Unreachable_common_tail)          \
+  V(DeadValue_common_tail)            \
+  V(Dead_common_tail)                 \
+  V(StaticAssert_common_tail)
+
+// Opcodes for JavaScript operators.
+// Arguments are JSName (the name with a 'JS' prefix), and Name.
+#define JS_COMPARE_BINOP_LIST_N(V)        \
+  V(JSEqual_js_compare_binop, Equal)                     \
+  V(JSStrictEqual_js_compare_binop, StrictEqual)         \
+  V(JSLessThan_js_compare_binop, LessThan)               \
+  V(JSGreaterThan_js_compare_binop, GreaterThan)         \
+  V(JSLessThanOrEqual_js_compare_binop, LessThanOrEqual) \
+  V(JSGreaterThanOrEqual_js_compare_binop, GreaterThanOrEqual)
+
+#define JS_BITWISE_BINOP_LIST_N(V) \
+  V(JSBitwiseOr_js_bitwise_binop, BitwiseOr)      \
+  V(JSBitwiseXor_js_bitwise_binop, BitwiseXor)    \
+  V(JSBitwiseAnd_js_bitwise_binop, BitwiseAnd)    \
+  V(JSShiftLeft_js_bitwise_binop, ShiftLeft)      \
+  V(JSShiftRight_js_bitwise_binop, ShiftRight)    \
+  V(JSShiftRightLogical_js_bitwise_binop, ShiftRightLogical)
+
+#define JS_ARITH_BINOP_LIST_N(V) \
+  V(JSAdd_js_arith_binop, Add)                \
+  V(JSSubtract_js_arith_binop, Subtract)      \
+  V(JSMultiply_js_arith_binop, Multiply)      \
+  V(JSDivide_js_arith_binop, Divide)          \
+  V(JSModulus_js_arith_binop, Modulus)        \
+  V(JSExponentiate_js_arith_binop, Exponentiate)
+
+#define JS_SIMPLE_BINOP_LIST_N(V) \
+  JS_COMPARE_BINOP_LIST_N(V)      \
+  JS_BITWISE_BINOP_LIST_N(V)      \
+  JS_ARITH_BINOP_LIST_N(V)        \
+  V(JSHasInPrototypeChain)      \
+  V(JSInstanceOf)               \
+  V(JSOrdinaryHasInstance)
+
+#define JS_CONVERSION_UNOP_LIST_N(V) \
+  V(JSToLength_js_conversion_unop)                    \
+  V(JSToName_js_conversion_unop)                      \
+  V(JSToNumber_js_conversion_unop)                    \
+  V(JSToNumberConvertBigInt_js_conversion_unop)       \
+  V(JSToNumeric_js_conversion_unop)                   \
+  V(JSToObject_js_conversion_unop)                    \
+  V(JSToString_js_conversion_unop)                    \
+  V(JSParseInt_js_conversion_unop)
+
+#define JS_BITWISE_UNOP_LIST_N(V) \
+  V(JSBitwiseNot_js_bitwise_unop, BitwiseNot)   \
+  V(JSNegate_js_bitwise_unop, Negate)
+
+#define JS_ARITH_UNOP_LIST_N(V) \
+  V(JSDecrement_js_arith_unop, Decrement)   \
+  V(JSIncrement_js_arith_unop, Increment)
+
+#define JS_SIMPLE_UNOP_LIST_N(V) \
+  JS_ARITH_UNOP_LIST_N(V)        \
+  JS_BITWISE_UNOP_LIST_N(V)      \
+  JS_CONVERSION_UNOP_LIST_N(V)
+
+#define JS_CREATE_OP_LIST_N(V)     \
+  V(JSCloneObject_js_create_op)               \
+  V(JSCreate_js_create_op)                    \
+  V(JSCreateArguments_js_create_op)           \
+  V(JSCreateArray_js_create_op)               \
+  V(JSCreateArrayFromIterable_js_create_op)   \
+  V(JSCreateArrayIterator_js_create_op)       \
+  V(JSCreateAsyncFunctionObject_js_create_op) \
+  V(JSCreateBoundFunction_js_create_op)       \
+  V(JSCreateClosure_js_create_op)             \
+  V(JSCreateCollectionIterator_js_create_op)  \
+  V(JSCreateEmptyLiteralArray_js_create_op)   \
+  V(JSCreateEmptyLiteralObject_js_create_op)  \
+  V(JSCreateGeneratorObject_js_create_op)     \
+  V(JSCreateIterResultObject_js_create_op)    \
+  V(JSCreateKeyValueArray_js_create_op)       \
+  V(JSCreateLiteralArray_js_create_op)        \
+  V(JSCreateLiteralObject_js_create_op)       \
+  V(JSCreateLiteralRegExp_js_create_op)       \
+  V(JSCreateObject_js_create_op)              \
+  V(JSCreatePromise_js_create_op)             \
+  V(JSCreateStringIterator_js_create_op)      \
+  V(JSCreateTypedArray_js_create_op)          \
+  V(JSGetTemplateObject_js_create_op)
+
+#define JS_OBJECT_OP_LIST_N(V)      \
+  JS_CREATE_OP_LIST_N(V)            \
+  V(JSLoadProperty_js_object_op)               \
+  V(JSLoadNamed_js_object_op)                  \
+  V(JSLoadNamedFromSuper_js_object_op)         \
+  V(JSLoadGlobal_js_object_op)                 \
+  V(JSStoreProperty_js_object_op)              \
+  V(JSStoreNamed_js_object_op)                 \
+  V(JSStoreNamedOwn_js_object_op)              \
+  V(JSStoreGlobal_js_object_op)                \
+  V(JSStoreDataPropertyInLiteral_js_object_op) \
+  V(JSStoreInArrayLiteral_js_object_op)        \
+  V(JSDeleteProperty_js_object_op)             \
+  V(JSHasProperty_js_object_op)                \
+  V(JSGetSuperConstructor_js_object_op)
+
+#define JS_CONTEXT_OP_LIST_N(V) \
+  V(JSHasContextExtension_js_context_op)    \
+  V(JSLoadContext_js_context_op)            \
+  V(JSStoreContext_js_context_op)           \
+  V(JSCreateFunctionContext_js_context_op)  \
+  V(JSCreateCatchContext_js_context_op)     \
+  V(JSCreateWithContext_js_context_op)      \
+  V(JSCreateBlockContext_js_context_op)
+
+#define JS_CALL_OP_LIST_N(V) \
+  V(JSCall_js_call_op)                \
+  V(JSCallForwardVarargs_js_call_op)  \
+  V(JSCallWithArrayLike_js_call_op)   \
+  V(JSCallWithSpread_js_call_op)      \
+  IF_WASM(V, JSWasmCall)
+
+#define JS_CONSTRUCT_OP_LIST_N(V) \
+  V(JSConstructForwardVarargs_js_construct_op)  \
+  V(JSConstruct_js_construct_op)                \
+  V(JSConstructWithArrayLike_js_construct_op)   \
+  V(JSConstructWithSpread_js_construct_op)
+
+#define JS_OTHER_OP_LIST_N(V)            \
+  JS_CALL_OP_LIST_N(V)                   \
+  JS_CONSTRUCT_OP_LIST_N(V)              \
+  V(JSAsyncFunctionEnter_js_other_op)              \
+  V(JSAsyncFunctionReject_js_other_op)             \
+  V(JSAsyncFunctionResolve_js_other_op)            \
+  V(JSCallRuntime_js_other_op)                     \
+  V(JSForInEnumerate_js_other_op)                  \
+  V(JSForInNext_js_other_op)                       \
+  V(JSForInPrepare_js_other_op)                    \
+  V(JSGetIterator_js_other_op)                     \
+  V(JSLoadMessage_js_other_op)                     \
+  V(JSStoreMessage_js_other_op)                    \
+  V(JSLoadModule_js_other_op)                      \
+  V(JSStoreModule_js_other_op)                     \
+  V(JSGetImportMeta_js_other_op)                   \
+  V(JSGeneratorStore_js_other_op)                  \
+  V(JSGeneratorRestoreContinuation_js_other_op)    \
+  V(JSGeneratorRestoreContext_js_other_op)         \
+  V(JSGeneratorRestoreRegister_js_other_op)        \
+  V(JSGeneratorRestoreInputOrDebugPos_js_other_op) \
+  V(JSFulfillPromise_js_other_op)                  \
+  V(JSPerformPromiseThen_js_other_op)              \
+  V(JSPromiseResolve_js_other_op)                  \
+  V(JSRejectPromise_js_other_op)                   \
+  V(JSResolvePromise_js_other_op)                  \
+  V(JSStackCheck_js_other_op)                      \
+  V(JSObjectIsArray_js_other_op)                   \
+  V(JSRegExpTest_js_other_op)                      \
+  V(JSDebugger_js_other_op)
+
+#define JS_OP_LIST_N(V)     \
+  JS_SIMPLE_BINOP_LIST_N(V) \
+  JS_SIMPLE_UNOP_LIST_N(V)  \
+  JS_OBJECT_OP_LIST_N(V)    \
+  JS_CONTEXT_OP_LIST_N(V)   \
+  JS_OTHER_OP_LIST_N(V)
+
+// Opcodes for VirtuaMachine-level operators.
+#define SIMPLIFIED_CHANGE_OP_LIST_N(V) \
+  V(ChangeTaggedSignedToInt32_simp_change_op)       \
+  V(ChangeTaggedSignedToInt64_simp_change_op)       \
+  V(ChangeTaggedToInt32_simp_change_op)             \
+  V(ChangeTaggedToInt64_simp_change_op)             \
+  V(ChangeTaggedToUint32_simp_change_op)            \
+  V(ChangeTaggedToFloat64_simp_change_op)           \
+  V(ChangeTaggedToTaggedSigned_simp_change_op)      \
+  V(ChangeInt31ToTaggedSigned_simp_change_op)       \
+  V(ChangeInt32ToTagged_simp_change_op)             \
+  V(ChangeInt64ToTagged_simp_change_op)             \
+  V(ChangeUint32ToTagged_simp_change_op)            \
+  V(ChangeUint64ToTagged_simp_change_op)            \
+  V(ChangeFloat64ToTagged_simp_change_op)           \
+  V(ChangeFloat64ToTaggedPointer_simp_change_op)    \
+  V(ChangeTaggedToBit_simp_change_op)               \
+  V(ChangeBitToTagged_simp_change_op)               \
+  V(ChangeUint64ToBigInt_simp_change_op)            \
+  V(TruncateBigIntToUint64_simp_change_op)          \
+  V(TruncateTaggedToWord32_simp_change_op)          \
+  V(TruncateTaggedToFloat64_simp_change_op)         \
+  V(TruncateTaggedToBit_simp_change_op)             \
+  V(TruncateTaggedPointerToBit_simp_change_op)
+
+#define SIMPLIFIED_CHECKED_OP_LIST_N(V) \
+  V(CheckedInt32Add_simp_checked_op)                  \
+  V(CheckedInt32Sub_simp_checked_op)                  \
+  V(CheckedInt32Div_simp_checked_op)                  \
+  V(CheckedInt32Mod_simp_checked_op)                  \
+  V(CheckedUint32Div_simp_checked_op)                 \
+  V(CheckedUint32Mod_simp_checked_op)                 \
+  V(CheckedInt32Mul_simp_checked_op)                  \
+  V(CheckedInt32ToTaggedSigned_simp_checked_op)       \
+  V(CheckedInt64ToInt32_simp_checked_op)              \
+  V(CheckedInt64ToTaggedSigned_simp_checked_op)       \
+  V(CheckedUint32Bounds_simp_checked_op)              \
+  V(CheckedUint32ToInt32_simp_checked_op)             \
+  V(CheckedUint32ToTaggedSigned_simp_checked_op)      \
+  V(CheckedUint64Bounds_simp_checked_op)              \
+  V(CheckedUint64ToInt32_simp_checked_op)             \
+  V(CheckedUint64ToTaggedSigned_simp_checked_op)      \
+  V(CheckedFloat64ToInt32_simp_checked_op)            \
+  V(CheckedFloat64ToInt64_simp_checked_op)            \
+  V(CheckedTaggedSignedToInt32_simp_checked_op)       \
+  V(CheckedTaggedToInt32_simp_checked_op)             \
+  V(CheckedTaggedToArrayIndex_simp_checked_op)        \
+  V(CheckedTruncateTaggedToWord32_simp_checked_op)    \
+  V(CheckedTaggedToFloat64_simp_checked_op)           \
+  V(CheckedTaggedToInt64_simp_checked_op)             \
+  V(CheckedTaggedToTaggedSigned_simp_checked_op)      \
+  V(CheckedTaggedToTaggedPointer_simp_checked_op)
+
+#define SIMPLIFIED_COMPARE_BINOP_LIST_N(V) \
+  V(NumberEqual_simp_compare_binop)                         \
+  V(NumberLessThan_simp_compare_binop)                      \
+  V(NumberLessThanOrEqual_simp_compare_binop)               \
+  V(SpeculativeNumberEqual_simp_compare_binop)              \
+  V(SpeculativeNumberLessThan_simp_compare_binop)           \
+  V(SpeculativeNumberLessThanOrEqual_simp_compare_binop)    \
+  V(ReferenceEqual_simp_compare_binop)                      \
+  V(SameValue_simp_compare_binop)                           \
+  V(SameValueNumbersOnly_simp_compare_binop)                \
+  V(NumberSameValue_simp_compare_binop)                     \
+  V(StringEqual_simp_compare_binop)                         \
+  V(StringLessThan_simp_compare_binop)                      \
+  V(StringLessThanOrEqual_simp_compare_binop)
+
+#define SIMPLIFIED_NUMBER_BINOP_LIST_N(V) \
+  V(NumberAdd_simp_number_binop)                          \
+  V(NumberSubtract_simp_number_binop)                     \
+  V(NumberMultiply_simp_number_binop)                     \
+  V(NumberDivide_simp_number_binop)                       \
+  V(NumberModulus_simp_number_binop)                      \
+  V(NumberBitwiseOr_simp_number_binop)                    \
+  V(NumberBitwiseXor_simp_number_binop)                   \
+  V(NumberBitwiseAnd_simp_number_binop)                   \
+  V(NumberShiftLeft_simp_number_binop)                    \
+  V(NumberShiftRight_simp_number_binop)                   \
+  V(NumberShiftRightLogical_simp_number_binop)            \
+  V(NumberAtan2_simp_number_binop)                        \
+  V(NumberImul_simp_number_binop)                         \
+  V(NumberMax_simp_number_binop)                          \
+  V(NumberMin_simp_number_binop)                          \
+  V(NumberPow_simp_number_binop)
+
+#define SIMPLIFIED_BIGINT_BINOP_LIST_N(V) \
+  V(BigIntAdd_simp_bigint_binop)                          \
+  V(BigIntSubtract_simp_bigint_binop)
+
+#define SIMPLIFIED_SPECULATIVE_NUMBER_BINOP_LIST_N(V) \
+  V(SpeculativeNumberAdd_simp_speculative_number_binop)                           \
+  V(SpeculativeNumberSubtract_simp_speculative_number_binop)                      \
+  V(SpeculativeNumberMultiply_simp_speculative_number_binop)                      \
+  V(SpeculativeNumberPow_simp_speculative_number_binop)                           \
+  V(SpeculativeNumberDivide_simp_speculative_number_binop)                        \
+  V(SpeculativeNumberModulus_simp_speculative_number_binop)                       \
+  V(SpeculativeNumberBitwiseAnd_simp_speculative_number_binop)                    \
+  V(SpeculativeNumberBitwiseOr_simp_speculative_number_binop)                     \
+  V(SpeculativeNumberBitwiseXor_simp_speculative_number_binop)                    \
+  V(SpeculativeNumberShiftLeft_simp_speculative_number_binop)                     \
+  V(SpeculativeNumberShiftRight_simp_speculative_number_binop)                    \
+  V(SpeculativeNumberShiftRightLogical_simp_speculative_number_binop)             \
+  V(SpeculativeSafeIntegerAdd_simp_speculative_number_binop)                      \
+  V(SpeculativeSafeIntegerSubtract_simp_speculative_number_binop)
+
+#define SIMPLIFIED_NUMBER_UNOP_LIST_N(V) \
+  V(NumberAbs_simp_number_unop)                         \
+  V(NumberAcos_simp_number_unop)                        \
+  V(NumberAcosh_simp_number_unop)                       \
+  V(NumberAsin_simp_number_unop)                        \
+  V(NumberAsinh_simp_number_unop)                       \
+  V(NumberAtan_simp_number_unop)                        \
+  V(NumberAtanh_simp_number_unop)                       \
+  V(NumberCbrt_simp_number_unop)                        \
+  V(NumberCeil_simp_number_unop)                        \
+  V(NumberClz32_simp_number_unop)                       \
+  V(NumberCos_simp_number_unop)                         \
+  V(NumberCosh_simp_number_unop)                        \
+  V(NumberExp_simp_number_unop)                         \
+  V(NumberExpm1_simp_number_unop)                       \
+  V(NumberFloor_simp_number_unop)                       \
+  V(NumberFround_simp_number_unop)                      \
+  V(NumberLog_simp_number_unop)                         \
+  V(NumberLog1p_simp_number_unop)                       \
+  V(NumberLog2_simp_number_unop)                        \
+  V(NumberLog10_simp_number_unop)                       \
+  V(NumberRound_simp_number_unop)                       \
+  V(NumberSign_simp_number_unop)                        \
+  V(NumberSin_simp_number_unop)                         \
+  V(NumberSinh_simp_number_unop)                        \
+  V(NumberSqrt_simp_number_unop)                        \
+  V(NumberTan_simp_number_unop)                         \
+  V(NumberTanh_simp_number_unop)                        \
+  V(NumberTrunc_simp_number_unop)                       \
+  V(NumberToBoolean_simp_number_unop)                   \
+  V(NumberToInt32_simp_number_unop)                     \
+  V(NumberToString_simp_number_unop)                    \
+  V(NumberToUint32_simp_number_unop)                    \
+  V(NumberToUint8Clamped_simp_number_unop)              \
+  V(NumberSilenceNaN_simp_number_unop)
+
+#define SIMPLIFIED_BIGINT_UNOP_LIST_N(V) \
+  V(BigIntNegate_simp_bigint_unop)                      \
+  V(CheckBigInt_simp_bigint_unop)
+
+#define SIMPLIFIED_SPECULATIVE_NUMBER_UNOP_LIST_N(V) V(SpeculativeToNumber_simp_specula_number_unop)
+
+#define SIMPLIFIED_OTHER_OP_LIST_N(V)     \
+  V(Allocatesimp_other_op)                           \
+  V(AllocateRawsimp_other_op)                        \
+  V(ArgumentsLengthsimp_other_op)                    \
+  V(AssertTypesimp_other_op)                         \
+  V(BooleanNotsimp_other_op)                         \
+  V(CheckBoundssimp_other_op)                        \
+  V(CheckClosuresimp_other_op)                       \
+  V(CheckEqualsInternalizedStringsimp_other_op)      \
+  V(CheckEqualsSymbolsimp_other_op)                  \
+  V(CheckFloat64Holesimp_other_op)                   \
+  V(CheckHeapObjectsimp_other_op)                    \
+  V(CheckIfsimp_other_op)                            \
+  V(CheckInternalizedStringsimp_other_op)            \
+  V(CheckMapssimp_other_op)                          \
+  V(CheckNotTaggedHolesimp_other_op)                 \
+  V(CheckNumbersimp_other_op)                        \
+  V(CheckReceiversimp_other_op)                      \
+  V(CheckReceiverOrNullOrUndefinedsimp_other_op)     \
+  V(CheckSmisimp_other_op)                           \
+  V(CheckStringsimp_other_op)                        \
+  V(CheckSymbolsimp_other_op)                        \
+  V(CompareMapssimp_other_op)                        \
+  V(ConvertReceiversimp_other_op)                    \
+  V(ConvertTaggedHoleToUndefinedsimp_other_op)       \
+  V(DateNowsimp_other_op)                            \
+  V(DelayedStringConstantsimp_other_op)              \
+  V(DynamicCheckMapssimp_other_op)                   \
+  V(EnsureWritableFastElementssimp_other_op)         \
+  V(FastApiCallsimp_other_op)                        \
+  V(FindOrderedHashMapEntrysimp_other_op)            \
+  V(FindOrderedHashMapEntryForInt32Keysimp_other_op) \
+  V(LoadDataViewElementsimp_other_op)                \
+  V(LoadElementsimp_other_op)                        \
+  V(LoadFieldsimp_other_op)                          \
+  V(LoadFieldByIndexsimp_other_op)                   \
+  V(LoadFromObjectsimp_other_op)                     \
+  V(LoadMessagesimp_other_op)                        \
+  V(LoadStackArgumentsimp_other_op)                  \
+  V(LoadTypedElementsimp_other_op)                   \
+  V(MaybeGrowFastElementssimp_other_op)              \
+  V(NewArgumentsElementssimp_other_op)               \
+  V(NewConsStringsimp_other_op)                      \
+  V(NewDoubleElementssimp_other_op)                  \
+  V(NewSmiOrObjectElementssimp_other_op)             \
+  V(NumberIsFinitesimp_other_op)                     \
+  V(NumberIsFloat64Holesimp_other_op)                \
+  V(NumberIsIntegersimp_other_op)                    \
+  V(NumberIsMinusZerosimp_other_op)                  \
+  V(NumberIsNaNsimp_other_op)                        \
+  V(NumberIsSafeIntegersimp_other_op)                \
+  V(ObjectIsArrayBufferViewsimp_other_op)            \
+  V(ObjectIsBigIntsimp_other_op)                     \
+  V(ObjectIsCallablesimp_other_op)                   \
+  V(ObjectIsConstructorsimp_other_op)                \
+  V(ObjectIsDetectableCallablesimp_other_op)         \
+  V(ObjectIsFiniteNumbersimp_other_op)               \
+  V(ObjectIsIntegersimp_other_op)                    \
+  V(ObjectIsMinusZerosimp_other_op)                  \
+  V(ObjectIsNaNsimp_other_op)                        \
+  V(ObjectIsNonCallablesimp_other_op)                \
+  V(ObjectIsNumbersimp_other_op)                     \
+  V(ObjectIsReceiversimp_other_op)                   \
+  V(ObjectIsSafeIntegersimp_other_op)                \
+  V(ObjectIsSmisimp_other_op)                        \
+  V(ObjectIsStringsimp_other_op)                     \
+  V(ObjectIsSymbolsimp_other_op)                     \
+  V(ObjectIsUndetectablesimp_other_op)               \
+  V(PlainPrimitiveToFloat64simp_other_op)            \
+  V(PlainPrimitiveToNumbersimp_other_op)             \
+  V(PlainPrimitiveToWord32simp_other_op)             \
+  V(PoisonIndexsimp_other_op)                        \
+  V(RestLengthsimp_other_op)                         \
+  V(RuntimeAbortsimp_other_op)                       \
+  V(StoreDataViewElementsimp_other_op)               \
+  V(StoreElementsimp_other_op)                       \
+  V(StoreFieldsimp_other_op)                         \
+  V(StoreMessagesimp_other_op)                       \
+  V(StoreSignedSmallElementsimp_other_op)            \
+  V(StoreToObjectsimp_other_op)                      \
+  V(StoreTypedElementsimp_other_op)                  \
+  V(StringCharCodeAtsimp_other_op)                   \
+  V(StringCodePointAtsimp_other_op)                  \
+  V(StringConcatsimp_other_op)                       \
+  V(StringFromCodePointAtsimp_other_op)              \
+  V(StringFromSingleCharCodesimp_other_op)           \
+  V(StringFromSingleCodePointsimp_other_op)          \
+  V(StringIndexOfsimp_other_op)                      \
+  V(StringLengthsimp_other_op)                       \
+  V(StringSubstringsimp_other_op)                    \
+  V(StringToLowerCaseIntlsimp_other_op)              \
+  V(StringToNumbersimp_other_op)                     \
+  V(StringToUpperCaseIntlsimp_other_op)              \
+  V(TierUpChecksimp_other_op)                        \
+  V(ToBooleansimp_other_op)                          \
+  V(TransitionAndStoreElementsimp_other_op)          \
+  V(TransitionAndStoreNonNumberElementsimp_other_op) \
+  V(TransitionAndStoreNumberElementsimp_other_op)    \
+  V(TransitionElementsKindsimp_other_op)             \
+  V(TypeOfsimp_other_op)                             \
+  V(UpdateInterruptBudgetsimp_other_op)              \
+  V(VerifyTypesimp_other_op)
+
+#define SIMPLIFIED_SPECULATIVE_BIGINT_BINOP_LIST_N(V) \
+  V(SpeculativeBigIntAdd_simp_spec_bigint_binop)                           \
+  V(SpeculativeBigIntSubtract_simp_spec_bigint_binop)
+
+#define SIMPLIFIED_SPECULATIVE_BIGINT_UNOP_LIST_N(V) \
+  V(SpeculativeBigIntAsUintN_simp_spec_bigint_unop)                      \
+  V(SpeculativeBigIntNegate_simp_spec_bigint_unop)
+
+#define SIMPLIFIED_OP_LIST_N(V)                 \
+  SIMPLIFIED_CHANGE_OP_LIST_N(V)                \
+  SIMPLIFIED_CHECKED_OP_LIST_N(V)               \
+  SIMPLIFIED_COMPARE_BINOP_LIST_N(V)            \
+  SIMPLIFIED_NUMBER_BINOP_LIST_N(V)             \
+  SIMPLIFIED_BIGINT_BINOP_LIST_N(V)             \
+  SIMPLIFIED_SPECULATIVE_NUMBER_BINOP_LIST_N(V) \
+  SIMPLIFIED_NUMBER_UNOP_LIST_N(V)              \
+  SIMPLIFIED_BIGINT_UNOP_LIST_N(V)              \
+  SIMPLIFIED_SPECULATIVE_NUMBER_UNOP_LIST_N(V)  \
+  SIMPLIFIED_SPECULATIVE_BIGINT_UNOP_LIST_N(V)  \
+  SIMPLIFIED_SPECULATIVE_BIGINT_BINOP_LIST_N(V) \
+  SIMPLIFIED_OTHER_OP_LIST_N(V)
+
+// Opcodes for Machine-level operators.
+#define MACHINE_COMPARE_BINOP_LIST_N(V) \
+  V(Word32Equal_mach_compare_binop)                      \
+  V(Word64Equal_mach_compare_binop)                      \
+  V(Int32LessThan_mach_compare_binop)                    \
+  V(Int32LessThanOrEqual_mach_compare_binop)             \
+  V(Uint32LessThan_mach_compare_binop)                   \
+  V(Uint32LessThanOrEqual_mach_compare_binop)            \
+  V(Int64LessThan_mach_compare_binop)                    \
+  V(Int64LessThanOrEqual_mach_compare_binop)             \
+  V(Uint64LessThan_mach_compare_binop)                   \
+  V(Uint64LessThanOrEqual_mach_compare_binop)            \
+  V(Float32Equal_mach_compare_binop)                     \
+  V(Float32LessThan_mach_compare_binop)                  \
+  V(Float32LessThanOrEqual_mach_compare_binop)           \
+  V(Float64Equal_mach_compare_binop)                     \
+  V(Float64LessThan_mach_compare_binop)                  \
+  V(Float64LessThanOrEqual_mach_compare_binop)
+
+#define MACHINE_UNOP_32_LIST_N(V) \
+  V(Word32Clz_mach_unop32)                  \
+  V(Word32Ctz_mach_unop32)                  \
+  V(Int32AbsWithOverflow_mach_unop32)       \
+  V(Word32ReverseBits_mach_unop32)          \
+  V(Word32ReverseBytes_mach_unop32)
+
+#define MACHINE_BINOP_32_LIST_N(V) \
+  V(Word32And_mach_binop32)                   \
+  V(Word32Or_mach_binop32)                    \
+  V(Word32Xor_mach_binop32)                   \
+  V(Word32Shl_mach_binop32)                   \
+  V(Word32Shr_mach_binop32)                   \
+  V(Word32Sar_mach_binop32)                   \
+  V(Word32Rol_mach_binop32)                   \
+  V(Word32Ror_mach_binop32)                   \
+  V(Int32Add_mach_binop32)                    \
+  V(Int32AddWithOverflow_mach_binop32)        \
+  V(Int32Sub_mach_binop32)                    \
+  V(Int32SubWithOverflow_mach_binop32)        \
+  V(Int32Mul_mach_binop32)                    \
+  V(Int32MulWithOverflow_mach_binop32)        \
+  V(Int32MulHigh_mach_binop32)                \
+  V(Int32Div_mach_binop32)                    \
+  V(Int32Mod_mach_binop32)                    \
+  V(Uint32Div_mach_binop32)                   \
+  V(Uint32Mod_mach_binop32)                   \
+  V(Uint32MulHigh_mach_binop32)
+
+#define MACHINE_BINOP_64_LIST_N(V) \
+  V(Word64And_mach_binop64)                   \
+  V(Word64Or_mach_binop64)                    \
+  V(Word64Xor_mach_binop64)                   \
+  V(Word64Shl_mach_binop64)                   \
+  V(Word64Shr_mach_binop64)                   \
+  V(Word64Sar_mach_binop64)                   \
+  V(Word64Rol_mach_binop64)                   \
+  V(Word64Ror_mach_binop64)                   \
+  V(Word64RolLowerable_mach_binop64)          \
+  V(Word64RorLowerable_mach_binop64)          \
+  V(Int64Add_mach_binop64)                    \
+  V(Int64AddWithOverflow_mach_binop64)        \
+  V(Int64Sub_mach_binop64)                    \
+  V(Int64SubWithOverflow_mach_binop64)        \
+  V(Int64Mul_mach_binop64)                    \
+  V(Int64Div_mach_binop64)                    \
+  V(Int64Mod_mach_binop64)                    \
+  V(Uint64Div_mach_binop64)                   \
+  V(Uint64Mod_mach_binop64)
+
+#define MACHINE_FLOAT32_UNOP_LIST_N(V) \
+  V(Float32Abs_mach_unop_fp32)                      \
+  V(Float32Neg_mach_unop_fp32)                      \
+  V(Float32RoundDown_mach_unop_fp32)                \
+  V(Float32RoundTiesEven_mach_unop_fp32)            \
+  V(Float32RoundTruncate_mach_unop_fp32)            \
+  V(Float32RoundUp_mach_unop_fp32)                  \
+  V(Float32Sqrt_mach_unop_fp32)
+
+#define MACHINE_FLOAT32_BINOP_LIST_N(V) \
+  V(Float32Add_mach_binop_fp32)                       \
+  V(Float32Sub_mach_binop_fp32)                       \
+  V(Float32Mul_mach_binop_fp32)                       \
+  V(Float32Div_mach_binop_fp32)                       \
+  V(Float32Max_mach_binop_fp32)                       \
+  V(Float32Min_mach_binop_fp32)
+
+#define MACHINE_FLOAT64_UNOP_LIST_N(V) \
+  V(Float64Abs_mach_unop_fp64)                      \
+  V(Float64Acos_mach_unop_fp64)                     \
+  V(Float64Acosh_mach_unop_fp64)                    \
+  V(Float64Asin_mach_unop_fp64)                     \
+  V(Float64Asinh_mach_unop_fp64)                    \
+  V(Float64Atan_mach_unop_fp64)                     \
+  V(Float64Atanh_mach_unop_fp64)                    \
+  V(Float64Cbrt_mach_unop_fp64)                     \
+  V(Float64Cos_mach_unop_fp64)                      \
+  V(Float64Cosh_mach_unop_fp64)                     \
+  V(Float64Exp_mach_unop_fp64)                      \
+  V(Float64Expm1_mach_unop_fp64)                    \
+  V(Float64Log_mach_unop_fp64)                      \
+  V(Float64Log1p_mach_unop_fp64)                    \
+  V(Float64Log10_mach_unop_fp64)                    \
+  V(Float64Log2_mach_unop_fp64)                     \
+  V(Float64Neg_mach_unop_fp64)                      \
+  V(Float64RoundDown_mach_unop_fp64)                \
+  V(Float64RoundTiesAway_mach_unop_fp64)            \
+  V(Float64RoundTiesEven_mach_unop_fp64)            \
+  V(Float64RoundTruncate_mach_unop_fp64)            \
+  V(Float64RoundUp_mach_unop_fp64)                  \
+  V(Float64Sin_mach_unop_fp64)                      \
+  V(Float64Sinh_mach_unop_fp64)                     \
+  V(Float64Sqrt_mach_unop_fp64)                     \
+  V(Float64Tan_mach_unop_fp64)                      \
+  V(Float64Tanh_mach_unop_fp64)
+
+#define MACHINE_FLOAT64_BINOP_LIST_N(V) \
+  V(Float64Atan2_mach_binop_fp64)                     \
+  V(Float64Max_mach_binop_fp64)                       \
+  V(Float64Min_mach_binop_fp64)                       \
+  V(Float64Add_mach_binop_fp64)                       \
+  V(Float64Sub_mach_binop_fp64)                       \
+  V(Float64Mul_mach_binop_fp64)                       \
+  V(Float64Div_mach_binop_fp64)                       \
+  V(Float64Mod_mach_binop_fp64)                       \
+  V(Float64Pow_mach_binop_fp64)
+
+#define MACHINE_ATOMIC_OP_LIST_N(V)    \
+  V(Word32AtomicLoad_mach_atomic_op)                \
+  V(Word32AtomicStore_mach_atomic_op)               \
+  V(Word32AtomicExchange_mach_atomic_op)            \
+  V(Word32AtomicCompareExchange_mach_atomic_op)     \
+  V(Word32AtomicAdd_mach_atomic_op)                 \
+  V(Word32AtomicSub_mach_atomic_op)                 \
+  V(Word32AtomicAnd_mach_atomic_op)                 \
+  V(Word32AtomicOr_mach_atomic_op)                  \
+  V(Word32AtomicXor_mach_atomic_op)                 \
+  V(Word32AtomicPairLoad_mach_atomic_op)            \
+  V(Word32AtomicPairStore_mach_atomic_op)           \
+  V(Word32AtomicPairAdd_mach_atomic_op)             \
+  V(Word32AtomicPairSub_mach_atomic_op)             \
+  V(Word32AtomicPairAnd_mach_atomic_op)             \
+  V(Word32AtomicPairOr_mach_atomic_op)              \
+  V(Word32AtomicPairXor_mach_atomic_op)             \
+  V(Word32AtomicPairExchange_mach_atomic_op)        \
+  V(Word32AtomicPairCompareExchange_mach_atomic_op) \
+  V(Word64AtomicLoad_mach_atomic_op)                \
+  V(Word64AtomicStore_mach_atomic_op)               \
+  V(Word64AtomicAdd_mach_atomic_op)                 \
+  V(Word64AtomicSub_mach_atomic_op)                 \
+  V(Word64AtomicAnd_mach_atomic_op)                 \
+  V(Word64AtomicOr_mach_atomic_op)                  \
+  V(Word64AtomicXor_mach_atomic_op)                 \
+  V(Word64AtomicExchange_mach_atomic_op)            \
+  V(Word64AtomicCompareExchange_mach_atomic_op)
+
+#define MACHINE_OP_LIST_N(V)               \
+  MACHINE_UNOP_32_LIST_N(V)                \
+  MACHINE_BINOP_32_LIST_N(V)               \
+  MACHINE_BINOP_64_LIST_N(V)               \
+  MACHINE_COMPARE_BINOP_LIST_N(V)          \
+  MACHINE_FLOAT32_BINOP_LIST_N(V)          \
+  MACHINE_FLOAT32_UNOP_LIST_N(V)           \
+  MACHINE_FLOAT64_BINOP_LIST_N(V)          \
+  MACHINE_FLOAT64_UNOP_LIST_N(V)           \
+  MACHINE_ATOMIC_OP_LIST_N(V)              \
+  V(AbortCSAAssert_mach_tail_op)                      \
+  V(DebugBreak_mach_tail_op)                          \
+  V(Comment_mach_tail_op)                             \
+  V(Load_mach_tail_op)                                \
+  V(PoisonedLoad_mach_tail_op)                        \
+  V(LoadImmutable_mach_tail_op)                       \
+  V(Store_mach_tail_op)                               \
+  V(StackSlot_mach_tail_op)                           \
+  V(Word32Popcnt_mach_tail_op)                        \
+  V(Word64Popcnt_mach_tail_op)                        \
+  V(Word64Clz_mach_tail_op)                           \
+  V(Word64Ctz_mach_tail_op)                           \
+  V(Word64ClzLowerable_mach_tail_op)                  \
+  V(Word64CtzLowerable_mach_tail_op)                  \
+  V(Word64ReverseBits_mach_tail_op)                   \
+  V(Word64ReverseBytes_mach_tail_op)                  \
+  V(Simd128ReverseBytes_mach_tail_op)                 \
+  V(Int64AbsWithOverflow_mach_tail_op)                \
+  V(BitcastTaggedToWord_mach_tail_op)                 \
+  V(BitcastTaggedToWordForTagAndSmiBits_mach_tail_op) \
+  V(BitcastWordToTagged_mach_tail_op)                 \
+  V(BitcastWordToTaggedSigned_mach_tail_op)           \
+  V(TruncateFloat64ToWord32_mach_tail_op)             \
+  V(ChangeFloat32ToFloat64_mach_tail_op)              \
+  V(ChangeFloat64ToInt32_mach_tail_op)                \
+  V(ChangeFloat64ToInt64_mach_tail_op)                \
+  V(ChangeFloat64ToUint32_mach_tail_op)               \
+  V(ChangeFloat64ToUint64_mach_tail_op)               \
+  V(Float64SilenceNaN_mach_tail_op)                   \
+  V(TruncateFloat64ToInt64_mach_tail_op)              \
+  V(TruncateFloat64ToUint32_mach_tail_op)             \
+  V(TruncateFloat32ToInt32_mach_tail_op)              \
+  V(TruncateFloat32ToUint32_mach_tail_op)             \
+  V(TryTruncateFloat32ToInt64_mach_tail_op)           \
+  V(TryTruncateFloat64ToInt64_mach_tail_op)           \
+  V(TryTruncateFloat32ToUint64_mach_tail_op)          \
+  V(TryTruncateFloat64ToUint64_mach_tail_op)          \
+  V(ChangeInt32ToFloat64_mach_tail_op)                \
+  V(BitcastWord32ToWord64_mach_tail_op)               \
+  V(ChangeInt32ToInt64_mach_tail_op)                  \
+  V(ChangeInt64ToFloat64_mach_tail_op)                \
+  V(ChangeUint32ToFloat64_mach_tail_op)               \
+  V(ChangeUint32ToUint64_mach_tail_op)                \
+  V(TruncateFloat64ToFloat32_mach_tail_op)            \
+  V(TruncateInt64ToInt32_mach_tail_op)                \
+  V(RoundFloat64ToInt32_mach_tail_op)                 \
+  V(RoundInt32ToFloat32_mach_tail_op)                 \
+  V(RoundInt64ToFloat32_mach_tail_op)                 \
+  V(RoundInt64ToFloat64_mach_tail_op)                 \
+  V(RoundUint32ToFloat32_mach_tail_op)                \
+  V(RoundUint64ToFloat32_mach_tail_op)                \
+  V(RoundUint64ToFloat64_mach_tail_op)                \
+  V(BitcastFloat32ToInt32_mach_tail_op)               \
+  V(BitcastFloat64ToInt64_mach_tail_op)               \
+  V(BitcastInt32ToFloat32_mach_tail_op)               \
+  V(BitcastInt64ToFloat64_mach_tail_op)               \
+  V(Float64ExtractLowWord32_mach_tail_op)             \
+  V(Float64ExtractHighWord32_mach_tail_op)            \
+  V(Float64InsertLowWord32_mach_tail_op)              \
+  V(Float64InsertHighWord32_mach_tail_op)             \
+  V(Word32Select_mach_tail_op)                        \
+  V(Word64Select_mach_tail_op)                        \
+  V(Float32Select_mach_tail_op)                       \
+  V(Float64Select_mach_tail_op)                       \
+  V(TaggedPoisonOnSpeculation_mach_tail_op)           \
+  V(Word32PoisonOnSpeculation_mach_tail_op)           \
+  V(Word64PoisonOnSpeculation_mach_tail_op)           \
+  V(LoadStackCheckOffset_mach_tail_op)                \
+  V(LoadFramePointer_mach_tail_op)                    \
+  V(LoadParentFramePointer_mach_tail_op)              \
+  V(UnalignedLoad_mach_tail_op)                       \
+  V(UnalignedStore_mach_tail_op)                      \
+  V(Int32PairAdd_mach_tail_op)                        \
+  V(Int32PairSub_mach_tail_op)                        \
+  V(Int32PairMul_mach_tail_op)                        \
+  V(Word32PairShl_mach_tail_op)                       \
+  V(Word32PairShr_mach_tail_op)                       \
+  V(Word32PairSar_mach_tail_op)                       \
+  V(ProtectedLoad_mach_tail_op)                       \
+  V(ProtectedStore_mach_tail_op)                      \
+  V(MemoryBarrier_mach_tail_op)                       \
+  V(SignExtendWord8ToInt32_mach_tail_op)              \
+  V(SignExtendWord16ToInt32_mach_tail_op)             \
+  V(SignExtendWord8ToInt64_mach_tail_op)              \
+  V(SignExtendWord16ToInt64_mach_tail_op)             \
+  V(SignExtendWord32ToInt64_mach_tail_op)             \
+  V(UnsafePointerAdd_mach_tail_op)                    \
+  V(StackPointerGreaterThan_mach_tail_op)
+
+#define MACHINE_SIMD_OP_LIST_N(V) \
+  V(F64x2Splat_mach_simd_op)                 \
+  V(F64x2ExtractLane_mach_simd_op)           \
+  V(F64x2ReplaceLane_mach_simd_op)           \
+  V(F64x2Abs_mach_simd_op)                   \
+  V(F64x2Neg_mach_simd_op)                   \
+  V(F64x2Sqrt_mach_simd_op)                  \
+  V(F64x2Add_mach_simd_op)                   \
+  V(F64x2Sub_mach_simd_op)                   \
+  V(F64x2Mul_mach_simd_op)                   \
+  V(F64x2Div_mach_simd_op)                   \
+  V(F64x2Min_mach_simd_op)                   \
+  V(F64x2Max_mach_simd_op)                   \
+  V(F64x2Eq_mach_simd_op)                    \
+  V(F64x2Ne_mach_simd_op)                    \
+  V(F64x2Lt_mach_simd_op)                    \
+  V(F64x2Le_mach_simd_op)                    \
+  V(F64x2Qfma_mach_simd_op)                  \
+  V(F64x2Qfms_mach_simd_op)                  \
+  V(F64x2Pmin_mach_simd_op)                  \
+  V(F64x2Pmax_mach_simd_op)                  \
+  V(F64x2Ceil_mach_simd_op)                  \
+  V(F64x2Floor_mach_simd_op)                 \
+  V(F64x2Trunc_mach_simd_op)                 \
+  V(F64x2NearestInt_mach_simd_op)            \
+  V(F64x2ConvertLowI32x4S_mach_simd_op)      \
+  V(F64x2ConvertLowI32x4U_mach_simd_op)      \
+  V(F64x2PromoteLowF32x4_mach_simd_op)       \
+  V(F32x4Splat_mach_simd_op)                 \
+  V(F32x4ExtractLane_mach_simd_op)           \
+  V(F32x4ReplaceLane_mach_simd_op)           \
+  V(F32x4SConvertI32x4_mach_simd_op)         \
+  V(F32x4UConvertI32x4_mach_simd_op)         \
+  V(F32x4Abs_mach_simd_op)                   \
+  V(F32x4Neg_mach_simd_op)                   \
+  V(F32x4Sqrt_mach_simd_op)                  \
+  V(F32x4RecipApprox_mach_simd_op)           \
+  V(F32x4RecipSqrtApprox_mach_simd_op)       \
+  V(F32x4Add_mach_simd_op)                   \
+  V(F32x4Sub_mach_simd_op)                   \
+  V(F32x4Mul_mach_simd_op)                   \
+  V(F32x4Div_mach_simd_op)                   \
+  V(F32x4Min_mach_simd_op)                   \
+  V(F32x4Max_mach_simd_op)                   \
+  V(F32x4Eq_mach_simd_op)                    \
+  V(F32x4Ne_mach_simd_op)                    \
+  V(F32x4Lt_mach_simd_op)                    \
+  V(F32x4Le_mach_simd_op)                    \
+  V(F32x4Gt_mach_simd_op)                    \
+  V(F32x4Ge_mach_simd_op)                    \
+  V(F32x4Qfma_mach_simd_op)                  \
+  V(F32x4Qfms_mach_simd_op)                  \
+  V(F32x4Pmin_mach_simd_op)                  \
+  V(F32x4Pmax_mach_simd_op)                  \
+  V(F32x4Ceil_mach_simd_op)                  \
+  V(F32x4Floor_mach_simd_op)                 \
+  V(F32x4Trunc_mach_simd_op)                 \
+  V(F32x4NearestInt_mach_simd_op)            \
+  V(F32x4DemoteF64x2Zero_mach_simd_op)       \
+  V(I64x2Splat_mach_simd_op)                 \
+  V(I64x2SplatI32Pair_mach_simd_op)          \
+  V(I64x2ExtractLane_mach_simd_op)           \
+  V(I64x2ReplaceLane_mach_simd_op)           \
+  V(I64x2ReplaceLaneI32Pair_mach_simd_op)    \
+  V(I64x2Abs_mach_simd_op)                   \
+  V(I64x2Neg_mach_simd_op)                   \
+  V(I64x2SConvertI32x4Low_mach_simd_op)      \
+  V(I64x2SConvertI32x4High_mach_simd_op)     \
+  V(I64x2UConvertI32x4Low_mach_simd_op)      \
+  V(I64x2UConvertI32x4High_mach_simd_op)     \
+  V(I64x2BitMask_mach_simd_op)               \
+  V(I64x2Shl_mach_simd_op)                   \
+  V(I64x2ShrS_mach_simd_op)                  \
+  V(I64x2Add_mach_simd_op)                   \
+  V(I64x2Sub_mach_simd_op)                   \
+  V(I64x2Mul_mach_simd_op)                   \
+  V(I64x2Eq_mach_simd_op)                    \
+  V(I64x2Ne_mach_simd_op)                    \
+  V(I64x2GtS_mach_simd_op)                   \
+  V(I64x2GeS_mach_simd_op)                   \
+  V(I64x2ShrU_mach_simd_op)                  \
+  V(I64x2ExtMulLowI32x4S_mach_simd_op)       \
+  V(I64x2ExtMulHighI32x4S_mach_simd_op)      \
+  V(I64x2ExtMulLowI32x4U_mach_simd_op)       \
+  V(I64x2ExtMulHighI32x4U_mach_simd_op)      \
+  V(I32x4Splat_mach_simd_op)                 \
+  V(I32x4ExtractLane_mach_simd_op)           \
+  V(I32x4ReplaceLane_mach_simd_op)           \
+  V(I32x4SConvertF32x4_mach_simd_op)         \
+  V(I32x4SConvertI16x8Low_mach_simd_op)      \
+  V(I32x4SConvertI16x8High_mach_simd_op)     \
+  V(I32x4Neg_mach_simd_op)                   \
+  V(I32x4Shl_mach_simd_op)                   \
+  V(I32x4ShrS_mach_simd_op)                  \
+  V(I32x4Add_mach_simd_op)                   \
+  V(I32x4Sub_mach_simd_op)                   \
+  V(I32x4Mul_mach_simd_op)                   \
+  V(I32x4MinS_mach_simd_op)                  \
+  V(I32x4MaxS_mach_simd_op)                  \
+  V(I32x4Eq_mach_simd_op)                    \
+  V(I32x4Ne_mach_simd_op)                    \
+  V(I32x4LtS_mach_simd_op)                   \
+  V(I32x4LeS_mach_simd_op)                   \
+  V(I32x4GtS_mach_simd_op)                   \
+  V(I32x4GeS_mach_simd_op)                   \
+  V(I32x4UConvertF32x4_mach_simd_op)         \
+  V(I32x4UConvertI16x8Low_mach_simd_op)      \
+  V(I32x4UConvertI16x8High_mach_simd_op)     \
+  V(I32x4ShrU_mach_simd_op)                  \
+  V(I32x4MinU_mach_simd_op)                  \
+  V(I32x4MaxU_mach_simd_op)                  \
+  V(I32x4LtU_mach_simd_op)                   \
+  V(I32x4LeU_mach_simd_op)                   \
+  V(I32x4GtU_mach_simd_op)                   \
+  V(I32x4GeU_mach_simd_op)                   \
+  V(I32x4Abs_mach_simd_op)                   \
+  V(I32x4BitMask_mach_simd_op)               \
+  V(I32x4DotI16x8S_mach_simd_op)             \
+  V(I32x4ExtMulLowI16x8S_mach_simd_op)       \
+  V(I32x4ExtMulHighI16x8S_mach_simd_op)      \
+  V(I32x4ExtMulLowI16x8U_mach_simd_op)       \
+  V(I32x4ExtMulHighI16x8U_mach_simd_op)      \
+  V(I32x4ExtAddPairwiseI16x8S_mach_simd_op)  \
+  V(I32x4ExtAddPairwiseI16x8U_mach_simd_op)  \
+  V(I32x4TruncSatF64x2SZero_mach_simd_op)    \
+  V(I32x4TruncSatF64x2UZero_mach_simd_op)    \
+  V(I16x8Splat_mach_simd_op)                 \
+  V(I16x8ExtractLaneU_mach_simd_op)          \
+  V(I16x8ExtractLaneS_mach_simd_op)          \
+  V(I16x8ReplaceLane_mach_simd_op)           \
+  V(I16x8SConvertI8x16Low_mach_simd_op)      \
+  V(I16x8SConvertI8x16High_mach_simd_op)     \
+  V(I16x8Neg_mach_simd_op)                   \
+  V(I16x8Shl_mach_simd_op)                   \
+  V(I16x8ShrS_mach_simd_op)                  \
+  V(I16x8SConvertI32x4_mach_simd_op)         \
+  V(I16x8Add_mach_simd_op)                   \
+  V(I16x8AddSatS_mach_simd_op)               \
+  V(I16x8Sub_mach_simd_op)                   \
+  V(I16x8SubSatS_mach_simd_op)               \
+  V(I16x8Mul_mach_simd_op)                   \
+  V(I16x8MinS_mach_simd_op)                  \
+  V(I16x8MaxS_mach_simd_op)                  \
+  V(I16x8Eq_mach_simd_op)                    \
+  V(I16x8Ne_mach_simd_op)                    \
+  V(I16x8LtS_mach_simd_op)                   \
+  V(I16x8LeS_mach_simd_op)                   \
+  V(I16x8GtS_mach_simd_op)                   \
+  V(I16x8GeS_mach_simd_op)                   \
+  V(I16x8UConvertI8x16Low_mach_simd_op)      \
+  V(I16x8UConvertI8x16High_mach_simd_op)     \
+  V(I16x8ShrU_mach_simd_op)                  \
+  V(I16x8UConvertI32x4_mach_simd_op)         \
+  V(I16x8AddSatU_mach_simd_op)               \
+  V(I16x8SubSatU_mach_simd_op)               \
+  V(I16x8MinU_mach_simd_op)                  \
+  V(I16x8MaxU_mach_simd_op)                  \
+  V(I16x8LtU_mach_simd_op)                   \
+  V(I16x8LeU_mach_simd_op)                   \
+  V(I16x8GtU_mach_simd_op)                   \
+  V(I16x8GeU_mach_simd_op)                   \
+  V(I16x8RoundingAverageU_mach_simd_op)      \
+  V(I16x8Q15MulRSatS_mach_simd_op)           \
+  V(I16x8Abs_mach_simd_op)                   \
+  V(I16x8BitMask_mach_simd_op)               \
+  V(I16x8ExtMulLowI8x16S_mach_simd_op)       \
+  V(I16x8ExtMulHighI8x16S_mach_simd_op)      \
+  V(I16x8ExtMulLowI8x16U_mach_simd_op)       \
+  V(I16x8ExtMulHighI8x16U_mach_simd_op)      \
+  V(I16x8ExtAddPairwiseI8x16S_mach_simd_op)  \
+  V(I16x8ExtAddPairwiseI8x16U_mach_simd_op)  \
+  V(I8x16Splat_mach_simd_op)                 \
+  V(I8x16ExtractLaneU_mach_simd_op)          \
+  V(I8x16ExtractLaneS_mach_simd_op)          \
+  V(I8x16ReplaceLane_mach_simd_op)           \
+  V(I8x16SConvertI16x8_mach_simd_op)         \
+  V(I8x16Neg_mach_simd_op)                   \
+  V(I8x16Shl_mach_simd_op)                   \
+  V(I8x16ShrS_mach_simd_op)                  \
+  V(I8x16Add_mach_simd_op)                   \
+  V(I8x16AddSatS_mach_simd_op)               \
+  V(I8x16Sub_mach_simd_op)                   \
+  V(I8x16SubSatS_mach_simd_op)               \
+  V(I8x16MinS_mach_simd_op)                  \
+  V(I8x16MaxS_mach_simd_op)                  \
+  V(I8x16Eq_mach_simd_op)                    \
+  V(I8x16Ne_mach_simd_op)                    \
+  V(I8x16LtS_mach_simd_op)                   \
+  V(I8x16LeS_mach_simd_op)                   \
+  V(I8x16GtS_mach_simd_op)                   \
+  V(I8x16GeS_mach_simd_op)                   \
+  V(I8x16UConvertI16x8_mach_simd_op)         \
+  V(I8x16AddSatU_mach_simd_op)               \
+  V(I8x16SubSatU_mach_simd_op)               \
+  V(I8x16ShrU_mach_simd_op)                  \
+  V(I8x16MinU_mach_simd_op)                  \
+  V(I8x16MaxU_mach_simd_op)                  \
+  V(I8x16LtU_mach_simd_op)                   \
+  V(I8x16LeU_mach_simd_op)                   \
+  V(I8x16GtU_mach_simd_op)                   \
+  V(I8x16GeU_mach_simd_op)                   \
+  V(I8x16RoundingAverageU_mach_simd_op)      \
+  V(I8x16Popcnt_mach_simd_op)                \
+  V(I8x16Abs_mach_simd_op)                   \
+  V(I8x16BitMask_mach_simd_op)               \
+  V(S128Zero_mach_simd_op)                   \
+  V(S128Const_mach_simd_op)                  \
+  V(S128Not_mach_simd_op)                    \
+  V(S128And_mach_simd_op)                    \
+  V(S128Or_mach_simd_op)                     \
+  V(S128Xor_mach_simd_op)                    \
+  V(S128Select_mach_simd_op)                 \
+  V(S128AndNot_mach_simd_op)                 \
+  V(I8x16Swizzle_mach_simd_op)               \
+  V(I8x16Shuffle_mach_simd_op)               \
+  V(V128AnyTrue_mach_simd_op)                \
+  V(I64x2AllTrue_mach_simd_op)               \
+  V(I32x4AllTrue_mach_simd_op)               \
+  V(I16x8AllTrue_mach_simd_op)               \
+  V(I8x16AllTrue_mach_simd_op)               \
+  V(LoadTransform_mach_simd_op)              \
+  V(LoadLane_mach_simd_op)                   \
+  V(StoreLane_mach_simd_op)
+
+#define VALUE_OP_LIST_N(V)  \
+  COMMON_OP_LIST_N(V)       \
+  SIMPLIFIED_OP_LIST_N(V)   \
+  MACHINE_OP_LIST_N(V)      \
+  MACHINE_SIMD_OP_LIST_N(V) \
+  JS_OP_LIST_N(V)
+
+
+#define ALL_OP_LIST_NAME(V) \
+  CONTROL_OP_LIST_N(V)   \
+  VALUE_OP_LIST_N(V)
 namespace v8 {
 namespace internal {
 namespace compiler {
@@ -1026,6 +2022,7 @@ class V8_EXPORT_PRIVATE IrOpcode {
 
   // Returns the mnemonic name of an opcode.
   static char const* Mnemonic(Value value);
+  static char const* Mnemonic(int value);
 
   // Returns true if opcode for common operator.
   static bool IsCommonOpcode(Value value) {

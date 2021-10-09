@@ -30,7 +30,7 @@ namespace internal {
 namespace {
 
 Object CompileOptimized(Isolate* isolate, Handle<JSFunction> function,
-                        ConcurrencyMode mode) {
+                        ConcurrencyMode mode) { //qj: here goto runtime JIT compile
   StackLimitCheck check(isolate);
   if (check.JsHasOverflowed(kStackSpaceRequiredForCompilation * KB)) {
     return isolate->StackOverflow();
@@ -101,7 +101,7 @@ RUNTIME_FUNCTION(Runtime_CompileOptimized_Concurrent) {
   return CompileOptimized(isolate, function, ConcurrencyMode::kConcurrent);
 }
 
-RUNTIME_FUNCTION(Runtime_CompileOptimized_NotConcurrent) {
+RUNTIME_FUNCTION(Runtime_CompileOptimized_NotConcurrent) { //qj: here call from simulator SoftwareInterrupt
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   CONVERT_ARG_HANDLE_CHECKED(JSFunction, function, 0);
