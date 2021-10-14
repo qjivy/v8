@@ -678,7 +678,7 @@ ExecuteSingleUnoptimizedCompilationJob(
     ParseInfo* parse_info, FunctionLiteral* literal,
     AccountingAllocator* allocator,
     std::vector<FunctionLiteral*>* eager_inner_literals,
-    LocalIsolate* local_isolate) {
+    LocalIsolate* local_isolate) { //qj:unopt com job for interpreter
 #if V8_ENABLE_WEBASSEMBLY
   if (UseAsmWasm(literal, parse_info->flags().is_asm_wasm_broken())) {
     std::unique_ptr<UnoptimizedCompilationJob> asm_job(
@@ -746,8 +746,8 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
   std::vector<FunctionLiteral*> functions_to_compile;
   functions_to_compile.push_back(parse_info->literal());
 
-  while (!functions_to_compile.empty()) {
-     std::cout<<"functions to compile"<<std::endl;
+  while (!functions_to_compile.empty()) { //qj here compier every function
+     std::cout<<"in IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs compiler.cc functions to compile"<<std::endl;
     FunctionLiteral* literal = functions_to_compile.back();
     functions_to_compile.pop_back();
     Handle<SharedFunctionInfo> shared_info =
@@ -757,7 +757,7 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
     std::unique_ptr<UnoptimizedCompilationJob> job =
         ExecuteSingleUnoptimizedCompilationJob(parse_info, literal, allocator,
                                                &functions_to_compile,
-                                               isolate->AsLocalIsolate());
+                                               isolate->AsLocalIsolate()); //qj: here goto GetOptimizedCode for every function //error
 
     if (!job) return false;
 
@@ -1141,7 +1141,7 @@ MaybeHandle<Code> GetOptimizedCode(
   // BUG(5946): This DCHECK is necessary to make certain that we won't
   // tolerate the lack of a script without bytecode.
   DCHECK_IMPLIES(!has_script, shared->HasBytecodeArray());
-  std::unique_ptr<OptimizedCompilationJob> job(
+  std::unique_ptr<OptimizedCompilationJob> job( //qj: here new job
       compiler::Pipeline::NewCompilationJob(isolate, function, code_kind,
                                             has_script, osr_offset, osr_frame));
   OptimizedCompilationInfo* compilation_info = job->compilation_info();

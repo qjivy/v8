@@ -38,7 +38,7 @@ Object CompileOptimized(Isolate* isolate, Handle<JSFunction> function,
 
   // Compile for the next tier.
   if (!Compiler::CompileOptimized(isolate, function, mode,
-                                  function->NextTier())) {
+                                  function->NextTier())) { //qj: go to compiler.cc and drive all the prepare/execute/finalize
     return ReadOnlyRoots(isolate).exception();
   }
 
