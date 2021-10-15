@@ -176,8 +176,10 @@ class InterpreterLoadGlobalAssembler : public InterpreterAssembler {
 
   void LdaGlobal(int slot_operand_index, int name_operand_index,
                  TypeofMode typeof_mode) {
+    Comment("======== LdaGlobal-1");
     TNode<HeapObject> maybe_feedback_vector = LoadFeedbackVector();
 
+    Comment("======== LdaGlobal-2");
     AccessorAssembler accessor_asm(state());
     ExitPoint exit_point(this, [=](TNode<Object> result) {
       SetAccumulator(result);
