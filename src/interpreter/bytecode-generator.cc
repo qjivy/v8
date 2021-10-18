@@ -1216,7 +1216,7 @@ Handle<BytecodeArray> BytecodeGenerator::FinalizeBytecode(
   }
 
   if (HasStackOverflow()) return Handle<BytecodeArray>();
-  Handle<BytecodeArray> bytecode_array = builder()->ToBytecodeArray(isolate);
+  Handle<BytecodeArray> bytecode_array = builder()->ToBytecodeArray(isolate); //v8i: goto
 
   if (incoming_new_target_or_generator_.is_valid()) {
     bytecode_array->set_incoming_new_target_or_generator_register(
@@ -1357,7 +1357,7 @@ bool NeedsContextInitialization(DeclarationScope* scope) {
 }
 }  // namespace
 
-void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
+void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) { //v8i: go
   DisallowGarbageCollection no_gc;
   DisallowHandleAllocation no_handles;
   DisallowHandleDereference no_deref;
@@ -1372,7 +1372,7 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
 
   RegisterAllocationScope register_scope(this);
 
-  AllocateTopLevelRegisters();
+  AllocateTopLevelRegisters(); //v8i allocate registers
 
   builder()->EmitFunctionStartSourcePosition(
       info()->literal()->start_position());
@@ -1388,14 +1388,14 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
     BuildLocalActivationContextInitialization();
     GenerateBytecodeBody();
   } else {
-    GenerateBytecodeBody();
+    GenerateBytecodeBody(); //v8i go
   }
 
   // Check that we are not falling off the end.
   DCHECK(builder()->RemainderOfBlockIsDead());
 }
 
-void BytecodeGenerator::GenerateBytecodeBody() {
+void BytecodeGenerator::GenerateBytecodeBody() { //v8i go
   // Build the arguments object if it is used.
   VisitArgumentsObject(closure_scope()->arguments());
 
@@ -1460,7 +1460,7 @@ void BytecodeGenerator::GenerateBytecodeBody() {
   }
 
   // Visit statements in the function body.
-  VisitStatements(literal->body());
+  VisitStatements(literal->body()); //v8i: statements one by one
 
   // Emit an implicit return instruction in case control flow can fall off the
   // end of the function without an explicit return being present on all paths.

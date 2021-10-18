@@ -182,7 +182,7 @@ InterpreterCompilationJob::InterpreterCompilationJob(
       generator_(&zone_, &compilation_info_, parse_info->ast_string_constants(),
                  eager_inner_literals) {}
 
-InterpreterCompilationJob::Status InterpreterCompilationJob::ExecuteJobImpl() {
+InterpreterCompilationJob::Status InterpreterCompilationJob::ExecuteJobImpl() { //v8i: CompileTopLevel -> UnoptimizedCompilationJob to here
   RCS_SCOPE(parse_info()->runtime_call_stats(),
             RuntimeCallCounterId::kCompileIgnition,
             RuntimeCallStats::kThreadSpecific);
@@ -199,7 +199,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::ExecuteJobImpl() {
   base::Optional<ParkedScope> parked_scope;
   if (local_isolate_) parked_scope.emplace(local_isolate_);
 
-  generator()->GenerateBytecode(stack_limit());
+  generator()->GenerateBytecode(stack_limit()); //v8i: gen bytecode
 
   if (generator()->HasStackOverflow()) {
     return FAILED;
@@ -251,7 +251,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::FinalizeJobImpl(
             RuntimeCallCounterId::kCompileIgnitionFinalization);
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
                "V8.CompileIgnitionFinalization");
-  return DoFinalizeJobImpl(shared_info, isolate);
+  return DoFinalizeJobImpl(shared_info, isolate); //v8i: goto
 }
 
 InterpreterCompilationJob::Status InterpreterCompilationJob::FinalizeJobImpl(
@@ -264,7 +264,7 @@ InterpreterCompilationJob::Status InterpreterCompilationJob::FinalizeJobImpl(
 }
 
 template <typename IsolateT>
-InterpreterCompilationJob::Status InterpreterCompilationJob::DoFinalizeJobImpl(
+InterpreterCompilationJob::Status InterpreterCompilationJob::DoFinalizeJobImpl( //v8i: goto
     Handle<SharedFunctionInfo> shared_info, IsolateT* isolate) {
   Handle<BytecodeArray> bytecodes = compilation_info_.bytecode_array();
   if (bytecodes.is_null()) {

@@ -2463,7 +2463,7 @@ i::ScriptDetails GetScriptDetails(i::Isolate* isolate,
 
 MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
     Isolate* v8_isolate, Source* source, CompileOptions options,
-    NoCacheReason no_cache_reason) {
+    NoCacheReason no_cache_reason) { //v8i
   auto isolate = reinterpret_cast<i::Isolate*>(v8_isolate);
   TRACE_EVENT_CALL_STATS_SCOPED(isolate, "v8", "V8.ScriptCompiler");
   ENTER_V8_NO_SCRIPT(isolate, v8_isolate->GetCurrentContext(), ScriptCompiler,
@@ -2505,7 +2505,7 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
     }
   } else {
     // Compile without any cache.
-    maybe_function_info = i::Compiler::GetSharedFunctionInfoForScript(
+    maybe_function_info = i::Compiler::GetSharedFunctionInfoForScript( //v8i: hello.js go
         isolate, str, script_details, options, no_cache_reason,
         i::NOT_NATIVES_CODE);
   }
@@ -2528,13 +2528,13 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundScript(
 MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
                                            Source* source,
                                            CompileOptions options,
-                                           NoCacheReason no_cache_reason) {
+                                           NoCacheReason no_cache_reason) { //v8i: hello.js
   Utils::ApiCheck(
       !source->GetResourceOptions().IsModule(), "v8::ScriptCompiler::Compile",
       "v8::ScriptCompiler::CompileModule must be used to compile modules");
   auto isolate = context->GetIsolate();
   MaybeLocal<UnboundScript> maybe =
-      CompileUnboundInternal(isolate, source, options, no_cache_reason);
+      CompileUnboundInternal(isolate, source, options, no_cache_reason);//v8i
   Local<UnboundScript> result;
   if (!maybe.ToLocal(&result)) return MaybeLocal<Script>();
   v8::Context::Scope scope(context);

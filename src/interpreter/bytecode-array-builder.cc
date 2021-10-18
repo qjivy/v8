@@ -82,7 +82,7 @@ Register BytecodeArrayBuilder::Local(int index) const {
 }
 
 template <typename IsolateT>
-Handle<BytecodeArray> BytecodeArrayBuilder::ToBytecodeArray(IsolateT* isolate) {
+Handle<BytecodeArray> BytecodeArrayBuilder::ToBytecodeArray(IsolateT* isolate) { //v8i: goto
   DCHECK(RemainderOfBlockIsDead());
   DCHECK(!bytecode_generated_);
   bytecode_generated_ = true;
