@@ -644,7 +644,7 @@ MaybeLocal<T> Shell::CompileString(Isolate* isolate, Local<Context> context,
 }
 
 // Executes a string within the current v8 context.
-bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
+bool Shell::ExecuteString(Isolate* isolate, Local<String> source, //v8i: go
                           Local<Value> name, PrintResult print_result,
                           ReportExceptions report_exceptions,
                           ProcessMessageQueue process_message_queue) {
@@ -712,7 +712,7 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
       }
     }
     Local<Script> script;
-    if (!CompileString<Script>(isolate, context, source, origin)
+    if (!CompileString<Script>(isolate, context, source, origin) //v8i: CompileString
              .ToLocal(&script)) {
       return false;
     }
@@ -728,7 +728,7 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
     if (options.compile_only) {
       return true;
     }
-    maybe_result = script->Run(realm);
+    maybe_result = script->Run(realm); //v8i: Run the bytecode
     if (options.code_cache_options ==
         ShellOptions::CodeCacheOptions::kProduceCacheAfterExecute) {
       // Serialize and store it in memory for the next execution.
@@ -3769,7 +3769,7 @@ bool SourceGroup::Execute(Isolate* isolate) {
             .ToLocalChecked();
     delete[] buffer;
     Shell::set_script_executed();
-    if (!Shell::ExecuteString(isolate, source, file_name, Shell::kNoPrintResult,
+    if (!Shell::ExecuteString(isolate, source, file_name, Shell::kNoPrintResult, //v8i: go
                               Shell::kReportExceptions,
                               Shell::kNoProcessMessageQueue)) {
       return false;
@@ -4464,7 +4464,7 @@ bool Shell::SetOptions(int argc, char* argv[]) {
   return true;
 }
 
-int Shell::RunMain(Isolate* isolate, bool last_run) {
+int Shell::RunMain(Isolate* isolate, bool last_run) { //v8i: hello go
   for (int i = 1; i < options.num_isolates; ++i) {
     options.isolate_sources[i].StartExecuteInThread();
   }
@@ -4486,7 +4486,7 @@ int Shell::RunMain(Isolate* isolate, bool last_run) {
       Context::Scope cscope(context);
       InspectorClient inspector_client(context, options.enable_inspector);
       PerIsolateData::RealmScope realm_scope(PerIsolateData::Get(isolate));
-      if (!options.isolate_sources[0].Execute(isolate)) success = false;
+      if (!options.isolate_sources[0].Execute(isolate)) success = false; //v8i: go
       if (!CompleteMessageLoop(isolate)) success = false;
     }
     if (!use_existing_context) {
