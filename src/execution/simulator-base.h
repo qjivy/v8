@@ -38,12 +38,12 @@ class SimulatorBase {
 
  protected:
   template <typename Return, typename SimT, typename CallImpl, typename... Args>
-  static Return VariadicCall(SimT* sim, CallImpl call, Address entry,
+  static Return VariadicCall(SimT* sim, CallImpl call, Address entry, //v8i: go
                              Args... args) {
     // Convert all arguments to intptr_t. Fails if any argument is not integral
     // or pointer.
     std::array<intptr_t, sizeof...(args)> args_arr{{ConvertArg(args)...}};
-    intptr_t ret = (sim->*call)(entry, args_arr.size(), args_arr.data());
+    intptr_t ret = (sim->*call)(entry, args_arr.size(), args_arr.data()); //v8i: here go to v8::internal::Simulator::CallImpl
     return ConvertReturn<Return>(ret);
   }
 

@@ -460,8 +460,8 @@ class Simulator : public SimulatorBase {
   void Execute();
 
   template <typename Return, typename... Args>
-  Return Call(Address entry, Args... args) {
-    return VariadicCall<Return>(this, &Simulator::CallImpl, entry, args...);
+  Return Call(Address entry, Args... args) { //v8i: go
+    return VariadicCall<Return>(this, &Simulator::CallImpl, entry, args...); //v8i: CallImpl 
   }
 
   // Alternative: call a 2-argument double function.

@@ -5490,7 +5490,7 @@ void Simulator::InstructionDecode(Instruction* instr) {
 void Simulator::Execute() {
   // Get the PC to simulate. Cannot use the accessor here as we need the
   // raw PC value and not the one used as input to arithmetic instructions.
-  int64_t program_counter = get_pc();
+  int64_t program_counter = get_pc(); //v8i: first PC is to JSEntry Builtin
   while (program_counter != end_sim_pc) {
     Instruction* instr = reinterpret_cast<Instruction*>(program_counter);
     icount_++;
@@ -5505,7 +5505,7 @@ void Simulator::Execute() {
   }
 }
 
-void Simulator::CallInternal(Address entry) {
+void Simulator::CallInternal(Address entry) { //v8i: final kick before RISV64 binary simulation
   // Adjust JS-based stack limit to C-based stack limit.
   isolate_->stack_guard()->AdjustStackLimitForSimulator();
 
@@ -5550,7 +5550,7 @@ void Simulator::CallInternal(Address entry) {
   set_register(gp, callee_saved_value);
 
   // Start the simulation.
-  Execute();
+  Execute(); //v8i: start simu
 
   // Check that the callee-saved registers have been preserved.
   CHECK_EQ(callee_saved_value, get_register(s0));
@@ -5600,7 +5600,7 @@ intptr_t Simulator::CallImpl(Address entry, int argument_count,
   if (reg_arg_count > 6) set_register(a6, arguments[6]);
   if (reg_arg_count > 7) set_register(a7, arguments[7]);
 
-  if (::v8::internal::FLAG_trace_sim) {
+  if (::v8::internal::FLAG_trace_sim) { //v8i: ok here print the entry point for JSEntry 
     std::cout << "CallImpl: reg_arg_count = " << reg_arg_count << std::hex
               << " entry-pc (JSEntry) = 0x" << entry
               << " a0 (Isolate-root) = 0x" << get_register(a0)
@@ -5627,7 +5627,7 @@ intptr_t Simulator::CallImpl(Address entry, int argument_count,
          stack_args_count * sizeof(*arguments));
   set_register(sp, entry_stack);
 
-  CallInternal(entry);
+  CallInternal(entry); //v8i: CallIngternal
 
   // Pop stack passed arguments.
   CHECK_EQ(entry_stack, get_register(sp));

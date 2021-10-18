@@ -2047,7 +2047,7 @@ Local<Value> UnboundScript::GetSourceMappingURL() {
   }
 }
 
-MaybeLocal<Value> Script::Run(Local<Context> context) {
+MaybeLocal<Value> Script::Run(Local<Context> context) { //v8i: go Run entry, bytecode is ready.
   auto isolate = reinterpret_cast<i::Isolate*>(context->GetIsolate());
   TRACE_EVENT_CALL_STATS_SCOPED(isolate, "v8", "V8.Execute");
   ENTER_V8(isolate, context, Script, Run, MaybeLocal<Value>(),
@@ -2057,7 +2057,7 @@ MaybeLocal<Value> Script::Run(Local<Context> context) {
       isolate->counters()->execute_precise());
   i::AggregatingHistogramTimerScope histogram_timer(
       isolate->counters()->compile_lazy());
-  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this));
+  auto fun = i::Handle<i::JSFunction>::cast(Utils::OpenHandle(this)); //v8i: a script local to a JSFunction by OpenHandle
 
   // TODO(crbug.com/1193459): remove once ablation study is completed
   base::ElapsedTimer timer;
@@ -2078,10 +2078,10 @@ MaybeLocal<Value> Script::Run(Local<Context> context) {
     }
   }
 
-  i::Handle<i::Object> receiver = isolate->global_proxy();
+  i::Handle<i::Object> receiver = isolate->global_proxy(); //v8i: here for a script reciever is global_proxy
   Local<Value> result;
   has_pending_exception = !ToLocal<Value>(
-      i::Execution::Call(isolate, fun, receiver, 0, nullptr), &result);
+      i::Execution::Call(isolate, fun, receiver, 0, nullptr), &result);//v8i:fun is a JSFunction handle , here kick off to run
 
   if (i::FLAG_script_delay_fraction > 0.0) {
     delta = v8::base::TimeDelta::FromMillisecondsD(
