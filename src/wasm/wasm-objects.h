@@ -194,7 +194,8 @@ class WasmTableObject
   V8_EXPORT_PRIVATE static Handle<WasmTableObject> New(
       Isolate* isolate, Handle<WasmInstanceObject> instance,
       wasm::ValueType type, uint32_t initial, bool has_maximum,
-      uint32_t maximum, Handle<FixedArray>* entries);
+      uint32_t maximum, Handle<FixedArray>* entries,
+      Handle<Object> initial_value);
 
   V8_EXPORT_PRIVATE static void AddDispatchTable(
       Isolate* isolate, Handle<WasmTableObject> table,
@@ -901,6 +902,8 @@ class WasmStruct : public TorqueGeneratedWasmStruct<WasmStruct, WasmObject> {
   static inline wasm::StructType* GcSafeType(Map map);
   static inline int Size(const wasm::StructType* type);
   static inline int GcSafeSize(Map map);
+  static inline void EncodeInstanceSizeInMap(int instance_size, Map map);
+  static inline int DecodeInstanceSizeFromMap(Map map);
 
   // Returns the address of the field at given offset.
   inline Address RawFieldAddress(int raw_offset);
@@ -934,10 +937,9 @@ class WasmArray : public TorqueGeneratedWasmArray<WasmArray, WasmObject> {
   // Get the {ObjectSlot} corresponding to the element at {index}. Requires that
   // this is a reference array.
   ObjectSlot ElementSlot(uint32_t index);
-  wasm::WasmValue GetElement(uint32_t index);
+  V8_EXPORT_PRIVATE wasm::WasmValue GetElement(uint32_t index);
 
   static inline int SizeFor(Map map, int length);
-  static inline int GcSafeSizeFor(Map map, int length);
 
   // Returns boxed value of the array's element.
   static inline Handle<Object> GetElement(Isolate* isolate,
@@ -946,6 +948,17 @@ class WasmArray : public TorqueGeneratedWasmArray<WasmArray, WasmObject> {
 
   // Returns the Address of the element at {index}.
   Address ElementAddress(uint32_t index);
+
+  static int MaxLength(const wasm::ArrayType* type) {
+    // The total object size must fit into a Smi, for filler objects. To make
+    // the behavior of Wasm programs independent from the Smi configuration,
+    // we hard-code the smaller of the two supported ranges.
+    int element_shift = type->element_type().element_size_log2();
+    return (SmiTagging<4>::kSmiMaxValue - kHeaderSize) >> element_shift;
+  }
+
+  static inline void EncodeElementSizeInMap(int element_size, Map map);
+  static inline int DecodeElementSizeFromMap(Map map);
 
   DECL_PRINTER(WasmArray)
 

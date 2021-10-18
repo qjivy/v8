@@ -93,16 +93,12 @@ bool PPCDebugger::GetValue(const char* desc, intptr_t* value) {
   if (regnum != kNoRegister) {
     *value = GetRegisterValue(regnum);
     return true;
-  } else {
-    if (strncmp(desc, "0x", 2) == 0) {
-      return SScanF(desc + 2, "%" V8PRIxPTR,
-                    reinterpret_cast<uintptr_t*>(value)) == 1;
-    } else {
-      return SScanF(desc, "%" V8PRIuPTR, reinterpret_cast<uintptr_t*>(value)) ==
-             1;
-    }
   }
-  return false;
+  if (strncmp(desc, "0x", 2) == 0) {
+    return SScanF(desc + 2, "%" V8PRIxPTR,
+                  reinterpret_cast<uintptr_t*>(value)) == 1;
+  }
+  return SScanF(desc, "%" V8PRIuPTR, reinterpret_cast<uintptr_t*>(value)) == 1;
 }
 
 bool PPCDebugger::GetFPDoubleValue(const char* desc, double* value) {
@@ -1031,7 +1027,6 @@ void Simulator::SoftwareInterrupt(Instruction* instr) {
               break;
             default:
               UNREACHABLE();
-              break;
           }
           if (!stack_aligned) {
             PrintF(" with unaligned stack %08" V8PRIxPTR "\n",
@@ -1071,7 +1066,6 @@ void Simulator::SoftwareInterrupt(Instruction* instr) {
           }
           default:
             UNREACHABLE();
-            break;
         }
         if (::v8::internal::FLAG_trace_sim || !stack_aligned) {
           switch (redirection->type()) {
@@ -1085,7 +1079,6 @@ void Simulator::SoftwareInterrupt(Instruction* instr) {
               break;
             default:
               UNREACHABLE();
-              break;
           }
         }
       } else if (redirection->type() == ExternalReference::DIRECT_API_CALL) {
@@ -1704,7 +1697,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
     case CRORC:
     case CROR: {
       UNIMPLEMENTED();  // Not used by V8.
-      break;
     }
     case RLWIMIX: {
       int ra = instr->RAValue();
@@ -2552,7 +2544,7 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
       int rs = instr->RSValue();
       int ra = instr->RAValue();
       uint32_t rs_val = static_cast<uint32_t>(get_register(rs));
-      uintptr_t count = __builtin_ctz(rs_val);
+      uintptr_t count = rs_val == 0 ? 32 : __builtin_ctz(rs_val);
       set_register(ra, count);
       if (instr->Bit(0)) {  // RC Bit set
         int bf = 0;
@@ -2570,7 +2562,7 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
       int rs = instr->RSValue();
       int ra = instr->RAValue();
       uint64_t rs_val = get_register(rs);
-      uintptr_t count = __builtin_ctz(rs_val);
+      uintptr_t count = rs_val == 0 ? 64 : __builtin_ctzl(rs_val);
       set_register(ra, count);
       if (instr->Bit(0)) {  // RC Bit set
         int bf = 0;
@@ -3192,7 +3184,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
     case LMW:
     case STMW: {
       UNIMPLEMENTED();
-      break;
     }
 
     case LFSU:
@@ -3530,7 +3521,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
             break;
           default:
             UNIMPLEMENTED();  // Not used by V8.
-            break;
         }
         if (frb_val < static_cast<double>(kMinVal)) {
           frt_val = kMinVal;
@@ -3575,7 +3565,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
             break;
           default:
             UNIMPLEMENTED();  // Not used by V8.
-            break;
         }
         if (frb_val < static_cast<double>(kMinVal)) {
           frt_val = kMinVal;
@@ -3627,7 +3616,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
           }
           default:
             UNIMPLEMENTED();  // Not used by V8.
-            break;
         }
         if (frb_val < kMinVal) {
           frt_val = kMinVal;
@@ -3652,8 +3640,8 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
                      ? kRoundToZero
                      : (fp_condition_reg_ & kFPRoundingModeMask);
       uint64_t frt_val;
-      uint64_t kMinVal = 0;
-      uint64_t kMaxVal = kMinVal - 1;
+      uint64_t kMinVal = kMinUInt32;
+      uint64_t kMaxVal = kMaxUInt32;
       bool invalid_convert = false;
 
       if (std::isnan(frb_val)) {
@@ -3671,7 +3659,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
             break;
           default:
             UNIMPLEMENTED();  // Not used by V8.
-            break;
         }
         if (frb_val < kMinVal) {
           frt_val = kMinVal;
@@ -3701,7 +3688,7 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
       int fra = instr->RAValue();
       double frb_val = get_double_from_d_register(frb);
       double fra_val = get_double_from_d_register(fra);
-      double frt_val = std::copysign(fra_val, frb_val);
+      double frt_val = std::copysign(frb_val, fra_val);
       set_d_register_from_double(frt, frt_val);
       return;
     }
@@ -3764,7 +3751,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
           break;
         default:
           UNIMPLEMENTED();
-          break;
       }
       return;
     }
@@ -5166,7 +5152,6 @@ void Simulator::ExecuteGeneric(Instruction* instr) {
 #undef GET_ADDRESS
     default: {
       UNIMPLEMENTED();
-      break;
     }
   }
 }

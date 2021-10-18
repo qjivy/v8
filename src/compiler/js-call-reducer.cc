@@ -2098,7 +2098,8 @@ FrameState CreateArtificialFrameState(
 FrameState PromiseConstructorFrameState(
     const PromiseCtorFrameStateParams& params, CommonOperatorBuilder* common,
     Graph* graph) {
-  DCHECK_EQ(1, params.shared.internal_formal_parameter_count());
+  DCHECK_EQ(1,
+            params.shared.internal_formal_parameter_count_without_receiver());
   return CreateArtificialFrameState(
       params.node_ptr, params.outer_frame_state, 1,
       BytecodeOffset::ConstructStubInvoke(), FrameStateType::kConstructStub,
@@ -2154,7 +2155,7 @@ TNode<Object> PromiseBuiltinReducerAssembler::ReducePromiseConstructor(
   DCHECK_EQ(target, NewTargetInput());
 
   SharedFunctionInfoRef promise_shared =
-      native_context.promise_function().shared(dependencies());
+      native_context.promise_function().shared();
 
   PromiseCtorFrameStateParams frame_state_params{jsgraph(),  promise_shared,
                                                  node_ptr(), context,
@@ -2733,7 +2734,7 @@ Reduction JSCallReducer::ReduceFunctionPrototypeCall(Node* node) {
   HeapObjectMatcher m(target);
   if (m.HasResolvedValue() && m.Ref(broker()).IsJSFunction()) {
     JSFunctionRef function = m.Ref(broker()).AsJSFunction();
-    context = jsgraph()->Constant(function.context(dependencies()));
+    context = jsgraph()->Constant(function.context());
   } else {
     context = effect = graph()->NewNode(
         simplified()->LoadField(AccessBuilder::ForJSFunctionContext()), target,
@@ -3638,8 +3639,6 @@ Reduction JSCallReducer::ReduceCallApiFunction(
   FunctionTemplateInfoRef function_template_info(
       shared.function_template_info().value());
 
-  if (!function_template_info.has_call_code()) return NoChange();
-
   if (function_template_info.accept_any_receiver() &&
       function_template_info.is_signature_undefined()) {
     // We might be able to
@@ -3763,7 +3762,8 @@ Reduction JSCallReducer::ReduceCallApiFunction(
       node->InsertInput(graph()->zone(), 0,
                         jsgraph()->HeapConstant(callable.code()));
       node->ReplaceInput(1, jsgraph()->Constant(function_template_info));
-      node->InsertInput(graph()->zone(), 2, jsgraph()->Constant(argc));
+      node->InsertInput(graph()->zone(), 2,
+                        jsgraph()->Constant(JSParameterCount(argc)));
       node->ReplaceInput(3, receiver);       // Update receiver input.
       node->ReplaceInput(6 + argc, effect);  // Update effect input.
       NodeProperties::ChangeOp(node, common()->Call(call_descriptor));
@@ -4038,7 +4038,8 @@ JSCallReducer::ReduceCallOrConstructWithArrayLikeOrSpreadOfCreateArguments(
       return NoChange();
     }
     formal_parameter_count =
-        MakeRef(broker(), shared).internal_formal_parameter_count();
+        MakeRef(broker(), shared)
+            .internal_formal_parameter_count_without_receiver();
   }
 
   if (type == CreateArgumentsType::kMappedArguments) {
@@ -4279,8 +4280,8 @@ bool JSCallReducer::IsBuiltinOrApiFunction(JSFunctionRef function) const {
   // TODO(neis): Add a way to check if function template info isn't serialized
   // and add a warning in such cases. Currently we can't tell if function
   // template info doesn't exist or wasn't serialized.
-  return function.shared(dependencies()).HasBuiltinId() ||
-         function.shared(dependencies()).function_template_info().has_value();
+  return function.shared().HasBuiltinId() ||
+         function.shared().function_template_info().has_value();
 }
 
 Reduction JSCallReducer::ReduceJSCall(Node* node) {
@@ -4301,20 +4302,16 @@ Reduction JSCallReducer::ReduceJSCall(Node* node) {
       JSFunctionRef function = target_ref.AsJSFunction();
 
       // Don't inline cross native context.
-      if (!function.native_context(dependencies()).equals(native_context())) {
+      if (!function.native_context().equals(native_context())) {
         return NoChange();
       }
 
-      return ReduceJSCall(node, function.shared(dependencies()));
+      return ReduceJSCall(node, function.shared());
     } else if (target_ref.IsJSBoundFunction()) {
       JSBoundFunctionRef function = target_ref.AsJSBoundFunction();
-      base::Optional<JSReceiverRef> bound_target_function =
-          function.bound_target_function();
-      if (!bound_target_function.has_value()) return NoChange();
-      base::Optional<ObjectRef> bound_this = function.bound_this();
-      if (!bound_this.has_value()) return NoChange();
+      ObjectRef bound_this = function.bound_this();
       ConvertReceiverMode const convert_mode =
-          bound_this->IsNullOrUndefined()
+          bound_this.IsNullOrUndefined()
               ? ConvertReceiverMode::kNullOrUndefined
               : ConvertReceiverMode::kNotNullOrUndefined;
 
@@ -4335,9 +4332,9 @@ Reduction JSCallReducer::ReduceJSCall(Node* node) {
 
       // Patch {node} to use [[BoundTargetFunction]] and [[BoundThis]].
       NodeProperties::ReplaceValueInput(
-          node, jsgraph()->Constant(*bound_target_function),
+          node, jsgraph()->Constant(function.bound_target_function()),
           JSCallNode::TargetIndex());
-      NodeProperties::ReplaceValueInput(node, jsgraph()->Constant(*bound_this),
+      NodeProperties::ReplaceValueInput(node, jsgraph()->Constant(bound_this),
                                         JSCallNode::ReceiverIndex());
 
       // Insert the [[BoundArguments]] for {node}.
@@ -4371,13 +4368,13 @@ Reduction JSCallReducer::ReduceJSCall(Node* node) {
     return ReduceJSCall(node, p.shared_info(broker()));
   } else if (target->opcode() == IrOpcode::kCheckClosure) {
     FeedbackCellRef cell = MakeRef(broker(), FeedbackCellOf(target->op()));
-    if (cell.shared_function_info().has_value()) {
-      return ReduceJSCall(node, *cell.shared_function_info());
-    } else {
+    base::Optional<SharedFunctionInfoRef> shared = cell.shared_function_info();
+    if (!shared.has_value()) {
       TRACE_BROKER_MISSING(broker(), "Unable to reduce JSCall. FeedbackCell "
                                          << cell << " has no FeedbackVector");
       return NoChange();
     }
+    return ReduceJSCall(node, *shared);
   }
 
   // If {target} is the result of a JSCreateBoundFunction operation,
@@ -4456,7 +4453,8 @@ Reduction JSCallReducer::ReduceJSCall(Node* node) {
   } else if (feedback_target.has_value() && feedback_target->IsFeedbackCell()) {
     FeedbackCellRef feedback_cell =
         MakeRef(broker(), feedback_target.value().AsFeedbackCell().object());
-    if (feedback_cell.value().has_value()) {
+    // TODO(neis): This check seems unnecessary.
+    if (feedback_cell.feedback_vector().has_value()) {
       // Check that {target} is a closure with given {feedback_cell},
       // which uniquely identifies a given function inside a native context.
       Node* target_closure = effect =
@@ -4998,11 +4996,11 @@ Reduction JSCallReducer::ReduceJSConstruct(Node* node) {
       // If this state changes during background compilation, the compilation
       // job will be aborted from the main thread (see
       // Debug::PrepareFunctionForDebugExecution()).
-      SharedFunctionInfoRef sfi = function.shared(dependencies());
+      SharedFunctionInfoRef sfi = function.shared();
       if (sfi.HasBreakInfo()) return NoChange();
 
       // Don't inline cross native context.
-      if (!function.native_context(dependencies()).equals(native_context())) {
+      if (!function.native_context().equals(native_context())) {
         return NoChange();
       }
 
@@ -5048,16 +5046,13 @@ Reduction JSCallReducer::ReduceJSConstruct(Node* node) {
         case Builtin::kPromiseConstructor:
           return ReducePromiseConstructor(node);
         case Builtin::kTypedArrayConstructor:
-          return ReduceTypedArrayConstructor(node,
-                                             function.shared(dependencies()));
+          return ReduceTypedArrayConstructor(node, function.shared());
         default:
           break;
       }
     } else if (target_ref.IsJSBoundFunction()) {
       JSBoundFunctionRef function = target_ref.AsJSBoundFunction();
-      base::Optional<JSReceiverRef> bound_target_function =
-          function.bound_target_function();
-      if (!bound_target_function.has_value()) return NoChange();
+      JSReceiverRef bound_target_function = function.bound_target_function();
       FixedArrayRef bound_arguments = function.bound_arguments();
       const int bound_arguments_length = bound_arguments.length();
 
@@ -5076,20 +5071,20 @@ Reduction JSCallReducer::ReduceJSConstruct(Node* node) {
 
       // Patch {node} to use [[BoundTargetFunction]].
       node->ReplaceInput(n.TargetIndex(),
-                         jsgraph()->Constant(*bound_target_function));
+                         jsgraph()->Constant(bound_target_function));
 
       // Patch {node} to use [[BoundTargetFunction]]
       // as new.target if {new_target} equals {target}.
       if (target == new_target) {
         node->ReplaceInput(n.NewTargetIndex(),
-                           jsgraph()->Constant(*bound_target_function));
+                           jsgraph()->Constant(bound_target_function));
       } else {
         node->ReplaceInput(
             n.NewTargetIndex(),
             graph()->NewNode(common()->Select(MachineRepresentation::kTagged),
                              graph()->NewNode(simplified()->ReferenceEqual(),
                                               target, new_target),
-                             jsgraph()->Constant(*bound_target_function),
+                             jsgraph()->Constant(bound_target_function),
                              new_target));
       }
 
@@ -5956,9 +5951,13 @@ Reduction JSCallReducer::ReduceArrayPrototypeSlice(Node* node) {
   Effect effect = n.effect();
   Control control = n.control();
 
-  // Optimize for the case where we simply clone the {receiver},
-  // i.e. when the {start} is zero and the {end} is undefined
-  // (meaning it will be set to {receiver}s "length" property).
+  // Optimize for the case where we simply clone the {receiver}, i.e. when the
+  // {start} is zero and the {end} is undefined (meaning it will be set to
+  // {receiver}s "length" property). This logic should be in sync with
+  // ReduceArrayPrototypeSlice (to a reasonable degree). This is because
+  // CloneFastJSArray produces arrays which are potentially COW. If there's a
+  // discrepancy, TF generates code which produces a COW array and then expects
+  // it to be non-COW (or the other way around) -> immediate deopt.
   if (!NumberMatcher(start).Is(0) ||
       !HeapObjectMatcher(end).Is(factory()->undefined_value())) {
     return NoChange();
@@ -8015,7 +8014,7 @@ Reduction JSCallReducer::ReduceNumberConstructor(Node* node) {
 
   // Create the artificial frame state in the middle of the Number constructor.
   SharedFunctionInfoRef shared_info =
-      native_context().number_function().shared(dependencies());
+      native_context().number_function().shared();
   Node* stack_parameters[] = {receiver};
   int stack_parameter_count = arraysize(stack_parameters);
   Node* continuation_frame_state =

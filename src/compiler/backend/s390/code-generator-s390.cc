@@ -2426,77 +2426,89 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       ASSEMBLE_ATOMIC64_COMP_EXCHANGE_WORD64();
       break;
       // Simd Support.
-#define SIMD_BINOP_LIST(V) \
-  V(F64x2Add)              \
-  V(F64x2Sub)              \
-  V(F64x2Mul)              \
-  V(F64x2Div)              \
-  V(F64x2Min)              \
-  V(F64x2Max)              \
-  V(F64x2Eq)               \
-  V(F64x2Ne)               \
-  V(F64x2Lt)               \
-  V(F64x2Le)               \
-  V(F32x4Add)              \
-  V(F32x4Sub)              \
-  V(F32x4Mul)              \
-  V(F32x4Div)              \
-  V(F32x4Min)              \
-  V(F32x4Max)              \
-  V(F32x4Eq)               \
-  V(F32x4Ne)               \
-  V(F32x4Lt)               \
-  V(F32x4Le)               \
-  V(I64x2Add)              \
-  V(I64x2Sub)              \
-  V(I64x2Mul)              \
-  V(I64x2Eq)               \
-  V(I64x2Ne)               \
-  V(I64x2GtS)              \
-  V(I64x2GeS)              \
-  V(I32x4Add)              \
-  V(I32x4Sub)              \
-  V(I32x4Mul)              \
-  V(I32x4Eq)               \
-  V(I32x4Ne)               \
-  V(I32x4GtS)              \
-  V(I32x4GeS)              \
-  V(I32x4GtU)              \
-  V(I32x4GeU)              \
-  V(I32x4MinS)             \
-  V(I32x4MinU)             \
-  V(I32x4MaxS)             \
-  V(I32x4MaxU)             \
-  V(I16x8Add)              \
-  V(I16x8Sub)              \
-  V(I16x8Mul)              \
-  V(I16x8Eq)               \
-  V(I16x8Ne)               \
-  V(I16x8GtS)              \
-  V(I16x8GeS)              \
-  V(I16x8GtU)              \
-  V(I16x8GeU)              \
-  V(I16x8MinS)             \
-  V(I16x8MinU)             \
-  V(I16x8MaxS)             \
-  V(I16x8MaxU)             \
-  V(I8x16Add)              \
-  V(I8x16Sub)              \
-  V(I8x16Eq)               \
-  V(I8x16Ne)               \
-  V(I8x16GtS)              \
-  V(I8x16GeS)              \
-  V(I8x16GtU)              \
-  V(I8x16GeU)              \
-  V(I8x16MinS)             \
-  V(I8x16MinU)             \
-  V(I8x16MaxS)             \
-  V(I8x16MaxU)
+#define SIMD_BINOP_LIST(V)      \
+  V(F64x2Add, Simd128Register)  \
+  V(F64x2Sub, Simd128Register)  \
+  V(F64x2Mul, Simd128Register)  \
+  V(F64x2Div, Simd128Register)  \
+  V(F64x2Min, Simd128Register)  \
+  V(F64x2Max, Simd128Register)  \
+  V(F64x2Eq, Simd128Register)   \
+  V(F64x2Ne, Simd128Register)   \
+  V(F64x2Lt, Simd128Register)   \
+  V(F64x2Le, Simd128Register)   \
+  V(F32x4Add, Simd128Register)  \
+  V(F32x4Sub, Simd128Register)  \
+  V(F32x4Mul, Simd128Register)  \
+  V(F32x4Div, Simd128Register)  \
+  V(F32x4Min, Simd128Register)  \
+  V(F32x4Max, Simd128Register)  \
+  V(F32x4Eq, Simd128Register)   \
+  V(F32x4Ne, Simd128Register)   \
+  V(F32x4Lt, Simd128Register)   \
+  V(F32x4Le, Simd128Register)   \
+  V(I64x2Add, Simd128Register)  \
+  V(I64x2Sub, Simd128Register)  \
+  V(I64x2Mul, Simd128Register)  \
+  V(I64x2Eq, Simd128Register)   \
+  V(I64x2Ne, Simd128Register)   \
+  V(I64x2GtS, Simd128Register)  \
+  V(I64x2GeS, Simd128Register)  \
+  V(I64x2Shl, Register)         \
+  V(I64x2ShrS, Register)        \
+  V(I64x2ShrU, Register)        \
+  V(I32x4Add, Simd128Register)  \
+  V(I32x4Sub, Simd128Register)  \
+  V(I32x4Mul, Simd128Register)  \
+  V(I32x4Eq, Simd128Register)   \
+  V(I32x4Ne, Simd128Register)   \
+  V(I32x4GtS, Simd128Register)  \
+  V(I32x4GeS, Simd128Register)  \
+  V(I32x4GtU, Simd128Register)  \
+  V(I32x4GeU, Simd128Register)  \
+  V(I32x4MinS, Simd128Register) \
+  V(I32x4MinU, Simd128Register) \
+  V(I32x4MaxS, Simd128Register) \
+  V(I32x4MaxU, Simd128Register) \
+  V(I32x4Shl, Register)         \
+  V(I32x4ShrS, Register)        \
+  V(I32x4ShrU, Register)        \
+  V(I16x8Add, Simd128Register)  \
+  V(I16x8Sub, Simd128Register)  \
+  V(I16x8Mul, Simd128Register)  \
+  V(I16x8Eq, Simd128Register)   \
+  V(I16x8Ne, Simd128Register)   \
+  V(I16x8GtS, Simd128Register)  \
+  V(I16x8GeS, Simd128Register)  \
+  V(I16x8GtU, Simd128Register)  \
+  V(I16x8GeU, Simd128Register)  \
+  V(I16x8MinS, Simd128Register) \
+  V(I16x8MinU, Simd128Register) \
+  V(I16x8MaxS, Simd128Register) \
+  V(I16x8MaxU, Simd128Register) \
+  V(I16x8Shl, Register)         \
+  V(I16x8ShrS, Register)        \
+  V(I16x8ShrU, Register)        \
+  V(I8x16Add, Simd128Register)  \
+  V(I8x16Sub, Simd128Register)  \
+  V(I8x16Eq, Simd128Register)   \
+  V(I8x16Ne, Simd128Register)   \
+  V(I8x16GtS, Simd128Register)  \
+  V(I8x16GeS, Simd128Register)  \
+  V(I8x16GtU, Simd128Register)  \
+  V(I8x16GeU, Simd128Register)  \
+  V(I8x16MinS, Simd128Register) \
+  V(I8x16MinU, Simd128Register) \
+  V(I8x16MaxS, Simd128Register) \
+  V(I8x16MaxU, Simd128Register) \
+  V(I8x16Shl, Register)         \
+  V(I8x16ShrS, Register)        \
+  V(I8x16ShrU, Register)
 
-#define EMIT_SIMD_BINOP(name)                                     \
+#define EMIT_SIMD_BINOP(name, stype)                              \
   case kS390_##name: {                                            \
     __ name(i.OutputSimd128Register(), i.InputSimd128Register(0), \
-            i.InputSimd128Register(1));                           \
+            i.Input##stype(1));                                   \
     break;                                                        \
   }
       SIMD_BINOP_LIST(EMIT_SIMD_BINOP)
@@ -2599,64 +2611,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ vavgl(i.OutputSimd128Register(), i.InputSimd128Register(0),
                i.InputSimd128Register(1), Condition(0), Condition(0),
                Condition(0));
-      break;
-    }
-    // vector shifts
-#define VECTOR_SHIFT(op, mode)                                             \
-  {                                                                        \
-    __ vlvg(kScratchDoubleReg, i.InputRegister(1), MemOperand(r0, 0),      \
-            Condition(mode));                                              \
-    __ vrep(kScratchDoubleReg, kScratchDoubleReg, Operand(0),              \
-            Condition(mode));                                              \
-    __ op(i.OutputSimd128Register(), i.InputSimd128Register(0),            \
-          kScratchDoubleReg, Condition(0), Condition(0), Condition(mode)); \
-  }
-    case kS390_I64x2Shl: {
-      VECTOR_SHIFT(veslv, 3);
-      break;
-    }
-    case kS390_I64x2ShrS: {
-      VECTOR_SHIFT(vesrav, 3);
-      break;
-    }
-    case kS390_I64x2ShrU: {
-      VECTOR_SHIFT(vesrlv, 3);
-      break;
-    }
-    case kS390_I32x4Shl: {
-      VECTOR_SHIFT(veslv, 2);
-      break;
-    }
-    case kS390_I32x4ShrS: {
-      VECTOR_SHIFT(vesrav, 2);
-      break;
-    }
-    case kS390_I32x4ShrU: {
-      VECTOR_SHIFT(vesrlv, 2);
-      break;
-    }
-    case kS390_I16x8Shl: {
-      VECTOR_SHIFT(veslv, 1);
-      break;
-    }
-    case kS390_I16x8ShrS: {
-      VECTOR_SHIFT(vesrav, 1);
-      break;
-    }
-    case kS390_I16x8ShrU: {
-      VECTOR_SHIFT(vesrlv, 1);
-      break;
-    }
-    case kS390_I8x16Shl: {
-      VECTOR_SHIFT(veslv, 0);
-      break;
-    }
-    case kS390_I8x16ShrS: {
-      VECTOR_SHIFT(vesrav, 0);
-      break;
-    }
-    case kS390_I8x16ShrU: {
-      VECTOR_SHIFT(vesrlv, 0);
       break;
     }
     // vector unary ops
@@ -3433,6 +3387,120 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ vpkls(dst, dst, kScratchDoubleReg, Condition(0), Condition(3));
       break;
     }
+#define LOAD_SPLAT(type)                           \
+  AddressingMode mode = kMode_None;                \
+  MemOperand operand = i.MemoryOperand(&mode);     \
+  Simd128Register dst = i.OutputSimd128Register(); \
+  __ LoadAndSplat##type##LE(dst, operand);
+    case kS390_S128Load64Splat: {
+      LOAD_SPLAT(64x2);
+      break;
+    }
+    case kS390_S128Load32Splat: {
+      LOAD_SPLAT(32x4);
+      break;
+    }
+    case kS390_S128Load16Splat: {
+      LOAD_SPLAT(16x8);
+      break;
+    }
+    case kS390_S128Load8Splat: {
+      LOAD_SPLAT(8x16);
+      break;
+    }
+#undef LOAD_SPLAT
+#define LOAD_EXTEND(type)                          \
+  AddressingMode mode = kMode_None;                \
+  MemOperand operand = i.MemoryOperand(&mode);     \
+  Simd128Register dst = i.OutputSimd128Register(); \
+  __ LoadAndExtend##type##LE(dst, operand);
+    case kS390_S128Load32x2U: {
+      LOAD_EXTEND(32x2U);
+      break;
+    }
+    case kS390_S128Load32x2S: {
+      LOAD_EXTEND(32x2S);
+      break;
+    }
+    case kS390_S128Load16x4U: {
+      LOAD_EXTEND(16x4U);
+      break;
+    }
+    case kS390_S128Load16x4S: {
+      LOAD_EXTEND(16x4S);
+      break;
+    }
+    case kS390_S128Load8x8U: {
+      LOAD_EXTEND(8x8U);
+      break;
+    }
+    case kS390_S128Load8x8S: {
+      LOAD_EXTEND(8x8S);
+      break;
+    }
+#undef LOAD_EXTEND
+#define LOAD_AND_ZERO(type)                        \
+  AddressingMode mode = kMode_None;                \
+  MemOperand operand = i.MemoryOperand(&mode);     \
+  Simd128Register dst = i.OutputSimd128Register(); \
+  __ LoadV##type##ZeroLE(dst, operand);
+    case kS390_S128Load32Zero: {
+      LOAD_AND_ZERO(32);
+      break;
+    }
+    case kS390_S128Load64Zero: {
+      LOAD_AND_ZERO(64);
+      break;
+    }
+#undef LOAD_AND_ZERO
+#undef LOAD_EXTEND
+#define LOAD_LANE(type, lane)                          \
+  AddressingMode mode = kMode_None;                    \
+  size_t index = 2;                                    \
+  MemOperand operand = i.MemoryOperand(&mode, &index); \
+  Simd128Register dst = i.OutputSimd128Register();     \
+  DCHECK_EQ(dst, i.InputSimd128Register(0));           \
+  __ LoadLane##type##LE(dst, operand, lane);
+    case kS390_S128Load8Lane: {
+      LOAD_LANE(8, 15 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Load16Lane: {
+      LOAD_LANE(16, 7 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Load32Lane: {
+      LOAD_LANE(32, 3 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Load64Lane: {
+      LOAD_LANE(64, 1 - i.InputUint8(1));
+      break;
+    }
+#undef LOAD_LANE
+#define STORE_LANE(type, lane)                         \
+  AddressingMode mode = kMode_None;                    \
+  size_t index = 2;                                    \
+  MemOperand operand = i.MemoryOperand(&mode, &index); \
+  Simd128Register src = i.InputSimd128Register(0);     \
+  __ StoreLane##type##LE(src, operand, lane);
+    case kS390_S128Store8Lane: {
+      STORE_LANE(8, 15 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Store16Lane: {
+      STORE_LANE(16, 7 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Store32Lane: {
+      STORE_LANE(32, 3 - i.InputUint8(1));
+      break;
+    }
+    case kS390_S128Store64Lane: {
+      STORE_LANE(64, 1 - i.InputUint8(1));
+      break;
+    }
+#undef STORE_LANE
     case kS390_StoreCompressTagged: {
       CHECK(!instr->HasOutput());
       size_t index = 0;
@@ -3957,7 +4025,6 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
         }
         case Constant::kRpoNumber:
           UNREACHABLE();  // TODO(dcarney): loading RPO constants on S390.
-          break;
       }
       if (destination->IsStackSlot()) {
         __ StoreU64(dst, g.ToMemOperand(destination), r0);

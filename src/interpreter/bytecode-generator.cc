@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "include/v8-extension.h"
 #include "src/api/api-inl.h"
 #include "src/ast/ast-source-ranges.h"
 #include "src/ast/ast.h"
@@ -1215,7 +1216,7 @@ Handle<BytecodeArray> BytecodeGenerator::FinalizeBytecode(
   }
 
   if (HasStackOverflow()) return Handle<BytecodeArray>();
-  Handle<BytecodeArray> bytecode_array = builder()->ToBytecodeArray(isolate);
+  Handle<BytecodeArray> bytecode_array = builder()->ToBytecodeArray(isolate); //v8i: goto
 
   if (incoming_new_target_or_generator_.is_valid()) {
     bytecode_array->set_incoming_new_target_or_generator_register(
@@ -1356,7 +1357,7 @@ bool NeedsContextInitialization(DeclarationScope* scope) {
 }
 }  // namespace
 
-void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
+void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) { //v8i: go
   DisallowGarbageCollection no_gc;
   DisallowHandleAllocation no_handles;
   DisallowHandleDereference no_deref;
@@ -1371,7 +1372,7 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
 
   RegisterAllocationScope register_scope(this);
 
-  AllocateTopLevelRegisters();
+  AllocateTopLevelRegisters(); //v8i allocate registers
 
   builder()->EmitFunctionStartSourcePosition(
       info()->literal()->start_position());
@@ -1387,14 +1388,14 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
     BuildLocalActivationContextInitialization();
     GenerateBytecodeBody();
   } else {
-    GenerateBytecodeBody();
+    GenerateBytecodeBody(); //v8i go
   }
 
   // Check that we are not falling off the end.
   DCHECK(builder()->RemainderOfBlockIsDead());
 }
 
-void BytecodeGenerator::GenerateBytecodeBody() {
+void BytecodeGenerator::GenerateBytecodeBody() { //v8i go
   // Build the arguments object if it is used.
   VisitArgumentsObject(closure_scope()->arguments());
 
@@ -1459,7 +1460,7 @@ void BytecodeGenerator::GenerateBytecodeBody() {
   }
 
   // Visit statements in the function body.
-  VisitStatements(literal->body());
+  VisitStatements(literal->body()); //v8i: statements one by one
 
   // Emit an implicit return instruction in case control flow can fall off the
   // end of the function without an explicit return being present on all paths.
@@ -3647,8 +3648,7 @@ void BytecodeGenerator::BuildVariableAssignment(
       break;
     }
     case VariableLocation::UNALLOCATED: {
-      FeedbackSlot slot = GetCachedStoreGlobalICSlot(language_mode(), variable);
-      builder()->StoreGlobal(variable->raw_name(), feedback_index(slot));
+      BuildStoreGlobal(variable);
       break;
     }
     case VariableLocation::CONTEXT: {
@@ -3737,9 +3737,7 @@ void BytecodeGenerator::BuildVariableAssignment(
         if (mode == VariableMode::kConst) {
           builder()->CallRuntime(Runtime::kThrowConstAssignError);
         } else {
-          FeedbackSlot slot =
-              GetCachedStoreGlobalICSlot(language_mode(), variable);
-          builder()->StoreGlobal(variable->raw_name(), feedback_index(slot));
+          BuildStoreGlobal(variable);
         }
       }
       break;
@@ -3766,6 +3764,21 @@ void BytecodeGenerator::BuildStoreNamedProperty(const Expression* object_expr,
   FeedbackSlot slot = GetCachedStoreICSlot(object_expr, name);
   builder()->StoreNamedProperty(object, name, feedback_index(slot),
                                 language_mode());
+
+  if (!execution_result()->IsEffect()) {
+    builder()->LoadAccumulatorWithRegister(value);
+  }
+}
+
+void BytecodeGenerator::BuildStoreGlobal(Variable* variable) {
+  Register value;
+  if (!execution_result()->IsEffect()) {
+    value = register_allocator()->NewRegister();
+    builder()->StoreAccumulatorInRegister(value);
+  }
+
+  FeedbackSlot slot = GetCachedStoreGlobalICSlot(language_mode(), variable);
+  builder()->StoreGlobal(variable->raw_name(), feedback_index(slot));
 
   if (!execution_result()->IsEffect()) {
     builder()->LoadAccumulatorWithRegister(value);

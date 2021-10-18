@@ -84,6 +84,7 @@
 #include "src/execution/isolate-inl.h"
 #include "src/heap/local-heap.h"
 #include "src/init/bootstrapper.h"
+#include "src/logging/code-events.h"
 #include "src/logging/counters.h"
 #include "src/logging/runtime-call-stats-scope.h"
 #include "src/objects/shared-function-info.h"
@@ -95,6 +96,7 @@
 
 #if V8_ENABLE_WEBASSEMBLY
 #include "src/compiler/wasm-compiler.h"
+#include "src/compiler/wasm-inlining.h"
 #include "src/wasm/function-body-decoder.h"
 #include "src/wasm/function-compiler.h"
 #include "src/wasm/wasm-engine.h"
@@ -946,13 +948,10 @@ void PrintCode(Isolate* isolate, Handle<Code> code,
 
 void TraceScheduleAndVerify(OptimizedCompilationInfo* info, PipelineData* data,
                             Schedule* schedule, const char* phase_name) {
-#ifdef V8_RUNTIME_CALL_STATS
-  PipelineRunScope scope(data, "V8.TraceScheduleAndVerify",
-                         RuntimeCallCounterId::kOptimizeTraceScheduleAndVerify,
-                         RuntimeCallStats::kThreadSpecific);
-#else
-  PipelineRunScope scope(data, "V8.TraceScheduleAndVerify");
-#endif
+  RCS_SCOPE(data->runtime_call_stats(),
+            RuntimeCallCounterId::kOptimizeTraceScheduleAndVerify,
+            RuntimeCallStats::kThreadSpecific);
+  TRACE_EVENT0(PipelineStatistics::kTraceCategory, "V8.TraceScheduleAndVerify");
   if (info->trace_turbo_json()) {
     UnparkedScopeIfNeeded scope(data->broker());
     AllowHandleDereference allow_deref;
@@ -1332,7 +1331,7 @@ struct GraphBuilderPhase {
     JSFunctionRef closure = MakeRef(data->broker(), data->info()->closure());
     CallFrequency frequency(1.0f);
     BuildGraphFromBytecode(
-        data->broker(), temp_zone, closure.shared(data->dependencies()),
+        data->broker(), temp_zone, closure.shared(),
         closure.raw_feedback_cell(data->dependencies()),
         data->info()->osr_offset(), data->jsgraph(), frequency,
         data->source_positions(), SourcePosition::kNotInlined,
@@ -1411,8 +1410,8 @@ struct InliningPhase {
 };
 
 #if V8_ENABLE_WEBASSEMBLY
-struct WasmInliningPhase {
-  DECL_PIPELINE_PHASE_CONSTANTS(WasmInlining)
+struct JSWasmInliningPhase {
+  DECL_PIPELINE_PHASE_CONSTANTS(JSWasmInlining)
   void Run(PipelineData* data, Zone* temp_zone) {
     DCHECK(data->has_js_wasm_calls());
 
@@ -1684,6 +1683,28 @@ struct WasmLoopUnrollingPhase {
         LoopPeeler::EliminateLoopExit(use);
       }
     }
+  }
+};
+
+struct WasmInliningPhase {
+  DECL_PIPELINE_PHASE_CONSTANTS(WasmInlining)
+
+  void Run(PipelineData* data, Zone* temp_zone, wasm::CompilationEnv* env,
+           const wasm::WireBytesStorage* wire_bytes) {
+    GraphReducer graph_reducer(
+        temp_zone, data->graph(), &data->info()->tick_counter(), data->broker(),
+        data->jsgraph()->Dead(), data->observe_node_manager());
+    DeadCodeElimination dead(&graph_reducer, data->graph(),
+                             data->mcgraph()->common(), temp_zone);
+    // For now, hard-code inlining the function at index 0.
+    InlineByIndex heuristics({0});
+    WasmInliner inliner(&graph_reducer, env, data->source_positions(),
+                        data->node_origins(), data->mcgraph(), wire_bytes,
+                        &heuristics);
+    AddReducer(data, &graph_reducer, &dead);
+    AddReducer(data, &graph_reducer, &inliner);
+
+    graph_reducer.ReduceGraph();
   }
 };
 #endif  // V8_ENABLE_WEBASSEMBLY
@@ -2591,6 +2612,9 @@ CompilationJob::Status WasmHeapStubCompilationJob::FinalizeJobImpl(
                         tracing_scope.stream(), isolate);
     }
 #endif
+    PROFILE(isolate, CodeCreateEvent(CodeEventListener::STUB_TAG,
+                                     Handle<AbstractCode>::cast(code),
+                                     compilation_info()->GetDebugName().get()));
     return SUCCEEDED;
   }
   return FAILED;
@@ -2734,8 +2758,8 @@ bool PipelineImpl::OptimizeGraph(Linkage* linkage) {
 #if V8_ENABLE_WEBASSEMBLY
   if (data->has_js_wasm_calls()) {
     DCHECK(data->info()->inline_js_wasm_calls());
-    Run<WasmInliningPhase>();
-    RunPrintAndVerify(WasmInliningPhase::phase_name(), true);
+    Run<JSWasmInliningPhase>();
+    RunPrintAndVerify(JSWasmInliningPhase::phase_name(), true);
   }
 #endif  // V8_ENABLE_WEBASSEMBLY
 
@@ -2837,8 +2861,8 @@ bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) {
 #if V8_ENABLE_WEBASSEMBLY
   if (data->has_js_wasm_calls()) {
     DCHECK(data->info()->inline_js_wasm_calls());
-    Run<WasmInliningPhase>();
-    RunPrintAndVerify(WasmInliningPhase::phase_name(), true);
+    Run<JSWasmInliningPhase>();
+    RunPrintAndVerify(JSWasmInliningPhase::phase_name(), true);
   }
 #endif  // V8_ENABLE_WEBASSEMBLY
 
@@ -3174,7 +3198,8 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
 
 // static
 void Pipeline::GenerateCodeForWasmFunction(
-    OptimizedCompilationInfo* info, MachineGraph* mcgraph,
+    OptimizedCompilationInfo* info, wasm::CompilationEnv* env,
+    const wasm::WireBytesStorage* wire_bytes_storage, MachineGraph* mcgraph,
     CallDescriptor* call_descriptor, SourcePositionTable* source_positions,
     NodeOriginTable* node_origins, wasm::FunctionBody function_body,
     const wasm::WasmModule* module, int function_index,
@@ -3203,6 +3228,10 @@ void Pipeline::GenerateCodeForWasmFunction(
   if (FLAG_wasm_loop_unrolling) {
     pipeline.Run<WasmLoopUnrollingPhase>(loop_info);
     pipeline.RunPrintAndVerify(WasmLoopUnrollingPhase::phase_name(), true);
+  }
+  if (FLAG_wasm_inlining) {
+    pipeline.Run<WasmInliningPhase>(env, wire_bytes_storage);
+    pipeline.RunPrintAndVerify(WasmInliningPhase::phase_name(), true);
   }
   const bool is_asm_js = is_asmjs_module(module);
 

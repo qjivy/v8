@@ -6,13 +6,16 @@
 
 #include <type_traits>
 
+#include "include/v8-maybe.h"
 #include "include/v8-value-serializer-version.h"
-#include "include/v8.h"
+#include "include/v8-value-serializer.h"
+#include "include/v8-wasm.h"
 #include "src/api/api-inl.h"
 #include "src/base/logging.h"
 #include "src/base/platform/wrappers.h"
 #include "src/execution/isolate.h"
 #include "src/flags/flags.h"
+#include "src/handles/global-handles-inl.h"
 #include "src/handles/handles-inl.h"
 #include "src/handles/maybe-handles-inl.h"
 #include "src/heap/factory.h"

@@ -144,21 +144,6 @@ class Arm64OperandGenerator final : public OperandGenerator {
 
 namespace {
 
-ArchOpcode GetAtomicStoreOpcode(MachineRepresentation rep) {
-  switch (rep) {
-    case MachineRepresentation::kWord8:
-      return kAtomicStoreWord8;
-    case MachineRepresentation::kWord16:
-      return kAtomicStoreWord16;
-    case MachineRepresentation::kWord32:
-      return kAtomicStoreWord32;
-    case MachineRepresentation::kWord64:
-      return kArm64Word64AtomicStoreWord64;
-    default:
-      UNREACHABLE();
-  }
-}
-
 void VisitRR(InstructionSelector* selector, ArchOpcode opcode, Node* node) {
   Arm64OperandGenerator g(selector);
   selector->Emit(opcode, g.DefineAsRegister(node),
@@ -205,7 +190,8 @@ void VisitSimdShiftRRR(InstructionSelector* selector, ArchOpcode opcode,
   }
 }
 
-void VisitRRI(InstructionSelector* selector, ArchOpcode opcode, Node* node) {
+void VisitRRI(InstructionSelector* selector, InstructionCode opcode,
+              Node* node) {
   Arm64OperandGenerator g(selector);
   int32_t imm = OpParameter<int32_t>(node->op());
   selector->Emit(opcode, g.DefineAsRegister(node),
@@ -220,7 +206,8 @@ void VisitRRO(InstructionSelector* selector, ArchOpcode opcode, Node* node,
                  g.UseOperand(node->InputAt(1), operand_mode));
 }
 
-void VisitRRIR(InstructionSelector* selector, ArchOpcode opcode, Node* node) {
+void VisitRRIR(InstructionSelector* selector, InstructionCode opcode,
+               Node* node) {
   Arm64OperandGenerator g(selector);
   int32_t imm = OpParameter<int32_t>(node->op());
   selector->Emit(opcode, g.DefineAsRegister(node),
@@ -1945,7 +1932,9 @@ void InstructionSelector::VisitBitcastWord32ToWord64(Node* node) {
 
 void InstructionSelector::VisitChangeInt32ToInt64(Node* node) {
   Node* value = node->InputAt(0);
-  if (value->opcode() == IrOpcode::kLoad && CanCover(node, value)) {
+  if ((value->opcode() == IrOpcode::kLoad ||
+       value->opcode() == IrOpcode::kLoadImmutable) &&
+      CanCover(node, value)) {
     // Generate sign-extending load.
     LoadRepresentation load_rep = LoadRepresentationOf(value->op());
     MachineRepresentation rep = load_rep.representation();
@@ -2618,30 +2607,136 @@ void VisitAtomicCompareExchange(InstructionSelector* selector, Node* node,
 }
 
 void VisitAtomicLoad(InstructionSelector* selector, Node* node,
-                     ArchOpcode opcode, AtomicWidth width) {
+                     AtomicWidth width) {
   Arm64OperandGenerator g(selector);
   Node* base = node->InputAt(0);
   Node* index = node->InputAt(1);
   InstructionOperand inputs[] = {g.UseRegister(base), g.UseRegister(index)};
   InstructionOperand outputs[] = {g.DefineAsRegister(node)};
   InstructionOperand temps[] = {g.TempRegister()};
-  InstructionCode code = opcode | AddressingModeField::encode(kMode_MRR) |
-                         AtomicWidthField::encode(width);
+
+  // The memory order is ignored as both acquire and sequentially consistent
+  // loads can emit LDAR.
+  // https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+  AtomicLoadParameters atomic_load_params = AtomicLoadParametersOf(node->op());
+  LoadRepresentation load_rep = atomic_load_params.representation();
+  InstructionCode code;
+  switch (load_rep.representation()) {
+    case MachineRepresentation::kWord8:
+      DCHECK_IMPLIES(load_rep.IsSigned(), width == AtomicWidth::kWord32);
+      code = load_rep.IsSigned() ? kAtomicLoadInt8 : kAtomicLoadUint8;
+      break;
+    case MachineRepresentation::kWord16:
+      DCHECK_IMPLIES(load_rep.IsSigned(), width == AtomicWidth::kWord32);
+      code = load_rep.IsSigned() ? kAtomicLoadInt16 : kAtomicLoadUint16;
+      break;
+    case MachineRepresentation::kWord32:
+      code = kAtomicLoadWord32;
+      break;
+    case MachineRepresentation::kWord64:
+      code = kArm64Word64AtomicLoadUint64;
+      break;
+#ifdef V8_COMPRESS_POINTERS
+    case MachineRepresentation::kTaggedSigned:
+      code = kArm64LdarDecompressTaggedSigned;
+      break;
+    case MachineRepresentation::kTaggedPointer:
+      code = kArm64LdarDecompressTaggedPointer;
+      break;
+    case MachineRepresentation::kTagged:
+      code = kArm64LdarDecompressAnyTagged;
+      break;
+#else
+    case MachineRepresentation::kTaggedSigned:   // Fall through.
+    case MachineRepresentation::kTaggedPointer:  // Fall through.
+    case MachineRepresentation::kTagged:
+      if (kTaggedSize == 8) {
+        code = kArm64Word64AtomicLoadUint64;
+      } else {
+        code = kAtomicLoadWord32;
+      }
+      break;
+#endif
+    case MachineRepresentation::kCompressedPointer:  // Fall through.
+    case MachineRepresentation::kCompressed:
+      DCHECK(COMPRESS_POINTERS_BOOL);
+      code = kAtomicLoadWord32;
+      break;
+    default:
+      UNREACHABLE();
+  }
+  code |=
+      AddressingModeField::encode(kMode_MRR) | AtomicWidthField::encode(width);
   selector->Emit(code, arraysize(outputs), outputs, arraysize(inputs), inputs,
                  arraysize(temps), temps);
 }
 
 void VisitAtomicStore(InstructionSelector* selector, Node* node,
-                      ArchOpcode opcode, AtomicWidth width) {
+                      AtomicWidth width) {
   Arm64OperandGenerator g(selector);
   Node* base = node->InputAt(0);
   Node* index = node->InputAt(1);
   Node* value = node->InputAt(2);
+
+  // The memory order is ignored as both release and sequentially consistent
+  // stores can emit STLR.
+  // https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+  AtomicStoreParameters store_params = AtomicStoreParametersOf(node->op());
+  WriteBarrierKind write_barrier_kind = store_params.write_barrier_kind();
+  MachineRepresentation rep = store_params.representation();
+
+  if (FLAG_enable_unconditional_write_barriers &&
+      CanBeTaggedOrCompressedPointer(rep)) {
+    write_barrier_kind = kFullWriteBarrier;
+  }
+
   InstructionOperand inputs[] = {g.UseRegister(base), g.UseRegister(index),
                                  g.UseUniqueRegister(value)};
   InstructionOperand temps[] = {g.TempRegister()};
-  InstructionCode code = opcode | AddressingModeField::encode(kMode_MRR) |
-                         AtomicWidthField::encode(width);
+  InstructionCode code;
+
+  if (write_barrier_kind != kNoWriteBarrier && !FLAG_disable_write_barriers) {
+    DCHECK(CanBeTaggedOrCompressedPointer(rep));
+    DCHECK_EQ(AtomicWidthSize(width), kTaggedSize);
+
+    RecordWriteMode record_write_mode =
+        WriteBarrierKindToRecordWriteMode(write_barrier_kind);
+    code = kArchAtomicStoreWithWriteBarrier;
+    code |= MiscField::encode(static_cast<int>(record_write_mode));
+  } else {
+    switch (rep) {
+      case MachineRepresentation::kWord8:
+        code = kAtomicStoreWord8;
+        break;
+      case MachineRepresentation::kWord16:
+        code = kAtomicStoreWord16;
+        break;
+      case MachineRepresentation::kWord32:
+        code = kAtomicStoreWord32;
+        break;
+      case MachineRepresentation::kWord64:
+        DCHECK_EQ(width, AtomicWidth::kWord64);
+        code = kArm64Word64AtomicStoreWord64;
+        break;
+      case MachineRepresentation::kTaggedSigned:   // Fall through.
+      case MachineRepresentation::kTaggedPointer:  // Fall through.
+      case MachineRepresentation::kTagged:
+        DCHECK_EQ(AtomicWidthSize(width), kTaggedSize);
+        code = kArm64StlrCompressTagged;
+        break;
+      case MachineRepresentation::kCompressedPointer:  // Fall through.
+      case MachineRepresentation::kCompressed:
+        CHECK(COMPRESS_POINTERS_BOOL);
+        DCHECK_EQ(width, AtomicWidth::kWord32);
+        code = kArm64StlrCompressTagged;
+        break;
+      default:
+        UNREACHABLE();
+    }
+    code |= AtomicWidthField::encode(width);
+  }
+
+  code |= AddressingModeField::encode(kMode_MRR);
   selector->Emit(code, 0, nullptr, arraysize(inputs), inputs, arraysize(temps),
                  temps);
 }
@@ -3202,55 +3297,19 @@ void InstructionSelector::VisitMemoryBarrier(Node* node) {
 }
 
 void InstructionSelector::VisitWord32AtomicLoad(Node* node) {
-  LoadRepresentation load_rep = LoadRepresentationOf(node->op());
-  ArchOpcode opcode;
-  switch (load_rep.representation()) {
-    case MachineRepresentation::kWord8:
-      opcode = load_rep.IsSigned() ? kAtomicLoadInt8 : kAtomicLoadUint8;
-      break;
-    case MachineRepresentation::kWord16:
-      opcode = load_rep.IsSigned() ? kAtomicLoadInt16 : kAtomicLoadUint16;
-      break;
-    case MachineRepresentation::kWord32:
-      opcode = kAtomicLoadWord32;
-      break;
-    default:
-      UNREACHABLE();
-  }
-  VisitAtomicLoad(this, node, opcode, AtomicWidth::kWord32);
+  VisitAtomicLoad(this, node, AtomicWidth::kWord32);
 }
 
 void InstructionSelector::VisitWord64AtomicLoad(Node* node) {
-  LoadRepresentation load_rep = LoadRepresentationOf(node->op());
-  ArchOpcode opcode;
-  switch (load_rep.representation()) {
-    case MachineRepresentation::kWord8:
-      opcode = kAtomicLoadUint8;
-      break;
-    case MachineRepresentation::kWord16:
-      opcode = kAtomicLoadUint16;
-      break;
-    case MachineRepresentation::kWord32:
-      opcode = kAtomicLoadWord32;
-      break;
-    case MachineRepresentation::kWord64:
-      opcode = kArm64Word64AtomicLoadUint64;
-      break;
-    default:
-      UNREACHABLE();
-  }
-  VisitAtomicLoad(this, node, opcode, AtomicWidth::kWord64);
+  VisitAtomicLoad(this, node, AtomicWidth::kWord64);
 }
 
 void InstructionSelector::VisitWord32AtomicStore(Node* node) {
-  MachineRepresentation rep = AtomicStoreRepresentationOf(node->op());
-  DCHECK_NE(rep, MachineRepresentation::kWord64);
-  VisitAtomicStore(this, node, GetAtomicStoreOpcode(rep), AtomicWidth::kWord32);
+  VisitAtomicStore(this, node, AtomicWidth::kWord32);
 }
 
 void InstructionSelector::VisitWord64AtomicStore(Node* node) {
-  MachineRepresentation rep = AtomicStoreRepresentationOf(node->op());
-  VisitAtomicStore(this, node, GetAtomicStoreOpcode(rep), AtomicWidth::kWord64);
+  VisitAtomicStore(this, node, AtomicWidth::kWord64);
 }
 
 void InstructionSelector::VisitWord32AtomicExchange(Node* node) {
@@ -3399,44 +3458,22 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   UNREACHABLE();
 }
 
-#define SIMD_TYPE_LIST(V) \
-  V(F64x2)                \
-  V(F32x4)                \
-  V(I64x2)                \
-  V(I32x4)                \
-  V(I16x8)                \
-  V(I8x16)
-
 #define SIMD_UNOP_LIST(V)                                   \
-  V(F64x2Abs, kArm64F64x2Abs)                               \
-  V(F64x2Neg, kArm64F64x2Neg)                               \
-  V(F64x2Sqrt, kArm64F64x2Sqrt)                             \
   V(F64x2ConvertLowI32x4S, kArm64F64x2ConvertLowI32x4S)     \
   V(F64x2ConvertLowI32x4U, kArm64F64x2ConvertLowI32x4U)     \
   V(F64x2PromoteLowF32x4, kArm64F64x2PromoteLowF32x4)       \
   V(F32x4SConvertI32x4, kArm64F32x4SConvertI32x4)           \
   V(F32x4UConvertI32x4, kArm64F32x4UConvertI32x4)           \
-  V(F32x4Abs, kArm64F32x4Abs)                               \
-  V(F32x4Neg, kArm64F32x4Neg)                               \
-  V(F32x4Sqrt, kArm64F32x4Sqrt)                             \
   V(F32x4RecipApprox, kArm64F32x4RecipApprox)               \
   V(F32x4RecipSqrtApprox, kArm64F32x4RecipSqrtApprox)       \
   V(F32x4DemoteF64x2Zero, kArm64F32x4DemoteF64x2Zero)       \
-  V(I64x2Abs, kArm64I64x2Abs)                               \
-  V(I64x2Neg, kArm64I64x2Neg)                               \
   V(I64x2BitMask, kArm64I64x2BitMask)                       \
   V(I32x4SConvertF32x4, kArm64I32x4SConvertF32x4)           \
-  V(I32x4Neg, kArm64I32x4Neg)                               \
   V(I32x4UConvertF32x4, kArm64I32x4UConvertF32x4)           \
-  V(I32x4Abs, kArm64I32x4Abs)                               \
   V(I32x4BitMask, kArm64I32x4BitMask)                       \
   V(I32x4TruncSatF64x2SZero, kArm64I32x4TruncSatF64x2SZero) \
   V(I32x4TruncSatF64x2UZero, kArm64I32x4TruncSatF64x2UZero) \
-  V(I16x8Neg, kArm64I16x8Neg)                               \
-  V(I16x8Abs, kArm64I16x8Abs)                               \
   V(I16x8BitMask, kArm64I16x8BitMask)                       \
-  V(I8x16Neg, kArm64I8x16Neg)                               \
-  V(I8x16Abs, kArm64I8x16Abs)                               \
   V(I8x16BitMask, kArm64I8x16BitMask)                       \
   V(S128Not, kArm64S128Not)                                 \
   V(V128AnyTrue, kArm64V128AnyTrue)                         \
@@ -3444,6 +3481,28 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(I32x4AllTrue, kArm64I32x4AllTrue)                       \
   V(I16x8AllTrue, kArm64I16x8AllTrue)                       \
   V(I8x16AllTrue, kArm64I8x16AllTrue)
+
+#define SIMD_UNOP_LANE_SIZE_LIST(V) \
+  V(F64x2Splat, kArm64FSplat, 64)   \
+  V(F64x2Abs, kArm64FAbs, 64)       \
+  V(F64x2Sqrt, kArm64FSqrt, 64)     \
+  V(F64x2Neg, kArm64FNeg, 64)       \
+  V(F32x4Splat, kArm64FSplat, 32)   \
+  V(F32x4Abs, kArm64FAbs, 32)       \
+  V(F32x4Sqrt, kArm64FSqrt, 32)     \
+  V(F32x4Neg, kArm64FNeg, 32)       \
+  V(I64x2Splat, kArm64ISplat, 64)   \
+  V(I64x2Abs, kArm64IAbs, 64)       \
+  V(I64x2Neg, kArm64INeg, 64)       \
+  V(I32x4Splat, kArm64ISplat, 32)   \
+  V(I32x4Abs, kArm64IAbs, 32)       \
+  V(I32x4Neg, kArm64INeg, 32)       \
+  V(I16x8Splat, kArm64ISplat, 16)   \
+  V(I16x8Abs, kArm64IAbs, 16)       \
+  V(I16x8Neg, kArm64INeg, 16)       \
+  V(I8x16Splat, kArm64ISplat, 8)    \
+  V(I8x16Abs, kArm64IAbs, 8)        \
+  V(I8x16Neg, kArm64INeg, 8)
 
 #define SIMD_SHIFT_OP_LIST(V) \
   V(I64x2Shl, 64)             \
@@ -3460,84 +3519,76 @@ void InstructionSelector::VisitInt64AbsWithOverflow(Node* node) {
   V(I8x16ShrU, 8)
 
 #define SIMD_BINOP_LIST(V)                              \
-  V(F64x2Add, kArm64F64x2Add)                           \
-  V(F64x2Sub, kArm64F64x2Sub)                           \
-  V(F64x2Div, kArm64F64x2Div)                           \
-  V(F64x2Min, kArm64F64x2Min)                           \
-  V(F64x2Max, kArm64F64x2Max)                           \
-  V(F64x2Eq, kArm64F64x2Eq)                             \
-  V(F64x2Ne, kArm64F64x2Ne)                             \
-  V(F64x2Lt, kArm64F64x2Lt)                             \
-  V(F64x2Le, kArm64F64x2Le)                             \
-  V(F32x4Add, kArm64F32x4Add)                           \
-  V(F32x4Sub, kArm64F32x4Sub)                           \
-  V(F32x4Div, kArm64F32x4Div)                           \
-  V(F32x4Min, kArm64F32x4Min)                           \
-  V(F32x4Max, kArm64F32x4Max)                           \
-  V(F32x4Eq, kArm64F32x4Eq)                             \
-  V(F32x4Ne, kArm64F32x4Ne)                             \
-  V(F32x4Lt, kArm64F32x4Lt)                             \
-  V(F32x4Le, kArm64F32x4Le)                             \
-  V(I64x2Add, kArm64I64x2Add)                           \
-  V(I64x2Sub, kArm64I64x2Sub)                           \
-  V(I64x2Eq, kArm64I64x2Eq)                             \
-  V(I64x2Ne, kArm64I64x2Ne)                             \
-  V(I64x2GtS, kArm64I64x2GtS)                           \
-  V(I64x2GeS, kArm64I64x2GeS)                           \
   V(I32x4Mul, kArm64I32x4Mul)                           \
-  V(I32x4MinS, kArm64I32x4MinS)                         \
-  V(I32x4MaxS, kArm64I32x4MaxS)                         \
-  V(I32x4Eq, kArm64I32x4Eq)                             \
-  V(I32x4Ne, kArm64I32x4Ne)                             \
-  V(I32x4GtS, kArm64I32x4GtS)                           \
-  V(I32x4GeS, kArm64I32x4GeS)                           \
-  V(I32x4MinU, kArm64I32x4MinU)                         \
-  V(I32x4MaxU, kArm64I32x4MaxU)                         \
-  V(I32x4GtU, kArm64I32x4GtU)                           \
-  V(I32x4GeU, kArm64I32x4GeU)                           \
   V(I32x4DotI16x8S, kArm64I32x4DotI16x8S)               \
   V(I16x8SConvertI32x4, kArm64I16x8SConvertI32x4)       \
-  V(I16x8AddSatS, kArm64I16x8AddSatS)                   \
-  V(I16x8SubSatS, kArm64I16x8SubSatS)                   \
   V(I16x8Mul, kArm64I16x8Mul)                           \
-  V(I16x8MinS, kArm64I16x8MinS)                         \
-  V(I16x8MaxS, kArm64I16x8MaxS)                         \
-  V(I16x8Eq, kArm64I16x8Eq)                             \
-  V(I16x8Ne, kArm64I16x8Ne)                             \
-  V(I16x8GtS, kArm64I16x8GtS)                           \
-  V(I16x8GeS, kArm64I16x8GeS)                           \
   V(I16x8UConvertI32x4, kArm64I16x8UConvertI32x4)       \
-  V(I16x8AddSatU, kArm64I16x8AddSatU)                   \
-  V(I16x8SubSatU, kArm64I16x8SubSatU)                   \
-  V(I16x8MinU, kArm64I16x8MinU)                         \
-  V(I16x8MaxU, kArm64I16x8MaxU)                         \
-  V(I16x8GtU, kArm64I16x8GtU)                           \
-  V(I16x8GeU, kArm64I16x8GeU)                           \
-  V(I16x8RoundingAverageU, kArm64I16x8RoundingAverageU) \
   V(I16x8Q15MulRSatS, kArm64I16x8Q15MulRSatS)           \
-  V(I8x16Add, kArm64I8x16Add)                           \
-  V(I8x16Sub, kArm64I8x16Sub)                           \
   V(I8x16SConvertI16x8, kArm64I8x16SConvertI16x8)       \
-  V(I8x16AddSatS, kArm64I8x16AddSatS)                   \
-  V(I8x16SubSatS, kArm64I8x16SubSatS)                   \
-  V(I8x16MinS, kArm64I8x16MinS)                         \
-  V(I8x16MaxS, kArm64I8x16MaxS)                         \
-  V(I8x16Eq, kArm64I8x16Eq)                             \
-  V(I8x16Ne, kArm64I8x16Ne)                             \
-  V(I8x16GtS, kArm64I8x16GtS)                           \
-  V(I8x16GeS, kArm64I8x16GeS)                           \
   V(I8x16UConvertI16x8, kArm64I8x16UConvertI16x8)       \
-  V(I8x16AddSatU, kArm64I8x16AddSatU)                   \
-  V(I8x16SubSatU, kArm64I8x16SubSatU)                   \
-  V(I8x16MinU, kArm64I8x16MinU)                         \
-  V(I8x16MaxU, kArm64I8x16MaxU)                         \
-  V(I8x16GtU, kArm64I8x16GtU)                           \
-  V(I8x16GeU, kArm64I8x16GeU)                           \
-  V(I8x16RoundingAverageU, kArm64I8x16RoundingAverageU) \
   V(S128And, kArm64S128And)                             \
   V(S128Or, kArm64S128Or)                               \
   V(S128Xor, kArm64S128Xor)                             \
   V(S128AndNot, kArm64S128AndNot)
+
+#define SIMD_BINOP_LANE_SIZE_LIST(V)                   \
+  V(F64x2Min, kArm64FMin, 64)                          \
+  V(F64x2Max, kArm64FMax, 64)                          \
+  V(F64x2Add, kArm64FAdd, 64)                          \
+  V(F64x2Sub, kArm64FSub, 64)                          \
+  V(F64x2Div, kArm64FDiv, 64)                          \
+  V(F32x4Min, kArm64FMin, 32)                          \
+  V(F32x4Max, kArm64FMax, 32)                          \
+  V(F32x4Add, kArm64FAdd, 32)                          \
+  V(F32x4Sub, kArm64FSub, 32)                          \
+  V(F32x4Div, kArm64FDiv, 32)                          \
+  V(I64x2Sub, kArm64ISub, 64)                          \
+  V(I64x2Eq, kArm64IEq, 64)                            \
+  V(I64x2Ne, kArm64INe, 64)                            \
+  V(I64x2GtS, kArm64IGtS, 64)                          \
+  V(I64x2GeS, kArm64IGeS, 64)                          \
+  V(I32x4Eq, kArm64IEq, 32)                            \
+  V(I32x4Ne, kArm64INe, 32)                            \
+  V(I32x4GtS, kArm64IGtS, 32)                          \
+  V(I32x4GeS, kArm64IGeS, 32)                          \
+  V(I32x4GtU, kArm64IGtU, 32)                          \
+  V(I32x4GeU, kArm64IGeU, 32)                          \
+  V(I32x4MinS, kArm64IMinS, 32)                        \
+  V(I32x4MaxS, kArm64IMaxS, 32)                        \
+  V(I32x4MinU, kArm64IMinU, 32)                        \
+  V(I32x4MaxU, kArm64IMaxU, 32)                        \
+  V(I16x8AddSatS, kArm64IAddSatS, 16)                  \
+  V(I16x8SubSatS, kArm64ISubSatS, 16)                  \
+  V(I16x8AddSatU, kArm64IAddSatU, 16)                  \
+  V(I16x8SubSatU, kArm64ISubSatU, 16)                  \
+  V(I16x8Eq, kArm64IEq, 16)                            \
+  V(I16x8Ne, kArm64INe, 16)                            \
+  V(I16x8GtS, kArm64IGtS, 16)                          \
+  V(I16x8GeS, kArm64IGeS, 16)                          \
+  V(I16x8GtU, kArm64IGtU, 16)                          \
+  V(I16x8GeU, kArm64IGeU, 16)                          \
+  V(I16x8RoundingAverageU, kArm64RoundingAverageU, 16) \
+  V(I8x16RoundingAverageU, kArm64RoundingAverageU, 8)  \
+  V(I16x8MinS, kArm64IMinS, 16)                        \
+  V(I16x8MaxS, kArm64IMaxS, 16)                        \
+  V(I16x8MinU, kArm64IMinU, 16)                        \
+  V(I16x8MaxU, kArm64IMaxU, 16)                        \
+  V(I8x16Sub, kArm64ISub, 8)                           \
+  V(I8x16AddSatS, kArm64IAddSatS, 8)                   \
+  V(I8x16SubSatS, kArm64ISubSatS, 8)                   \
+  V(I8x16AddSatU, kArm64IAddSatU, 8)                   \
+  V(I8x16SubSatU, kArm64ISubSatU, 8)                   \
+  V(I8x16Eq, kArm64IEq, 8)                             \
+  V(I8x16Ne, kArm64INe, 8)                             \
+  V(I8x16GtS, kArm64IGtS, 8)                           \
+  V(I8x16GeS, kArm64IGeS, 8)                           \
+  V(I8x16GtU, kArm64IGtU, 8)                           \
+  V(I8x16GeU, kArm64IGeU, 8)                           \
+  V(I8x16MinS, kArm64IMinS, 8)                         \
+  V(I8x16MaxS, kArm64IMaxS, 8)                         \
+  V(I8x16MinU, kArm64IMinU, 8)                         \
+  V(I8x16MaxU, kArm64IMaxU, 8)
 
 void InstructionSelector::VisitS128Const(Node* node) {
   Arm64OperandGenerator g(this);
@@ -3562,34 +3613,34 @@ void InstructionSelector::VisitS128Zero(Node* node) {
   Emit(kArm64S128Zero, g.DefineAsRegister(node));
 }
 
-#define SIMD_VISIT_SPLAT(Type)                               \
-  void InstructionSelector::Visit##Type##Splat(Node* node) { \
-    VisitRR(this, kArm64##Type##Splat, node);                \
+#define SIMD_VISIT_EXTRACT_LANE(Type, T, Sign, LaneSize)                     \
+  void InstructionSelector::Visit##Type##ExtractLane##Sign(Node* node) {     \
+    VisitRRI(this,                                                           \
+             kArm64##T##ExtractLane##Sign | LaneSizeField::encode(LaneSize), \
+             node);                                                          \
   }
-SIMD_TYPE_LIST(SIMD_VISIT_SPLAT)
-#undef SIMD_VISIT_SPLAT
-
-#define SIMD_VISIT_EXTRACT_LANE(Type, Sign)                              \
-  void InstructionSelector::Visit##Type##ExtractLane##Sign(Node* node) { \
-    VisitRRI(this, kArm64##Type##ExtractLane##Sign, node);               \
-  }
-SIMD_VISIT_EXTRACT_LANE(F64x2, )
-SIMD_VISIT_EXTRACT_LANE(F32x4, )
-SIMD_VISIT_EXTRACT_LANE(I64x2, )
-SIMD_VISIT_EXTRACT_LANE(I32x4, )
-SIMD_VISIT_EXTRACT_LANE(I16x8, U)
-SIMD_VISIT_EXTRACT_LANE(I16x8, S)
-SIMD_VISIT_EXTRACT_LANE(I8x16, U)
-SIMD_VISIT_EXTRACT_LANE(I8x16, S)
+SIMD_VISIT_EXTRACT_LANE(F64x2, F, , 64)
+SIMD_VISIT_EXTRACT_LANE(F32x4, F, , 32)
+SIMD_VISIT_EXTRACT_LANE(I64x2, I, , 64)
+SIMD_VISIT_EXTRACT_LANE(I32x4, I, , 32)
+SIMD_VISIT_EXTRACT_LANE(I16x8, I, U, 16)
+SIMD_VISIT_EXTRACT_LANE(I16x8, I, S, 16)
+SIMD_VISIT_EXTRACT_LANE(I8x16, I, U, 8)
+SIMD_VISIT_EXTRACT_LANE(I8x16, I, S, 8)
 #undef SIMD_VISIT_EXTRACT_LANE
 
-#define SIMD_VISIT_REPLACE_LANE(Type)                              \
-  void InstructionSelector::Visit##Type##ReplaceLane(Node* node) { \
-    VisitRRIR(this, kArm64##Type##ReplaceLane, node);              \
+#define SIMD_VISIT_REPLACE_LANE(Type, T, LaneSize)                            \
+  void InstructionSelector::Visit##Type##ReplaceLane(Node* node) {            \
+    VisitRRIR(this, kArm64##T##ReplaceLane | LaneSizeField::encode(LaneSize), \
+              node);                                                          \
   }
-SIMD_TYPE_LIST(SIMD_VISIT_REPLACE_LANE)
+SIMD_VISIT_REPLACE_LANE(F64x2, F, 64)
+SIMD_VISIT_REPLACE_LANE(F32x4, F, 32)
+SIMD_VISIT_REPLACE_LANE(I64x2, I, 64)
+SIMD_VISIT_REPLACE_LANE(I32x4, I, 32)
+SIMD_VISIT_REPLACE_LANE(I16x8, I, 16)
+SIMD_VISIT_REPLACE_LANE(I8x16, I, 8)
 #undef SIMD_VISIT_REPLACE_LANE
-#undef SIMD_TYPE_LIST
 
 #define SIMD_VISIT_UNOP(Name, instruction)            \
   void InstructionSelector::Visit##Name(Node* node) { \
@@ -3614,6 +3665,22 @@ SIMD_SHIFT_OP_LIST(SIMD_VISIT_SHIFT_OP)
 SIMD_BINOP_LIST(SIMD_VISIT_BINOP)
 #undef SIMD_VISIT_BINOP
 #undef SIMD_BINOP_LIST
+
+#define SIMD_VISIT_BINOP_LANE_SIZE(Name, instruction, LaneSize)          \
+  void InstructionSelector::Visit##Name(Node* node) {                    \
+    VisitRRR(this, instruction | LaneSizeField::encode(LaneSize), node); \
+  }
+SIMD_BINOP_LANE_SIZE_LIST(SIMD_VISIT_BINOP_LANE_SIZE)
+#undef SIMD_VISIT_BINOP_LANE_SIZE
+#undef SIMD_BINOP_LANE_SIZE_LIST
+
+#define SIMD_VISIT_UNOP_LANE_SIZE(Name, instruction, LaneSize)          \
+  void InstructionSelector::Visit##Name(Node* node) {                   \
+    VisitRR(this, instruction | LaneSizeField::encode(LaneSize), node); \
+  }
+SIMD_UNOP_LANE_SIZE_LIST(SIMD_VISIT_UNOP_LANE_SIZE)
+#undef SIMD_VISIT_UNOP_LANE_SIZE
+#undef SIMD_UNOP_LANE_SIZE_LIST
 
 using ShuffleMatcher =
     ValueMatcher<S128ImmediateParameter, IrOpcode::kI8x16Shuffle>;
@@ -3675,22 +3742,22 @@ MulWithDupResult TryMatchMulWithDup(Node* node) {
 void InstructionSelector::VisitF32x4Mul(Node* node) {
   if (MulWithDupResult result = TryMatchMulWithDup<4>(node)) {
     Arm64OperandGenerator g(this);
-    Emit(kArm64F32x4MulElement, g.DefineAsRegister(node),
-         g.UseRegister(result.input), g.UseRegister(result.dup_node),
-         g.UseImmediate(result.index));
+    Emit(kArm64FMulElement | LaneSizeField::encode(32),
+         g.DefineAsRegister(node), g.UseRegister(result.input),
+         g.UseRegister(result.dup_node), g.UseImmediate(result.index));
   } else {
-    return VisitRRR(this, kArm64F32x4Mul, node);
+    return VisitRRR(this, kArm64FMul | LaneSizeField::encode(32), node);
   }
 }
 
 void InstructionSelector::VisitF64x2Mul(Node* node) {
   if (MulWithDupResult result = TryMatchMulWithDup<2>(node)) {
     Arm64OperandGenerator g(this);
-    Emit(kArm64F64x2MulElement, g.DefineAsRegister(node),
-         g.UseRegister(result.input), g.UseRegister(result.dup_node),
-         g.UseImmediate(result.index));
+    Emit(kArm64FMulElement | LaneSizeField::encode(64),
+         g.DefineAsRegister(node), g.UseRegister(result.input),
+         g.UseRegister(result.dup_node), g.UseImmediate(result.index));
   } else {
-    return VisitRRR(this, kArm64F64x2Mul, node);
+    return VisitRRR(this, kArm64FMul | LaneSizeField::encode(64), node);
   }
 }
 
@@ -3702,85 +3769,217 @@ void InstructionSelector::VisitI64x2Mul(Node* node) {
        arraysize(temps), temps);
 }
 
-#define VISIT_SIMD_ADD(Type, PairwiseType, LaneSize)                           \
-  void InstructionSelector::Visit##Type##Add(Node* node) {                     \
-    Arm64OperandGenerator g(this);                                             \
-    Node* left = node->InputAt(0);                                             \
-    Node* right = node->InputAt(1);                                            \
-    /* Select Mla(z, x, y) for Add(Mul(x, y), z). */                           \
-    if (left->opcode() == IrOpcode::k##Type##Mul && CanCover(node, left)) {    \
-      Emit(kArm64##Type##Mla, g.DefineSameAsFirst(node), g.UseRegister(right), \
-           g.UseRegister(left->InputAt(0)), g.UseRegister(left->InputAt(1)));  \
-      return;                                                                  \
-    }                                                                          \
-    /* Select Mla(z, x, y) for Add(z, Mul(x, y)). */                           \
-    if (right->opcode() == IrOpcode::k##Type##Mul && CanCover(node, right)) {  \
-      Emit(kArm64##Type##Mla, g.DefineSameAsFirst(node), g.UseRegister(left),  \
-           g.UseRegister(right->InputAt(0)),                                   \
-           g.UseRegister(right->InputAt(1)));                                  \
-      return;                                                                  \
-    }                                                                          \
-    /* Select Sadalp(x, y) for Add(x, ExtAddPairwiseS(y)). */                  \
-    if (right->opcode() ==                                                     \
-            IrOpcode::k##Type##ExtAddPairwise##PairwiseType##S &&              \
-        CanCover(node, right)) {                                               \
-      Emit(kArm64Sadalp | LaneSizeField::encode(LaneSize),                     \
-           g.DefineSameAsFirst(node), g.UseRegister(left),                     \
-           g.UseRegister(right->InputAt(0)));                                  \
-      return;                                                                  \
-    }                                                                          \
-    /* Select Sadalp(y, x) for Add(ExtAddPairwiseS(x), y). */                  \
-    if (left->opcode() ==                                                      \
-            IrOpcode::k##Type##ExtAddPairwise##PairwiseType##S &&              \
-        CanCover(node, left)) {                                                \
-      Emit(kArm64Sadalp | LaneSizeField::encode(LaneSize),                     \
-           g.DefineSameAsFirst(node), g.UseRegister(right),                    \
-           g.UseRegister(left->InputAt(0)));                                   \
-      return;                                                                  \
-    }                                                                          \
-    /* Select Uadalp(x, y) for Add(x, ExtAddPairwiseU(y)). */                  \
-    if (right->opcode() ==                                                     \
-            IrOpcode::k##Type##ExtAddPairwise##PairwiseType##U &&              \
-        CanCover(node, right)) {                                               \
-      Emit(kArm64Uadalp | LaneSizeField::encode(LaneSize),                     \
-           g.DefineSameAsFirst(node), g.UseRegister(left),                     \
-           g.UseRegister(right->InputAt(0)));                                  \
-      return;                                                                  \
-    }                                                                          \
-    /* Select Uadalp(y, x) for Add(ExtAddPairwiseU(x), y). */                  \
-    if (left->opcode() ==                                                      \
-            IrOpcode::k##Type##ExtAddPairwise##PairwiseType##U &&              \
-        CanCover(node, left)) {                                                \
-      Emit(kArm64Uadalp | LaneSizeField::encode(LaneSize),                     \
-           g.DefineSameAsFirst(node), g.UseRegister(right),                    \
-           g.UseRegister(left->InputAt(0)));                                   \
-      return;                                                                  \
-    }                                                                          \
-    VisitRRR(this, kArm64##Type##Add, node);                                   \
+namespace {
+
+// Used for pattern matching SIMD Add operations where one of the inputs matches
+// |opcode| and ensure that the matched input is on the LHS (input 0).
+struct SimdAddOpMatcher : public NodeMatcher {
+  explicit SimdAddOpMatcher(Node* node, IrOpcode::Value opcode)
+      : NodeMatcher(node),
+        opcode_(opcode),
+        left_(InputAt(0)),
+        right_(InputAt(1)) {
+    DCHECK(HasProperty(Operator::kCommutative));
+    PutOpOnLeft();
+  }
+
+  bool Matches() { return left_->opcode() == opcode_; }
+  Node* left() const { return left_; }
+  Node* right() const { return right_; }
+
+ private:
+  void PutOpOnLeft() {
+    if (right_->opcode() == opcode_) {
+      std::swap(left_, right_);
+      node()->ReplaceInput(0, left_);
+      node()->ReplaceInput(1, right_);
+    }
+  }
+  IrOpcode::Value opcode_;
+  Node* left_;
+  Node* right_;
+};
+
+bool ShraHelper(InstructionSelector* selector, Node* node, int lane_size,
+                InstructionCode shra_code, InstructionCode add_code,
+                IrOpcode::Value shift_op) {
+  Arm64OperandGenerator g(selector);
+  SimdAddOpMatcher m(node, shift_op);
+  if (!m.Matches() || !selector->CanCover(node, m.left())) return false;
+  if (!g.IsIntegerConstant(m.left()->InputAt(1))) return false;
+
+  // If shifting by zero, just do the addition
+  if (g.GetIntegerConstantValue(m.left()->InputAt(1)) % lane_size == 0) {
+    selector->Emit(add_code, g.DefineAsRegister(node),
+                   g.UseRegister(m.left()->InputAt(0)),
+                   g.UseRegister(m.right()));
+  } else {
+    selector->Emit(shra_code | LaneSizeField::encode(lane_size),
+                   g.DefineSameAsFirst(node), g.UseRegister(m.right()),
+                   g.UseRegister(m.left()->InputAt(0)),
+                   g.UseImmediate(m.left()->InputAt(1)));
+  }
+  return true;
+}
+
+bool AdalpHelper(InstructionSelector* selector, Node* node, int lane_size,
+                 InstructionCode adalp_code, IrOpcode::Value ext_op) {
+  Arm64OperandGenerator g(selector);
+  SimdAddOpMatcher m(node, ext_op);
+  if (!m.Matches() || !selector->CanCover(node, m.left())) return false;
+  selector->Emit(adalp_code | LaneSizeField::encode(lane_size),
+                 g.DefineSameAsFirst(node), g.UseRegister(m.right()),
+                 g.UseRegister(m.left()->InputAt(0)));
+  return true;
+}
+
+bool MlaHelper(InstructionSelector* selector, Node* node,
+               InstructionCode mla_code, IrOpcode::Value mul_op) {
+  Arm64OperandGenerator g(selector);
+  SimdAddOpMatcher m(node, mul_op);
+  if (!m.Matches() || !selector->CanCover(node, m.left())) return false;
+  selector->Emit(mla_code, g.DefineSameAsFirst(node), g.UseRegister(m.right()),
+                 g.UseRegister(m.left()->InputAt(0)),
+                 g.UseRegister(m.left()->InputAt(1)));
+  return true;
+}
+
+bool SmlalHelper(InstructionSelector* selector, Node* node, int lane_size,
+                 InstructionCode smlal_code, IrOpcode::Value ext_mul_op) {
+  Arm64OperandGenerator g(selector);
+  SimdAddOpMatcher m(node, ext_mul_op);
+  if (!m.Matches() || !selector->CanCover(node, m.left())) return false;
+
+  selector->Emit(smlal_code | LaneSizeField::encode(lane_size),
+                 g.DefineSameAsFirst(node), g.UseRegister(m.right()),
+                 g.UseRegister(m.left()->InputAt(0)),
+                 g.UseRegister(m.left()->InputAt(1)));
+  return true;
+}
+
+}  // namespace
+
+void InstructionSelector::VisitI64x2Add(Node* node) {
+  if (!ShraHelper(this, node, 64, kArm64Ssra,
+                  kArm64IAdd | LaneSizeField::encode(64),
+                  IrOpcode::kI64x2ShrS) &&
+      !ShraHelper(this, node, 64, kArm64Usra,
+                  kArm64IAdd | LaneSizeField::encode(64),
+                  IrOpcode::kI64x2ShrU)) {
+    VisitRRR(this, kArm64IAdd | LaneSizeField::encode(64), node);
+  }
+}
+
+void InstructionSelector::VisitI8x16Add(Node* node) {
+  if (!ShraHelper(this, node, 8, kArm64Ssra,
+                  kArm64IAdd | LaneSizeField::encode(8),
+                  IrOpcode::kI8x16ShrS) &&
+      !ShraHelper(this, node, 8, kArm64Usra,
+                  kArm64IAdd | LaneSizeField::encode(8),
+                  IrOpcode::kI8x16ShrU)) {
+    VisitRRR(this, kArm64IAdd | LaneSizeField::encode(8), node);
+  }
+}
+
+#define VISIT_SIMD_ADD(Type, PairwiseType, LaneSize)                       \
+  void InstructionSelector::Visit##Type##Add(Node* node) {                 \
+    /* Select Mla(z, x, y) for Add(x, Mul(y, z)). */                       \
+    if (MlaHelper(this, node, kArm64Mla | LaneSizeField::encode(LaneSize), \
+                  IrOpcode::k##Type##Mul)) {                               \
+      return;                                                              \
+    }                                                                      \
+    /* Select S/Uadalp(x, y) for Add(x, ExtAddPairwise(y)). */             \
+    if (AdalpHelper(this, node, LaneSize, kArm64Sadalp,                    \
+                    IrOpcode::k##Type##ExtAddPairwise##PairwiseType##S) || \
+        AdalpHelper(this, node, LaneSize, kArm64Uadalp,                    \
+                    IrOpcode::k##Type##ExtAddPairwise##PairwiseType##U)) { \
+      return;                                                              \
+    }                                                                      \
+    /* Select S/Usra(x, y) for Add(x, ShiftRight(y, imm)). */              \
+    if (ShraHelper(this, node, LaneSize, kArm64Ssra,                       \
+                   kArm64IAdd | LaneSizeField::encode(LaneSize),           \
+                   IrOpcode::k##Type##ShrS) ||                             \
+        ShraHelper(this, node, LaneSize, kArm64Usra,                       \
+                   kArm64IAdd | LaneSizeField::encode(LaneSize),           \
+                   IrOpcode::k##Type##ShrU)) {                             \
+      return;                                                              \
+    }                                                                      \
+    /* Select Smlal/Umlal(x, y, z) for Add(x, ExtMulLow(y, z)) and         \
+     * Smlal2/Umlal2(x, y, z) for Add(x, ExtMulHigh(y, z)). */             \
+    if (SmlalHelper(this, node, LaneSize, kArm64Smlal,                     \
+                    IrOpcode::k##Type##ExtMulLow##PairwiseType##S) ||      \
+        SmlalHelper(this, node, LaneSize, kArm64Smlal2,                    \
+                    IrOpcode::k##Type##ExtMulHigh##PairwiseType##S) ||     \
+        SmlalHelper(this, node, LaneSize, kArm64Umlal,                     \
+                    IrOpcode::k##Type##ExtMulLow##PairwiseType##U) ||      \
+        SmlalHelper(this, node, LaneSize, kArm64Umlal2,                    \
+                    IrOpcode::k##Type##ExtMulHigh##PairwiseType##U)) {     \
+      return;                                                              \
+    }                                                                      \
+    VisitRRR(this, kArm64IAdd | LaneSizeField::encode(LaneSize), node);    \
   }
 
 VISIT_SIMD_ADD(I32x4, I16x8, 32)
 VISIT_SIMD_ADD(I16x8, I8x16, 16)
 #undef VISIT_SIMD_ADD
 
-#define VISIT_SIMD_SUB(Type)                                                  \
+#define VISIT_SIMD_SUB(Type, LaneSize)                                        \
   void InstructionSelector::Visit##Type##Sub(Node* node) {                    \
     Arm64OperandGenerator g(this);                                            \
     Node* left = node->InputAt(0);                                            \
     Node* right = node->InputAt(1);                                           \
     /* Select Mls(z, x, y) for Sub(z, Mul(x, y)). */                          \
     if (right->opcode() == IrOpcode::k##Type##Mul && CanCover(node, right)) { \
-      Emit(kArm64##Type##Mls, g.DefineSameAsFirst(node), g.UseRegister(left), \
+      Emit(kArm64Mls | LaneSizeField::encode(LaneSize),                       \
+           g.DefineSameAsFirst(node), g.UseRegister(left),                    \
            g.UseRegister(right->InputAt(0)),                                  \
            g.UseRegister(right->InputAt(1)));                                 \
       return;                                                                 \
     }                                                                         \
-    VisitRRR(this, kArm64##Type##Sub, node);                                  \
+    VisitRRR(this, kArm64ISub | LaneSizeField::encode(LaneSize), node);       \
   }
 
-VISIT_SIMD_SUB(I32x4)
-VISIT_SIMD_SUB(I16x8)
+VISIT_SIMD_SUB(I32x4, 32)
+VISIT_SIMD_SUB(I16x8, 16)
 #undef VISIT_SIMD_SUB
+
+namespace {
+bool isSimdZero(Arm64OperandGenerator& g, Node* node) {
+  auto m = V128ConstMatcher(node);
+  if (m.HasResolvedValue()) {
+    auto imms = m.ResolvedValue().immediate();
+    return (std::all_of(imms.begin(), imms.end(), std::logical_not<uint8_t>()));
+  }
+  return node->opcode() == IrOpcode::kS128Zero;
+}
+}  // namespace
+
+#define VISIT_SIMD_FCM(Type, CmOp, CmOpposite, LaneSize)                   \
+  void InstructionSelector::Visit##Type##CmOp(Node* node) {                \
+    Arm64OperandGenerator g(this);                                         \
+    Node* left = node->InputAt(0);                                         \
+    Node* right = node->InputAt(1);                                        \
+    if (isSimdZero(g, left)) {                                             \
+      Emit(kArm64F##CmOpposite | LaneSizeField::encode(LaneSize),          \
+           g.DefineAsRegister(node), g.UseRegister(right));                \
+      return;                                                              \
+    } else if (isSimdZero(g, right)) {                                     \
+      Emit(kArm64F##CmOp | LaneSizeField::encode(LaneSize),                \
+           g.DefineAsRegister(node), g.UseRegister(left));                 \
+      return;                                                              \
+    }                                                                      \
+    VisitRRR(this, kArm64F##CmOp | LaneSizeField::encode(LaneSize), node); \
+  }
+
+VISIT_SIMD_FCM(F64x2, Eq, Eq, 64)
+VISIT_SIMD_FCM(F64x2, Ne, Ne, 64)
+VISIT_SIMD_FCM(F64x2, Lt, Gt, 64)
+VISIT_SIMD_FCM(F64x2, Le, Ge, 64)
+VISIT_SIMD_FCM(F32x4, Eq, Eq, 32)
+VISIT_SIMD_FCM(F32x4, Ne, Ne, 32)
+VISIT_SIMD_FCM(F32x4, Lt, Gt, 32)
+VISIT_SIMD_FCM(F32x4, Le, Ge, 32)
+#undef VISIT_SIMD_FCM
 
 void InstructionSelector::VisitS128Select(Node* node) {
   Arm64OperandGenerator g(this);

@@ -261,16 +261,17 @@ enum class PrimitiveType { kBoolean, kNumber, kString, kSymbol };
 #define CSA_ASSERT_BRANCH(csa, gen, ...) \
   (csa)->Assert(gen, #gen, __FILE__, __LINE__, CSA_ASSERT_ARGS(__VA_ARGS__))
 
-#define CSA_ASSERT_JS_ARGC_OP(csa, Op, op, expected)                    \
-  (csa)->Assert(                                                        \
-      [&]() -> TNode<BoolT> {                                           \
-        const TNode<Word32T> argc = (csa)->UncheckedParameter<Word32T>( \
-            Descriptor::kJSActualArgumentsCount);                       \
-        return (csa)->Op(argc, (csa)->Int32Constant(expected));         \
-      },                                                                \
-      "argc " #op " " #expected, __FILE__, __LINE__,                    \
-      {{SmiFromInt32((csa)->UncheckedParameter<Int32T>(                 \
-            Descriptor::kJSActualArgumentsCount)),                      \
+#define CSA_ASSERT_JS_ARGC_OP(csa, Op, op, expected)                           \
+  (csa)->Assert(                                                               \
+      [&]() -> TNode<BoolT> {                                                  \
+        const TNode<Word32T> argc = (csa)->UncheckedParameter<Word32T>(        \
+            Descriptor::kJSActualArgumentsCount);                              \
+        return (csa)->Op(argc,                                                 \
+                         (csa)->Int32Constant(i::JSParameterCount(expected))); \
+      },                                                                       \
+      "argc " #op " " #expected, __FILE__, __LINE__,                           \
+      {{SmiFromInt32((csa)->UncheckedParameter<Int32T>(                        \
+            Descriptor::kJSActualArgumentsCount)),                             \
         "argc"}})
 
 #define CSA_ASSERT_JS_ARGC_EQ(csa, expected) \
@@ -1107,15 +1108,14 @@ class V8_EXPORT_PRIVATE CodeStubAssembler
 
   TNode<RawPtrT> LoadJSTypedArrayExternalPointerPtr(
       TNode<JSTypedArray> holder) {
-    return LoadExternalPointerFromObject(holder,
-                                         JSTypedArray::kExternalPointerOffset,
-                                         kTypedArrayExternalPointerTag);
+    return LoadObjectField<RawPtrT>(holder,
+                                    JSTypedArray::kExternalPointerOffset);
   }
 
   void StoreJSTypedArrayExternalPointerPtr(TNode<JSTypedArray> holder,
                                            TNode<RawPtrT> value) {
-    StoreExternalPointerToObject(holder, JSTypedArray::kExternalPointerOffset,
-                                 value, kTypedArrayExternalPointerTag);
+    StoreObjectFieldNoWriteBarrier<RawPtrT>(
+        holder, JSTypedArray::kExternalPointerOffset, value);
   }
 
   // Load value from current parent frame by given offset in bytes.
@@ -2133,7 +2133,6 @@ class V8_EXPORT_PRIVATE CodeStubAssembler
     kFixedArrays = 1,
     kFixedDoubleArrays = 2,
     kDontCopyCOW = 4,
-    kNewSpaceAllocationOnly = 8,
     kAllFixedArrays = kFixedArrays | kFixedDoubleArrays,
     kAllFixedArraysDontCopyCOW = kAllFixedArrays | kDontCopyCOW
   };
@@ -2882,9 +2881,9 @@ class V8_EXPORT_PRIVATE CodeStubAssembler
 
   // Call non-allocating runtime String::WriteToFlat using fast C-calls.
   void StringWriteToFlatOneByte(TNode<String> source, TNode<RawPtrT> sink,
-                                TNode<Int32T> from, TNode<Int32T> to);
+                                TNode<Int32T> start, TNode<Int32T> length);
   void StringWriteToFlatTwoByte(TNode<String> source, TNode<RawPtrT> sink,
-                                TNode<Int32T> from, TNode<Int32T> to);
+                                TNode<Int32T> start, TNode<Int32T> length);
 
   // Calls External{One,Two}ByteString::GetChars with a fast C-call.
   TNode<RawPtr<Uint8T>> ExternalOneByteStringGetChars(
@@ -3642,8 +3641,28 @@ class V8_EXPORT_PRIVATE CodeStubAssembler
   TNode<Object> GetArgumentValue(TorqueStructArguments args,
                                  TNode<IntPtrT> index);
 
-  TorqueStructArguments GetFrameArguments(TNode<RawPtrT> frame,
-                                          TNode<IntPtrT> argc);
+  enum class FrameArgumentsArgcType {
+    kCountIncludesReceiver,
+    kCountExcludesReceiver
+  };
+
+  TorqueStructArguments GetFrameArguments(
+      TNode<RawPtrT> frame, TNode<IntPtrT> argc,
+      FrameArgumentsArgcType argc_type =
+          FrameArgumentsArgcType::kCountExcludesReceiver);
+
+  inline TNode<Int32T> JSParameterCount(TNode<Int32T> argc_without_receiver) {
+    return kJSArgcIncludesReceiver
+               ? Int32Add(argc_without_receiver,
+                          Int32Constant(kJSArgcReceiverSlots))
+               : argc_without_receiver;
+  }
+  inline TNode<Word32T> JSParameterCount(TNode<Word32T> argc_without_receiver) {
+    return kJSArgcIncludesReceiver
+               ? Int32Add(argc_without_receiver,
+                          Int32Constant(kJSArgcReceiverSlots))
+               : argc_without_receiver;
+  }
 
   // Support for printf-style debugging
   void Print(const char* s);
@@ -4081,7 +4100,7 @@ class V8_EXPORT_PRIVATE CodeStubArguments {
   CodeStubArguments(CodeStubAssembler* assembler,
                     TorqueStructArguments torque_arguments)
       : assembler_(assembler),
-        argc_(torque_arguments.length),
+        argc_(torque_arguments.actual_count),
         base_(torque_arguments.base),
         fp_(torque_arguments.frame) {}
 
@@ -4099,12 +4118,12 @@ class V8_EXPORT_PRIVATE CodeStubArguments {
   TNode<Object> AtIndex(int index) const;
 
   // Return the number of arguments (excluding the receiver).
-  TNode<IntPtrT> GetLength() const { return argc_; }
+  TNode<IntPtrT> GetLengthWithoutReceiver() const;
   // Return the number of arguments (including the receiver).
   TNode<IntPtrT> GetLengthWithReceiver() const;
 
   TorqueStructArguments GetTorqueArguments() const {
-    return TorqueStructArguments{fp_, base_, argc_};
+    return TorqueStructArguments{fp_, base_, GetLengthWithoutReceiver(), argc_};
   }
 
   TNode<Object> GetOptionalArgumentValue(TNode<IntPtrT> index,

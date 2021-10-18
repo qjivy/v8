@@ -168,8 +168,6 @@ void TurboAssembler::Jump(intptr_t target, RelocInfo::Mode rmode,
 
   if (cond != al) b(NegateCondition(cond), &skip, cr);
 
-  DCHECK(rmode == RelocInfo::CODE_TARGET || rmode == RelocInfo::RUNTIME_ENTRY);
-
   mov(ip, Operand(target, rmode));
   mtctr(ip);
   bctr();
@@ -189,15 +187,14 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
   DCHECK_IMPLIES(options().isolate_independent_code,
                  Builtins::IsIsolateIndependentBuiltin(*code));
 
-  Builtin builtin_index = Builtin::kNoBuiltinId;
+  Builtin builtin = Builtin::kNoBuiltinId;
   bool target_is_builtin =
-      isolate()->builtins()->IsBuiltinHandle(code, &builtin_index);
+      isolate()->builtins()->IsBuiltinHandle(code, &builtin);
 
   if (root_array_available_ && options().isolate_independent_code) {
     Label skip;
     Register scratch = ip;
-    int offset = static_cast<int>(code->builtin_id()) * kSystemPointerSize +
-                 IsolateData::builtin_entry_table_offset();
+    int offset = IsolateData::BuiltinEntrySlotOffset(code->builtin_id());
     LoadU64(scratch, MemOperand(kRootRegister, offset), r0);
     if (cond != al) b(NegateCondition(cond), &skip, cr);
     Jump(scratch);
@@ -206,10 +203,10 @@ void TurboAssembler::Jump(Handle<Code> code, RelocInfo::Mode rmode,
   } else if (options().inline_offheap_trampolines && target_is_builtin) {
     // Inline the trampoline.
     Label skip;
-    RecordCommentForOffHeapTrampoline(builtin_index);
+    RecordCommentForOffHeapTrampoline(builtin);
     // Use ip directly instead of using UseScratchRegisterScope, as we do
     // not preserve scratch registers across calls.
-    mov(ip, Operand(BuiltinEntry(builtin_index), RelocInfo::OFF_HEAP_TARGET));
+    mov(ip, Operand(BuiltinEntry(builtin), RelocInfo::OFF_HEAP_TARGET));
     if (cond != al) b(NegateCondition(cond), &skip, cr);
     Jump(ip);
     bind(&skip);
@@ -276,14 +273,13 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
   DCHECK_IMPLIES(options().use_pc_relative_calls_and_jumps,
                  Builtins::IsIsolateIndependentBuiltin(*code));
 
-  Builtin builtin_index = Builtin::kNoBuiltinId;
+  Builtin builtin = Builtin::kNoBuiltinId;
   bool target_is_builtin =
-      isolate()->builtins()->IsBuiltinHandle(code, &builtin_index);
+      isolate()->builtins()->IsBuiltinHandle(code, &builtin);
 
   if (root_array_available_ && options().isolate_independent_code) {
     Label skip;
-    int offset = static_cast<int>(code->builtin_id()) * kSystemPointerSize +
-                 IsolateData::builtin_entry_table_offset();
+    int offset = IsolateData::BuiltinEntrySlotOffset(code->builtin_id());
     LoadU64(ip, MemOperand(kRootRegister, offset));
     if (cond != al) b(NegateCondition(cond), &skip);
     Call(ip);
@@ -291,19 +287,24 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
     return;
   } else if (options().inline_offheap_trampolines && target_is_builtin) {
     // Inline the trampoline.
-    RecordCommentForOffHeapTrampoline(builtin_index);
-    // Use ip directly instead of using UseScratchRegisterScope, as we do
-    // not preserve scratch registers across calls.
-    mov(ip, Operand(BuiltinEntry(builtin_index), RelocInfo::OFF_HEAP_TARGET));
-    Label skip;
-    if (cond != al) b(NegateCondition(cond), &skip);
-    Call(ip);
-    bind(&skip);
+    CallBuiltin(builtin, cond);
     return;
   }
   DCHECK(code->IsExecutable());
   int32_t target_index = AddCodeTarget(code);
   Call(static_cast<Address>(target_index), rmode, cond);
+}
+
+void TurboAssembler::CallBuiltin(Builtin builtin, Condition cond) {
+  ASM_CODE_COMMENT_STRING(this, CommentForOffHeapTrampoline("call", builtin));
+  DCHECK(Builtins::IsBuiltinId(builtin));
+  // Use ip directly instead of using UseScratchRegisterScope, as we do not
+  // preserve scratch registers across calls.
+  mov(ip, Operand(BuiltinEntry(builtin), RelocInfo::OFF_HEAP_TARGET));
+  Label skip;
+  if (cond != al) b(NegateCondition(cond), &skip);
+  Call(ip);
+  bind(&skip);
 }
 
 void TurboAssembler::Drop(int count) {
@@ -1252,6 +1253,9 @@ void TurboAssembler::EnterFrame(StackFrame::Type type,
     mov(ip, Operand(StackFrame::TypeToMarker(type)));
     PushCommonFrame(ip);
   }
+#if V8_ENABLE_WEBASSEMBLY
+  if (type == StackFrame::WASM) Push(kWasmInstanceRegister);
+#endif  // V8_ENABLE_WEBASSEMBLY
 }
 
 int TurboAssembler::LeaveFrame(StackFrame::Type type, int stack_adjustment) {
@@ -1470,9 +1474,11 @@ void MacroAssembler::InvokePrologue(Register expected_parameter_count,
 
   // If the expected parameter count is equal to the adaptor sentinel, no need
   // to push undefined value as arguments.
-  mov(r0, Operand(kDontAdaptArgumentsSentinel));
-  CmpS64(expected_parameter_count, r0);
-  beq(&regular_invoke);
+  if (kDontAdaptArgumentsSentinel != 0) {
+    mov(r0, Operand(kDontAdaptArgumentsSentinel));
+    CmpS64(expected_parameter_count, r0);
+    beq(&regular_invoke);
+  }
 
   // If overapplication or if the actual argument count is equal to the
   // formal parameter count, no need to push extra undefined values.
@@ -3055,6 +3061,11 @@ void TurboAssembler::DivF32(DoubleRegister dst, DoubleRegister lhs,
   frsp(dst, dst, r);
 }
 
+void TurboAssembler::CopySignF64(DoubleRegister dst, DoubleRegister lhs,
+                                 DoubleRegister rhs, RCBit r) {
+  fcpsgn(dst, rhs, lhs, r);
+}
+
 void MacroAssembler::CmpSmiLiteral(Register src1, Smi smi, Register scratch,
                                    CRegister cr) {
 #if defined(V8_COMPRESS_POINTERS) || defined(V8_31BIT_SMIS_ON_64BIT_ARCH)
@@ -3107,7 +3118,7 @@ void MacroAssembler::AndSmiLiteral(Register dst, Register src, Smi smi,
 
 #define GenerateMemoryOperation(reg, mem, ri_op, rr_op) \
   {                                                     \
-    int offset = mem.offset();                          \
+    int64_t offset = mem.offset();                      \
                                                         \
     if (mem.rb() == no_reg) {                           \
       if (!is_int16(offset)) {                          \
@@ -3136,7 +3147,7 @@ void MacroAssembler::AndSmiLiteral(Register dst, Register src, Smi smi,
 
 #define GenerateMemoryOperationWithAlign(reg, mem, ri_op, rr_op) \
   {                                                              \
-    int offset = mem.offset();                                   \
+    int64_t offset = mem.offset();                               \
     int misaligned = (offset & 3);                               \
                                                                  \
     if (mem.rb() == no_reg) {                                    \
@@ -3225,7 +3236,10 @@ void TurboAssembler::StoreSimd128(Simd128Register src, const MemOperand& mem) {
 #define GenerateMemoryLEOperation(reg, mem, op)                \
   {                                                            \
     if (mem.offset() == 0) {                                   \
-      op(reg, mem);                                            \
+      if (mem.rb() != no_reg)                                  \
+        op(reg, mem);                                          \
+      else                                                     \
+        op(reg, MemOperand(r0, mem.ra()));                     \
     } else if (is_int16(mem.offset())) {                       \
       if (mem.rb() != no_reg)                                  \
         addi(scratch, mem.rb(), Operand(mem.offset()));        \
@@ -3316,7 +3330,7 @@ void TurboAssembler::StoreF64LE(DoubleRegister dst, const MemOperand& mem,
   LoadU64(scratch, mem, scratch2);
   StoreU64LE(scratch, mem, scratch2);
 #else
-  LoadF64(dst, mem, scratch);
+  StoreF64(dst, mem, scratch);
 #endif
 }
 
@@ -3327,7 +3341,7 @@ void TurboAssembler::StoreF32LE(DoubleRegister dst, const MemOperand& mem,
   LoadU32(scratch, mem, scratch2);
   StoreU32LE(scratch, mem, scratch2);
 #else
-  LoadF64(dst, mem, scratch);
+  StoreF32(dst, mem, scratch);
 #endif
 }
 
@@ -3504,6 +3518,27 @@ void TurboAssembler::SwapSimd128(MemOperand src, MemOperand dst,
   addi(sp, sp, Operand(2 * kSimd128Size));
 }
 
+void TurboAssembler::ByteReverseU16(Register dst, Register val) {
+  subi(sp, sp, Operand(kSystemPointerSize));
+  sth(val, MemOperand(sp));
+  lhbrx(dst, MemOperand(r0, sp));
+  addi(sp, sp, Operand(kSystemPointerSize));
+}
+
+void TurboAssembler::ByteReverseU32(Register dst, Register val) {
+  subi(sp, sp, Operand(kSystemPointerSize));
+  stw(val, MemOperand(sp));
+  lwbrx(dst, MemOperand(r0, sp));
+  addi(sp, sp, Operand(kSystemPointerSize));
+}
+
+void TurboAssembler::ByteReverseU64(Register dst, Register val) {
+  subi(sp, sp, Operand(kSystemPointerSize));
+  std(val, MemOperand(sp));
+  ldbrx(dst, MemOperand(r0, sp));
+  addi(sp, sp, Operand(kSystemPointerSize));
+}
+
 void TurboAssembler::JumpIfEqual(Register x, int32_t y, Label* dest) {
   CmpS64(x, Operand(y), r0);
   beq(dest);
@@ -3637,8 +3672,9 @@ void TurboAssembler::CallForDeoptimization(Builtin target, int, Label* exit,
                                            DeoptimizeKind kind, Label* ret,
                                            Label*) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
+  CHECK_LE(target, Builtins::kLastTier0);
   LoadU64(ip, MemOperand(kRootRegister,
-                         IsolateData::builtin_entry_slot_offset(target)));
+                         IsolateData::BuiltinEntrySlotOffset(target)));
   Call(ip);
   DCHECK_EQ(SizeOfCodeGeneratedSince(exit),
             (kind == DeoptimizeKind::kLazy)

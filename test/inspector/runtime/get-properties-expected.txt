@@ -176,12 +176,21 @@ Running test: testDetachedArrayBuffer
 Running test: testArrayBufferWithBrokenUintCtor
 Internal properties
   [[ArrayBufferByteLength]] number 7
-  [[ArrayBufferData]] string 0x...
+  [[ArrayBufferData]] number 4
   [[Int8Array]] object undefined
   [[Prototype]] object undefined
   [[Uint8Array]] object undefined
 
 Running test: testObjectWithProtoProperty
   __proto__ own object undefined
+Internal properties
+  [[Prototype]] object undefined
+
+Running test: testArrayNonIndexedPropertiesOnly
+  length own number 2
+Internal properties
+  [[Prototype]] object undefined
+
+Running test: testTypedArrayNonIndexedPropertiesOnly
 Internal properties
   [[Prototype]] object undefined

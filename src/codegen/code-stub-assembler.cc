@@ -2925,11 +2925,18 @@ TNode<BytecodeArray> CodeStubAssembler::LoadSharedFunctionInfoBytecodeArray(
   Label check_for_interpreter_data(this, &var_result);
   Label done(this, &var_result);
 
-  GotoIfNot(HasInstanceType(var_result.value(), BASELINE_DATA_TYPE),
+  GotoIfNot(HasInstanceType(var_result.value(), CODET_TYPE),
             &check_for_interpreter_data);
-  TNode<HeapObject> baseline_data = LoadObjectField<HeapObject>(
-      var_result.value(), BaselineData::kDataOffset);
-  var_result = baseline_data;
+  {
+    TNode<Code> code = FromCodeT(CAST(var_result.value()));
+    CSA_ASSERT(
+        this, Word32Equal(DecodeWord32<Code::KindField>(LoadObjectField<Int32T>(
+                              code, Code::kFlagsOffset)),
+                          Int32Constant(static_cast<int>(CodeKind::BASELINE))));
+    TNode<HeapObject> baseline_data = LoadObjectField<HeapObject>(
+        code, Code::kDeoptimizationDataOrInterpreterDataOffset);
+    var_result = baseline_data;
+  }
   Goto(&check_for_interpreter_data);
 
   BIND(&check_for_interpreter_data);
@@ -3188,7 +3195,8 @@ TNode<Smi> CodeStubAssembler::BuildAppendJSArray(ElementsKind kind,
 
   // Resize the capacity of the fixed array if it doesn't fit.
   TNode<IntPtrT> first = arg_index->value();
-  TNode<BInt> growth = IntPtrToBInt(IntPtrSub(args->GetLength(), first));
+  TNode<BInt> growth =
+      IntPtrToBInt(IntPtrSub(args->GetLengthWithoutReceiver(), first));
   PossiblyGrowElementsCapacity(kind, array, var_length.value(), &var_elements,
                                growth, &pre_bailout);
 
@@ -4341,17 +4349,11 @@ TNode<FixedArray> CodeStubAssembler::ExtractToFixedArray(
   {
     bool handle_old_space = !FLAG_young_generation_large_objects;
     if (handle_old_space) {
-      if (extract_flags & ExtractFixedArrayFlag::kNewSpaceAllocationOnly) {
-        handle_old_space = false;
-        CSA_ASSERT(this, Word32BinaryNot(FixedArraySizeDoesntFitInNewSpace(
-                             count, FixedArray::kHeaderSize)));
-      } else {
-        int constant_count;
-        handle_old_space =
-            !TryGetIntPtrOrSmiConstantValue(count, &constant_count) ||
-            (constant_count >
-             FixedArray::GetMaxLengthForNewSpaceAllocation(PACKED_ELEMENTS));
-      }
+      int constant_count;
+      handle_old_space =
+          !TryGetIntPtrOrSmiConstantValue(count, &constant_count) ||
+          (constant_count >
+           FixedArray::GetMaxLengthForNewSpaceAllocation(PACKED_ELEMENTS));
     }
 
     Label old_space(this, Label::kDeferred);
@@ -4554,10 +4556,7 @@ TNode<FixedArrayBase> CodeStubAssembler::ExtractFixedArray(
       var_holes_converted != nullptr ? HoleConversionMode::kConvertToUndefined
                                      : HoleConversionMode::kDontConvert;
   TVARIABLE(FixedArrayBase, var_result);
-  const AllocationFlags allocation_flags =
-      (extract_flags & ExtractFixedArrayFlag::kNewSpaceAllocationOnly)
-          ? CodeStubAssembler::kNone
-          : CodeStubAssembler::kAllowLargeObjectAllocation;
+  auto allocation_flags = CodeStubAssembler::kAllowLargeObjectAllocation;
   if (!first) {
     first = IntPtrOrSmiConstant<TIndex>(0);
   }
@@ -8016,28 +8015,28 @@ void CodeStubAssembler::TryToName(TNode<Object> key, Label* if_keyisindex,
 
 void CodeStubAssembler::StringWriteToFlatOneByte(TNode<String> source,
                                                  TNode<RawPtrT> sink,
-                                                 TNode<Int32T> from,
-                                                 TNode<Int32T> to) {
+                                                 TNode<Int32T> start,
+                                                 TNode<Int32T> length) {
   TNode<ExternalReference> function =
       ExternalConstant(ExternalReference::string_write_to_flat_one_byte());
   CallCFunction(function, base::nullopt,
                 std::make_pair(MachineType::AnyTagged(), source),
                 std::make_pair(MachineType::Pointer(), sink),
-                std::make_pair(MachineType::Int32(), from),
-                std::make_pair(MachineType::Int32(), to));
+                std::make_pair(MachineType::Int32(), start),
+                std::make_pair(MachineType::Int32(), length));
 }
 
 void CodeStubAssembler::StringWriteToFlatTwoByte(TNode<String> source,
                                                  TNode<RawPtrT> sink,
-                                                 TNode<Int32T> from,
-                                                 TNode<Int32T> to) {
+                                                 TNode<Int32T> start,
+                                                 TNode<Int32T> length) {
   TNode<ExternalReference> function =
       ExternalConstant(ExternalReference::string_write_to_flat_two_byte());
   CallCFunction(function, base::nullopt,
                 std::make_pair(MachineType::AnyTagged(), source),
                 std::make_pair(MachineType::Pointer(), sink),
-                std::make_pair(MachineType::Int32(), from),
-                std::make_pair(MachineType::Int32(), to));
+                std::make_pair(MachineType::Int32(), start),
+                std::make_pair(MachineType::Int32(), length));
 }
 
 TNode<RawPtr<Uint8T>> CodeStubAssembler::ExternalOneByteStringGetChars(
@@ -9526,7 +9525,8 @@ TNode<Object> CodeStubAssembler::CallGetterIfAccessor(
             GetCreationContext(CAST(holder), if_bailout);
         var_value = CallBuiltin(
             Builtin::kCallFunctionTemplate_CheckAccessAndCompatibleReceiver,
-            creation_context, getter, IntPtrConstant(0), receiver);
+            creation_context, getter, IntPtrConstant(i::JSParameterCount(0)),
+            receiver);
         Goto(&done);
 
         BIND(&runtime);
@@ -13797,9 +13797,8 @@ void CodeStubAssembler::ThrowIfArrayBufferViewBufferIsDetached(
 
 TNode<RawPtrT> CodeStubAssembler::LoadJSArrayBufferBackingStorePtr(
     TNode<JSArrayBuffer> array_buffer) {
-  return LoadExternalPointerFromObject(array_buffer,
-                                       JSArrayBuffer::kBackingStoreOffset,
-                                       kArrayBufferBackingStoreTag);
+  return LoadObjectField<RawPtrT>(array_buffer,
+                                  JSArrayBuffer::kBackingStoreOffset);
 }
 
 TNode<JSArrayBuffer> CodeStubAssembler::LoadJSArrayBufferViewBuffer(
@@ -14084,7 +14083,8 @@ TNode<RawPtrT> CodeStubArguments::AtIndexPtr(TNode<IntPtrT> index) const {
 }
 
 TNode<Object> CodeStubArguments::AtIndex(TNode<IntPtrT> index) const {
-  CSA_ASSERT(assembler_, assembler_->UintPtrOrSmiLessThan(index, GetLength()));
+  CSA_ASSERT(assembler_, assembler_->UintPtrOrSmiLessThan(
+                             index, GetLengthWithoutReceiver()));
   return assembler_->LoadFullTagged(AtIndexPtr(index));
 }
 
@@ -14092,9 +14092,19 @@ TNode<Object> CodeStubArguments::AtIndex(int index) const {
   return AtIndex(assembler_->IntPtrConstant(index));
 }
 
+TNode<IntPtrT> CodeStubArguments::GetLengthWithoutReceiver() const {
+  TNode<IntPtrT> argc = argc_;
+  if (kJSArgcIncludesReceiver) {
+    argc = assembler_->IntPtrSub(argc, assembler_->IntPtrConstant(1));
+  }
+  return argc;
+}
+
 TNode<IntPtrT> CodeStubArguments::GetLengthWithReceiver() const {
-  TNode<IntPtrT> argc = GetLength();
-  argc = assembler_->IntPtrAdd(argc, assembler_->IntPtrConstant(1));
+  TNode<IntPtrT> argc = argc_;
+  if (!kJSArgcIncludesReceiver) {
+    argc = assembler_->IntPtrAdd(argc, assembler_->IntPtrConstant(1));
+  }
   return argc;
 }
 
@@ -14104,8 +14114,9 @@ TNode<Object> CodeStubArguments::GetOptionalArgumentValue(
   CodeStubAssembler::Label argument_missing(assembler_),
       argument_done(assembler_, &result);
 
-  assembler_->GotoIf(assembler_->UintPtrGreaterThanOrEqual(index, argc_),
-                     &argument_missing);
+  assembler_->GotoIf(
+      assembler_->UintPtrGreaterThanOrEqual(index, GetLengthWithoutReceiver()),
+      &argument_missing);
   result = AtIndex(index);
   assembler_->Goto(&argument_done);
 
@@ -14126,7 +14137,7 @@ void CodeStubArguments::ForEach(
     first = assembler_->IntPtrConstant(0);
   }
   if (last == nullptr) {
-    last = argc_;
+    last = GetLengthWithoutReceiver();
   }
   TNode<RawPtrT> start = AtIndexPtr(first);
   TNode<RawPtrT> end = AtIndexPtr(last);
@@ -14141,8 +14152,7 @@ void CodeStubArguments::ForEach(
 }
 
 void CodeStubArguments::PopAndReturn(TNode<Object> value) {
-  TNode<IntPtrT> pop_count =
-      assembler_->IntPtrAdd(argc_, assembler_->IntPtrConstant(1));
+  TNode<IntPtrT> pop_count = GetLengthWithReceiver();
   assembler_->PopAndReturn(pop_count, value);
 }
 
@@ -14327,7 +14337,7 @@ TNode<Code> CodeStubAssembler::GetSharedFunctionInfoCode(
 
   int32_t case_values[] = {
     BYTECODE_ARRAY_TYPE,
-    BASELINE_DATA_TYPE,
+    CODET_TYPE,
     UNCOMPILED_DATA_WITHOUT_PREPARSE_DATA_TYPE,
     UNCOMPILED_DATA_WITH_PREPARSE_DATA_TYPE,
     FUNCTION_TEMPLATE_INFO_TYPE,
@@ -14371,7 +14381,7 @@ TNode<Code> CodeStubAssembler::GetSharedFunctionInfoCode(
   // IsBaselineData: Execute baseline code
   BIND(&check_is_baseline_data);
   {
-    TNode<CodeT> baseline_code = LoadBaselineDataBaselineCode(CAST(sfi_data));
+    TNode<CodeT> baseline_code = CAST(sfi_data);
     sfi_code = FromCodeT(baseline_code);
     Goto(&done);
   }
@@ -14554,7 +14564,15 @@ TNode<Object> CodeStubAssembler::GetArgumentValue(TorqueStructArguments args,
 }
 
 TorqueStructArguments CodeStubAssembler::GetFrameArguments(
-    TNode<RawPtrT> frame, TNode<IntPtrT> argc) {
+    TNode<RawPtrT> frame, TNode<IntPtrT> argc,
+    FrameArgumentsArgcType argc_type) {
+  if (kJSArgcIncludesReceiver &&
+      argc_type == FrameArgumentsArgcType::kCountExcludesReceiver) {
+    argc = IntPtrAdd(argc, IntPtrConstant(kJSArgcReceiverSlots));
+  } else if (!kJSArgcIncludesReceiver &&
+             argc_type == FrameArgumentsArgcType::kCountIncludesReceiver) {
+    argc = IntPtrSub(argc, IntPtrConstant(1));
+  }
   return CodeStubArguments(this, argc, frame).GetTorqueArguments();
 }
 

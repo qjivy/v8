@@ -155,16 +155,6 @@ class InterpreterData
   TQ_OBJECT_CONSTRUCTORS(InterpreterData)
 };
 
-class BaselineData : public TorqueGeneratedBaselineData<BaselineData, Struct> {
- public:
-  inline BytecodeArray GetActiveBytecodeArray() const;
-  inline void SetActiveBytecodeArray(BytecodeArray bytecode);
-
-  DECL_ACCESSORS(baseline_code, Code)
-
-  TQ_OBJECT_CONSTRUCTORS(BaselineData)
-};
-
 // SharedFunctionInfo describes the JSFunction information that can be
 // shared by multiple instances of the function.
 class SharedFunctionInfo
@@ -243,6 +233,7 @@ class SharedFunctionInfo
   // [outer scope info | feedback metadata] Shared storage for outer scope info
   // (on uncompiled functions) and feedback metadata (on compiled functions).
   DECL_ACCESSORS(raw_outer_scope_info_or_feedback_metadata, HeapObject)
+  DECL_ACQUIRE_GETTER(raw_outer_scope_info_or_feedback_metadata, HeapObject)
  private:
   using TorqueGeneratedSharedFunctionInfo::
       outer_scope_info_or_feedback_metadata;
@@ -257,7 +248,9 @@ class SharedFunctionInfo
   // [feedback metadata] Metadata template for feedback vectors of instances of
   // this function.
   inline bool HasFeedbackMetadata() const;
-  DECL_ACCESSORS(feedback_metadata, FeedbackMetadata)
+  inline bool HasFeedbackMetadata(AcquireLoadTag tag) const;
+  inline FeedbackMetadata feedback_metadata() const;
+  DECL_RELEASE_ACQUIRE_ACCESSORS(feedback_metadata, FeedbackMetadata)
 
   // Returns if this function has been compiled yet. Note: with bytecode
   // flushing, any GC after this call is made could cause the function
@@ -273,8 +266,12 @@ class SharedFunctionInfo
 
   // [internal formal parameter count]: The declared number of parameters.
   // For subclass constructors, also includes new.target.
-  // The size of function's frame is internal_formal_parameter_count + 1.
-  DECL_UINT16_ACCESSORS(internal_formal_parameter_count)
+  // The size of function's frame is
+  // internal_formal_parameter_count_with_receiver.
+  inline void set_internal_formal_parameter_count(int value);
+  inline uint16_t internal_formal_parameter_count_with_receiver() const;
+  inline uint16_t internal_formal_parameter_count_without_receiver() const;
+
  private:
   using TorqueGeneratedSharedFunctionInfo::formal_parameter_count;
   using TorqueGeneratedSharedFunctionInfo::set_formal_parameter_count;
@@ -283,6 +280,7 @@ class SharedFunctionInfo
   // Set the formal parameter count so the function code will be
   // called without using argument adaptor frames.
   inline void DontAdaptArguments();
+  inline bool IsDontAdaptArguments() const;
 
   // [function data]: This field holds some additional data for function.
   // Currently it has one of:
@@ -312,10 +310,10 @@ class SharedFunctionInfo
   inline bool HasInterpreterData() const;
   inline InterpreterData interpreter_data() const;
   inline void set_interpreter_data(InterpreterData interpreter_data);
-  inline bool HasBaselineData() const;
-  inline BaselineData baseline_data() const;
-  inline void set_baseline_data(BaselineData Baseline_data);
-  inline void flush_baseline_data();
+  inline bool HasBaselineCode() const;
+  inline Code baseline_code(AcquireLoadTag) const;
+  inline void set_baseline_code(Code baseline_code, ReleaseStoreTag);
+  inline void FlushBaselineCode();
   inline BytecodeArray GetActiveBytecodeArray() const;
   inline void SetActiveBytecodeArray(BytecodeArray bytecode);
 
@@ -535,17 +533,19 @@ class SharedFunctionInfo
   inline bool ShouldFlushCode(base::EnumSet<CodeFlushMode> code_flush_mode);
 
   enum Inlineability {
-    kIsInlineable,
     // Different reasons for not being inlineable:
     kHasNoScript,
     kNeedsBinaryCoverage,
-    kHasOptimizationDisabled,
     kIsBuiltin,
     kIsNotUserCode,
     kHasNoBytecode,
     kExceedsBytecodeLimit,
     kMayContainBreakPoints,
+    kHasOptimizationDisabled,
+    // Actually inlineable!
+    kIsInlineable,
   };
+  // Returns the first value that applies (see enum definition for the order).
   template <typename IsolateT>
   Inlineability GetInlineability(IsolateT* isolate, bool is_turboprop) const;
 

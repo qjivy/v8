@@ -391,9 +391,6 @@ class MainMarkingVisitor final
            V8_UNLIKELY(revisiting_object_);
   }
 
-  void MarkDescriptorArrayFromWriteBarrier(DescriptorArray descriptors,
-                                           int number_of_own_descriptors);
-
  private:
   // Functions required by MarkingVisitorBase.
 
@@ -582,10 +579,6 @@ class MarkCompactCollector final : public MarkCompactCollectorBase {
   void VisitObject(HeapObject obj);
   // Used by incremental marking for black-allocated objects.
   void RevisitObject(HeapObject obj);
-  // Ensures that all descriptors int range [0, number_of_own_descripts)
-  // are visited.
-  void MarkDescriptorArrayFromWriteBarrier(DescriptorArray array,
-                                           int number_of_own_descriptors);
 
   // Drains the main thread marking worklist until the specified number of
   // bytes are processed. If the number of bytes is zero, then the worklist
@@ -668,10 +661,6 @@ class MarkCompactCollector final : public MarkCompactCollectorBase {
 
   // Flushes a weakly held bytecode array from a shared function info.
   void FlushBytecodeFromSFI(SharedFunctionInfo shared_info);
-
-  // Marks the BaselineData as live and records the slots of baseline data
-  // fields. This assumes that the objects in the data fields are alive.
-  void MarkBaselineDataAsLive(BaselineData baseline_data);
 
   // Clears bytecode arrays / baseline code that have not been executed for
   // multiple collections.

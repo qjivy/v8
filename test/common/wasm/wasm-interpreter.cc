@@ -12,6 +12,7 @@
 #include "src/codegen/assembler-inl.h"
 #include "src/common/globals.h"
 #include "src/compiler/wasm-compiler.h"
+#include "src/handles/global-handles-inl.h"
 #include "src/numbers/conversions.h"
 #include "src/objects/objects-inl.h"
 #include "src/utils/boxed-float.h"
@@ -931,6 +932,8 @@ class SideTable : public ZoneObject {
                 if (exception_stack.back() == control_stack.size() - 1) {
                   // Close try scope for catch-less try.
                   exception_stack.pop_back();
+                  copy_unreachable();
+                  unreachable = control_stack.back().unreachable;
                 }
                 DCHECK_EQ(*c->pc, kExprTry);
                 constexpr int kUnusedControlIndex = -1;
@@ -968,12 +971,20 @@ class SideTable : public ZoneObject {
           Control* c = &control_stack.back();
           const size_t new_stack_size = control_stack.size() - 1;
           const size_t max_depth = new_stack_size - 1;
-          if (imm.depth < max_depth) {
+          // Find the first try block that is equal to or encloses the target
+          // block, i.e. has a lower than or equal index in the control stack.
+          int try_index = static_cast<int>(exception_stack.size()) - 1;
+          while (try_index >= 0 &&
+                 exception_stack[try_index] > max_depth - imm.depth) {
+            try_index--;
+          }
+          if (try_index >= 0) {
+            size_t target_depth = exception_stack[try_index];
             constexpr int kUnusedControlIndex = -1;
             c->else_label->Bind(i.pc(), kRethrowOrDelegateExceptionIndex,
                                 kUnusedControlIndex);
             c->else_label->Finish(&map_, code->start);
-            Control* target = &control_stack[max_depth - imm.depth];
+            Control* target = &control_stack[target_depth];
             DCHECK_EQ(*target->pc, kExprTry);
             DCHECK_NOT_NULL(target->else_label);
             if (!control_parent().unreachable) {

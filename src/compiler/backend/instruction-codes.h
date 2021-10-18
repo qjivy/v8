@@ -17,6 +17,8 @@
 #include "src/compiler/backend/mips/instruction-codes-mips.h"
 #elif V8_TARGET_ARCH_MIPS64
 #include "src/compiler/backend/mips64/instruction-codes-mips64.h"
+#elif V8_TARGET_ARCH_LOONG64
+#include "src/compiler/backend/loong64/instruction-codes-loong64.h"
 #elif V8_TARGET_ARCH_X64
 #include "src/compiler/backend/x64/instruction-codes-x64.h"
 #elif V8_TARGET_ARCH_PPC || V8_TARGET_ARCH_PPC64
@@ -30,6 +32,7 @@
 #define TARGET_ADDRESSING_MODE_LIST(V)
 #endif
 #include "src/base/bit-field.h"
+#include "src/codegen/atomic-memory-order.h"
 #include "src/compiler/write-barrier-kind.h"
 
 namespace v8 {
@@ -99,6 +102,7 @@ inline RecordWriteMode WriteBarrierKindToRecordWriteMode(
   V(ArchParentFramePointer)                                                \
   V(ArchTruncateDoubleToI)                                                 \
   V(ArchStoreWithWriteBarrier)                                             \
+  V(ArchAtomicStoreWithWriteBarrier)                                       \
   V(ArchStackSlot)                                                         \
   V(ArchStackPointerGreaterThan)                                           \
   V(ArchStackCheckOffset)                                                  \
@@ -263,6 +267,16 @@ enum MemoryAccessMode {
 
 enum class AtomicWidth { kWord32, kWord64 };
 
+inline size_t AtomicWidthSize(AtomicWidth width) {
+  switch (width) {
+    case AtomicWidth::kWord32:
+      return 4;
+    case AtomicWidth::kWord64:
+      return 8;
+  }
+  UNREACHABLE();
+}
+
 // The InstructionCode is an opaque, target-specific integer that encodes
 // what code to emit for an instruction in the code generator. It is not
 // interesting to the register allocator, as the inputs and flags on the
@@ -277,6 +291,9 @@ using ArchOpcodeField = base::BitField<ArchOpcode, 0, 9>;
 static_assert(ArchOpcodeField::is_valid(kLastArchOpcode),
               "All opcodes must fit in the 9-bit ArchOpcodeField.");
 using AddressingModeField = base::BitField<AddressingMode, 9, 5>;
+static_assert(
+    AddressingModeField::is_valid(kLastAddressingMode),
+    "All addressing modes must fit in the 5-bit AddressingModeField.");
 using FlagsModeField = base::BitField<FlagsMode, 14, 3>;
 using FlagsConditionField = base::BitField<FlagsCondition, 17, 5>;
 using DeoptImmedArgsCountField = base::BitField<int, 22, 2>;
@@ -285,11 +302,28 @@ using DeoptFrameStateOffsetField = base::BitField<int, 24, 8>;
 // size, an access mode, or both inside the overlapping MiscField.
 using LaneSizeField = base::BitField<int, 22, 8>;
 using AccessModeField = base::BitField<MemoryAccessMode, 30, 2>;
-// AtomicOperandWidth overlaps with MiscField and is used for the various Atomic
+// AtomicWidthField overlaps with MiscField and is used for the various Atomic
 // opcodes. Only used on 64bit architectures. All atomic instructions on 32bit
 // architectures are assumed to be 32bit wide.
 using AtomicWidthField = base::BitField<AtomicWidth, 22, 2>;
+// AtomicMemoryOrderField overlaps with MiscField and is used for the various
+// Atomic opcodes. This field is not used on all architectures. It is used on
+// architectures where the codegen for kSeqCst and kAcqRel differ only by
+// emitting fences.
+using AtomicMemoryOrderField = base::BitField<AtomicMemoryOrder, 24, 2>;
+using AtomicStoreRecordWriteModeField = base::BitField<RecordWriteMode, 26, 4>;
 using MiscField = base::BitField<int, 22, 10>;
+
+// This static assertion serves as an early warning if we are about to exhaust
+// the available opcode space. If we are about to exhaust it, we should start
+// looking into options to compress some opcodes (see
+// https://crbug.com/v8/12093) before we fully run out of available opcodes.
+// Otherwise we risk being unable to land an important security fix or merge
+// back fixes that add new opcodes.
+// It is OK to temporarily reduce the required slack if we have a tracking bug
+// to reduce the number of used opcodes again.
+static_assert(ArchOpcodeField::kMax - kLastArchOpcode >= 16,
+              "We are running close to the number of available opcodes.");
 
 }  // namespace compiler
 }  // namespace internal

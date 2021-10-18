@@ -15,8 +15,10 @@
 
 // Clients of this interface shouldn't depend on lots of heap internals.
 // Do not include anything from src/heap here!
+#include "include/v8-callbacks.h"
+#include "include/v8-embedder-heap.h"
 #include "include/v8-internal.h"
-#include "include/v8.h"
+#include "include/v8-isolate.h"
 #include "src/base/atomic-utils.h"
 #include "src/base/enum-set.h"
 #include "src/base/platform/condition-variable.h"
@@ -577,8 +579,6 @@ class Heap {
                                              int elements_to_trim);
   void RightTrimWeakFixedArray(WeakFixedArray obj, int elements_to_trim);
 
-  void UndoLastAllocationAt(Address addr, int size);
-
   // Converts the given boolean condition to JavaScript boolean value.
   inline Oddball ToBoolean(bool condition);
 
@@ -1053,6 +1053,7 @@ class Heap {
 
   V8_EXPORT_PRIVATE Code builtin(Builtin builtin);
   Address builtin_address(Builtin builtin);
+  Address builtin_tier0_address(Builtin builtin);
   void set_builtin(Builtin builtin, Code code);
 
   // ===========================================================================

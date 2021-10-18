@@ -365,6 +365,7 @@ void PagedSpace::DecreaseLimit(Address new_limit) {
       optional_scope.emplace(chunk);
     }
 
+    ConcurrentAllocationMutex guard(this);
     SetTopAndLimit(top(), new_limit);
     Free(new_limit, old_limit - new_limit,
          SpaceAccountingMode::kSpaceAccounted);
@@ -498,11 +499,11 @@ void PagedSpace::SetReadAndExecutable() {
   }
 }
 
-void PagedSpace::SetReadAndWritable() {
+void PagedSpace::SetCodeModificationPermissions() {
   DCHECK(identity() == CODE_SPACE);
   for (Page* page : *this) {
     CHECK(heap()->memory_allocator()->IsMemoryChunkExecutable(page));
-    page->SetReadAndWritable();
+    page->SetCodeModificationPermissions();
   }
 }
 

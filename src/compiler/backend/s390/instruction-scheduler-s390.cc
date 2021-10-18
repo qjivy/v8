@@ -135,9 +135,6 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kS390_LoadAndTestWord64:
     case kS390_LoadAndTestFloat32:
     case kS390_LoadAndTestFloat64:
-    case kS390_CompressSigned:
-    case kS390_CompressPointer:
-    case kS390_CompressAny:
     case kS390_F64x2Splat:
     case kS390_F64x2ReplaceLane:
     case kS390_F64x2Abs:
@@ -362,6 +359,22 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kS390_LoadDecompressTaggedSigned:
     case kS390_LoadDecompressTaggedPointer:
     case kS390_LoadDecompressAnyTagged:
+    case kS390_S128Load8Splat:
+    case kS390_S128Load16Splat:
+    case kS390_S128Load32Splat:
+    case kS390_S128Load64Splat:
+    case kS390_S128Load8x8S:
+    case kS390_S128Load8x8U:
+    case kS390_S128Load16x4S:
+    case kS390_S128Load16x4U:
+    case kS390_S128Load32x2S:
+    case kS390_S128Load32x2U:
+    case kS390_S128Load32Zero:
+    case kS390_S128Load64Zero:
+    case kS390_S128Load8Lane:
+    case kS390_S128Load16Lane:
+    case kS390_S128Load32Lane:
+    case kS390_S128Load64Lane:
       return kIsLoadOperation;
 
     case kS390_StoreWord8:
@@ -379,6 +392,10 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kS390_Push:
     case kS390_PushFrame:
     case kS390_StoreToStackSlot:
+    case kS390_S128Store8Lane:
+    case kS390_S128Store16Lane:
+    case kS390_S128Store32Lane:
+    case kS390_S128Store64Lane:
       return kHasSideEffect;
 
     case kS390_Word64AtomicExchangeUint64:

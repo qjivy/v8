@@ -4,6 +4,7 @@
 
 #include "src/objects/feedback-vector.h"
 
+#include "src/common/globals.h"
 #include "src/deoptimizer/deoptimizer.h"
 #include "src/diagnostics/code-tracer.h"
 #include "src/heap/heap-inl.h"
@@ -207,6 +208,12 @@ FeedbackSlotKind FeedbackVector::GetKind(FeedbackSlot slot) const {
   return metadata().GetKind(slot);
 }
 
+FeedbackSlotKind FeedbackVector::GetKind(FeedbackSlot slot,
+                                         AcquireLoadTag tag) const {
+  DCHECK(!is_empty());
+  return metadata(tag).GetKind(slot);
+}
+
 FeedbackSlot FeedbackVector::GetTypeProfileSlot() const {
   DCHECK(metadata().HasTypeProfileSlot());
   FeedbackSlot slot =
@@ -383,12 +390,13 @@ void FeedbackVector::SetOptimizedCode(Handle<FeedbackVector> vector,
                                       Handle<Code> code,
                                       FeedbackCell feedback_cell) {
   DCHECK(CodeKindIsOptimizedJSFunction(code->kind()));
-  // We should only set optimized code only when there is no valid optimized
-  // code or we are tiering up.
+  // We should set optimized code only when there is no valid optimized code or
+  // we are tiering up.
   DCHECK(!vector->has_optimized_code() ||
          vector->optimized_code().marked_for_deoptimization() ||
          (vector->optimized_code().kind() == CodeKind::TURBOPROP &&
-          code->kind() == CodeKind::TURBOFAN));
+          code->kind() == CodeKind::TURBOFAN) ||
+         FLAG_stress_concurrent_inlining_attach_code);
   // TODO(mythria): We could see a CompileOptimized marker here either from
   // tests that use %OptimizeFunctionOnNextCall, --always-opt or because we
   // re-mark the function for non-concurrent optimization after an OSR. We
@@ -562,7 +570,7 @@ FeedbackNexus::FeedbackNexus(Handle<FeedbackVector> vector, FeedbackSlot slot,
                              const NexusConfig& config)
     : vector_handle_(vector),
       slot_(slot),
-      kind_(vector->GetKind(slot)),
+      kind_(vector->GetKind(slot, kAcquireLoad)),
       config_(config) {}
 
 Handle<WeakFixedArray> FeedbackNexus::CreateArrayOfSize(int length) {

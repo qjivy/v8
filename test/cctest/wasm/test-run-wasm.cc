@@ -11,6 +11,7 @@
 #include "src/base/platform/elapsed-timer.h"
 #include "src/codegen/assembler-inl.h"
 #include "src/utils/utils.h"
+#include "src/wasm/code-space-access.h"
 #include "src/wasm/wasm-opcodes-inl.h"
 #include "test/cctest/cctest.h"
 #include "test/cctest/compiler/value-helper.h"
@@ -177,6 +178,65 @@ static void TestInt32Binop(TestExecutionTier execution_tier, WasmOpcode opcode,
       FOR_INT32_INPUTS(j) {
         CHECK_EQ(expected(i, j), r.Call(i, j));
       }
+    }
+  }
+  FOR_INT32_INPUTS(i) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on constant and parameter.
+    BUILD(r, WASM_BINOP(opcode, WASM_I32V(i), WASM_LOCAL_GET(0)));
+    FOR_INT32_INPUTS(j) {
+      CHECK_EQ(expected(i, j), r.Call(j));
+    }
+  }
+  FOR_INT32_INPUTS(j) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on parameter and constant.
+    BUILD(r, WASM_BINOP(opcode, WASM_LOCAL_GET(0), WASM_I32V(j)));
+    FOR_INT32_INPUTS(i) {
+      CHECK_EQ(expected(i, j), r.Call(i));
+    }
+  }
+  auto to_bool = [](ctype value) -> ctype {
+    return value == static_cast<ctype>(0xDEADBEEF) ? value : !!value;
+  };
+  FOR_INT32_INPUTS(i) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on constant and parameter, followed by {if}.
+    BUILD(r, WASM_IF(WASM_BINOP(opcode, WASM_I32V(i), WASM_LOCAL_GET(0)),
+                     WASM_RETURN(WASM_ONE)),
+             WASM_ZERO);
+    FOR_INT32_INPUTS(j) {
+      CHECK_EQ(to_bool(expected(i, j)), r.Call(j));
+    }
+  }
+  FOR_INT32_INPUTS(j) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on parameter and constant, followed by {if}.
+    BUILD(r, WASM_IF(WASM_BINOP(opcode, WASM_LOCAL_GET(0), WASM_I32V(j)),
+                     WASM_RETURN(WASM_ONE)),
+             WASM_ZERO);
+    FOR_INT32_INPUTS(i) {
+      CHECK_EQ(to_bool(expected(i, j)), r.Call(i));
+    }
+  }
+  FOR_INT32_INPUTS(i) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on constant and parameter, followed by {br_if}.
+    BUILD(r, WASM_BR_IFD(0, WASM_ONE,
+                         WASM_BINOP(opcode, WASM_I32V(i), WASM_LOCAL_GET(0))),
+             WASM_ZERO);
+    FOR_INT32_INPUTS(j) {
+      CHECK_EQ(to_bool(expected(i, j)), r.Call(j));
+    }
+  }
+  FOR_INT32_INPUTS(j) {
+    WasmRunner<ctype, ctype> r(execution_tier);
+    // Apply {opcode} on parameter and constant, followed by {br_if}.
+    BUILD(r, WASM_BR_IFD(0, WASM_ONE,
+                         WASM_BINOP(opcode, WASM_LOCAL_GET(0), WASM_I32V(j))),
+             WASM_ZERO);
+    FOR_INT32_INPUTS(i) {
+      CHECK_EQ(to_bool(expected(i, j)), r.Call(i));
     }
   }
 }
@@ -3880,28 +3940,31 @@ TEST(Liftoff_tier_up) {
       r.builder().instance_object()->module_object().native_module();
 
   // This test only works if we managed to compile with Liftoff.
-  if (native_module->GetCode(add.function_index())->is_liftoff()) {
-    // First run should execute {add}.
-    CHECK_EQ(18, r.Call(11, 7));
+  if (!native_module->GetCode(add.function_index())->is_liftoff()) return;
 
-    // Now make a copy of the {sub} function, and add it to the native module at
-    // the index of {add}.
-    CodeDesc desc;
-    memset(&desc, 0, sizeof(CodeDesc));
-    WasmCode* sub_code = native_module->GetCode(sub.function_index());
-    size_t sub_size = sub_code->instructions().size();
-    std::unique_ptr<byte[]> buffer(new byte[sub_code->instructions().size()]);
-    memcpy(buffer.get(), sub_code->instructions().begin(), sub_size);
-    desc.buffer = buffer.get();
-    desc.instr_size = static_cast<int>(sub_size);
+  // First run should execute {add}.
+  CHECK_EQ(18, r.Call(11, 7));
+
+  // Now make a copy of the {sub} function, and add it to the native module at
+  // the index of {add}.
+  CodeDesc desc;
+  memset(&desc, 0, sizeof(CodeDesc));
+  WasmCode* sub_code = native_module->GetCode(sub.function_index());
+  size_t sub_size = sub_code->instructions().size();
+  std::unique_ptr<byte[]> buffer(new byte[sub_code->instructions().size()]);
+  memcpy(buffer.get(), sub_code->instructions().begin(), sub_size);
+  desc.buffer = buffer.get();
+  desc.instr_size = static_cast<int>(sub_size);
+  {
+    CodeSpaceWriteScope write_scope(native_module);
     std::unique_ptr<WasmCode> new_code = native_module->AddCode(
         add.function_index(), desc, 0, 0, {}, {}, WasmCode::kFunction,
         ExecutionTier::kTurbofan, kNoDebugging);
     native_module->PublishCode(std::move(new_code));
-
-    // Second run should now execute {sub}.
-    CHECK_EQ(4, r.Call(11, 7));
   }
+
+  // Second run should now execute {sub}.
+  CHECK_EQ(4, r.Call(11, 7));
 }
 
 TEST(Regression_1085507) {

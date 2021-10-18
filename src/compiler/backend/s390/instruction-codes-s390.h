@@ -161,9 +161,6 @@ namespace compiler {
   V(S390_StoreReverseSimd128)               \
   V(S390_StoreFloat32)                      \
   V(S390_StoreDouble)                       \
-  V(S390_CompressSigned)                    \
-  V(S390_CompressPointer)                   \
-  V(S390_CompressAny)                       \
   V(S390_Word64AtomicExchangeUint64)        \
   V(S390_Word64AtomicCompareExchangeUint64) \
   V(S390_Word64AtomicAddUint64)             \
@@ -375,6 +372,26 @@ namespace compiler {
   V(S390_S128Not)                           \
   V(S390_S128Select)                        \
   V(S390_S128AndNot)                        \
+  V(S390_S128Load8Splat)                    \
+  V(S390_S128Load16Splat)                   \
+  V(S390_S128Load32Splat)                   \
+  V(S390_S128Load64Splat)                   \
+  V(S390_S128Load8x8S)                      \
+  V(S390_S128Load8x8U)                      \
+  V(S390_S128Load16x4S)                     \
+  V(S390_S128Load16x4U)                     \
+  V(S390_S128Load32x2S)                     \
+  V(S390_S128Load32x2U)                     \
+  V(S390_S128Load32Zero)                    \
+  V(S390_S128Load64Zero)                    \
+  V(S390_S128Load8Lane)                     \
+  V(S390_S128Load16Lane)                    \
+  V(S390_S128Load32Lane)                    \
+  V(S390_S128Load64Lane)                    \
+  V(S390_S128Store8Lane)                    \
+  V(S390_S128Store16Lane)                   \
+  V(S390_S128Store32Lane)                   \
+  V(S390_S128Store64Lane)                   \
   V(S390_StoreSimd128)                      \
   V(S390_LoadSimd128)                       \
   V(S390_StoreCompressTagged)               \

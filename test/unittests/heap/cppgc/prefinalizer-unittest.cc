@@ -246,16 +246,23 @@ class AllocatingPrefinalizer : public GarbageCollected<AllocatingPrefinalizer> {
 
 }  // namespace
 
+#ifdef CPPGC_ALLOW_ALLOCATIONS_IN_PREFINALIZERS
+TEST_F(PrefinalizerTest, PrefinalizerDoesNotFailOnAllcoation) {
+  auto* object = MakeGarbageCollected<AllocatingPrefinalizer>(
+      GetAllocationHandle(), GetHeap());
+  PreciseGC();
+  USE(object);
+}
+#else
 #ifdef DEBUG
-
 TEST_F(PrefinalizerDeathTest, PrefinalizerFailsOnAllcoation) {
   auto* object = MakeGarbageCollected<AllocatingPrefinalizer>(
       GetAllocationHandle(), GetHeap());
   USE(object);
   EXPECT_DEATH_IF_SUPPORTED(PreciseGC(), "");
 }
-
 #endif  // DEBUG
+#endif  // CPPGC_ALLOW_ALLOCATIONS_IN_PREFINALIZERS
 
 namespace {
 
@@ -285,7 +292,7 @@ class GCedHolder : public GarbageCollected<GCedHolder> {
 }  // namespace
 
 #if V8_ENABLE_CHECKS
-#ifdef CPPGC_CHECK_ASSIGNMENTS_IN_PREFINALIZERS
+#ifdef CPPGC_VERIFY_HEAP
 
 TEST_F(PrefinalizerDeathTest, PrefinalizerCantRewireGraphWithDeadObjects) {
   Persistent<LinkedNode> root{MakeGarbageCollected<LinkedNode>(
@@ -318,8 +325,20 @@ TEST_F(PrefinalizerDeathTest, PrefinalizerCantRessurectObjectOnHeap) {
   EXPECT_DEATH_IF_SUPPORTED(PreciseGC(), "");
 }
 
-#endif  // CPPGC_CHECK_ASSIGNMENTS_IN_PREFINALIZERS
+#endif  // CPPGC_VERIFY_HEAP
 #endif  // V8_ENABLE_CHECKS
 
+#ifdef CPPGC_ALLOW_ALLOCATIONS_IN_PREFINALIZERS
+TEST_F(PrefinalizerTest, AllocatingPrefinalizersInMultipleGCCycles) {
+  auto* object = MakeGarbageCollected<AllocatingPrefinalizer>(
+      GetAllocationHandle(), GetHeap());
+  PreciseGC();
+  auto* other_object = MakeGarbageCollected<AllocatingPrefinalizer>(
+      GetAllocationHandle(), GetHeap());
+  PreciseGC();
+  USE(object);
+  USE(other_object);
+}
+#endif
 }  // namespace internal
 }  // namespace cppgc

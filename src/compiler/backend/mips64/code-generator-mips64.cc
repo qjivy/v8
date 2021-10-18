@@ -95,7 +95,6 @@ class MipsOperandConverter final : public InstructionOperandConverter {
             constant.ToDelayedStringConstant());
       case Constant::kRpoNumber:
         UNREACHABLE();  // TODO(titzer): RPO immediates on mips?
-        break;
     }
     UNREACHABLE();
   }
@@ -768,7 +767,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kArchBinarySearchSwitch:
       AssembleArchBinarySearchSwitch(instr);
       break;
-      break;
     case kArchTableSwitch:
       AssembleArchTableSwitch(instr);
       break;
@@ -829,7 +827,8 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ TruncateDoubleToI(isolate(), zone(), i.OutputRegister(),
                            i.InputDoubleRegister(0), DetermineStubCallMode());
       break;
-    case kArchStoreWithWriteBarrier: {
+    case kArchStoreWithWriteBarrier:  // Fall through.
+    case kArchAtomicStoreWithWriteBarrier: {
       RecordWriteMode mode =
           static_cast<RecordWriteMode>(MiscField::decode(instr->opcode()));
       Register object = i.InputRegister(0);
@@ -841,7 +840,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                                                    scratch0, scratch1, mode,
                                                    DetermineStubCallMode());
       __ Daddu(kScratchReg, object, index);
-      __ Sd(value, MemOperand(kScratchReg));
+      if (arch_opcode == kArchStoreWithWriteBarrier) {
+        __ Sd(value, MemOperand(kScratchReg));
+      } else {
+        DCHECK_EQ(kArchAtomicStoreWithWriteBarrier, arch_opcode);
+        __ sync();
+        __ Sd(value, MemOperand(kScratchReg));
+        __ sync();
+      }
       if (mode > RecordWriteMode::kValueIsPointer) {
         __ JumpIfSmi(value, ool->exit());
       }
@@ -1883,7 +1889,10 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       ASSEMBLE_ATOMIC_LOAD_INTEGER(Lhu);
       break;
     case kAtomicLoadWord32:
-      ASSEMBLE_ATOMIC_LOAD_INTEGER(Lw);
+      if (AtomicWidthField::decode(opcode) == AtomicWidth::kWord32)
+        ASSEMBLE_ATOMIC_LOAD_INTEGER(Lw);
+      else
+        ASSEMBLE_ATOMIC_LOAD_INTEGER(Lwu);
       break;
     case kMips64Word64AtomicLoadUint64:
       ASSEMBLE_ATOMIC_LOAD_INTEGER(Ld);
@@ -1897,6 +1906,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kAtomicStoreWord32:
       ASSEMBLE_ATOMIC_STORE_INTEGER(Sw);
       break;
+    case kMips64StoreCompressTagged:
     case kMips64Word64AtomicStoreWord64:
       ASSEMBLE_ATOMIC_STORE_INTEGER(Sd);
       break;
@@ -3819,7 +3829,6 @@ void AssembleBranchToLabels(CodeGenerator* gen, TurboAssembler* tasm,
         break;
       default:
         UNSUPPORTED_COND(instr->arch_opcode(), condition);
-        break;
     }
   } else if (instr->arch_opcode() == kMips64MulOvf) {
     // Overflow occurs if overflow register is not zero
@@ -3832,7 +3841,6 @@ void AssembleBranchToLabels(CodeGenerator* gen, TurboAssembler* tasm,
         break;
       default:
         UNSUPPORTED_COND(kMipsMulOvf, condition);
-        break;
     }
   } else if (instr->arch_opcode() == kMips64Cmp) {
     cc = FlagsConditionToConditionCmp(condition);
@@ -4437,7 +4445,6 @@ void CodeGenerator::AssembleMove(InstructionOperand* source,
           UNREACHABLE();
         case Constant::kRpoNumber:
           UNREACHABLE();  // TODO(titzer): loading RPO numbers on mips64.
-          break;
       }
       if (destination->IsStackSlot()) __ Sd(dst, g.ToMemOperand(destination));
     } else if (src.type() == Constant::kFloat32) {

@@ -643,7 +643,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   // Define a jump/call target and bind a label.
   inline void BindJumpOrCallTarget(Label* label);
 
-  static unsigned CountClearHalfWords(uint64_t imm, unsigned reg_size);
+  static unsigned CountSetHalfWords(uint64_t imm, unsigned reg_size);
 
   CPURegList* TmpList() { return &tmp_list_; }
   CPURegList* FPTmpList() { return &fptmp_list_; }
@@ -1192,6 +1192,29 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   LSPAIR_MACRO_LIST(DECLARE_FUNCTION)
 #undef DECLARE_FUNCTION
 
+  void St1(const VRegister& vt, const MemOperand& dst) {
+    DCHECK(allow_macro_instructions());
+    st1(vt, dst);
+  }
+  void St1(const VRegister& vt, const VRegister& vt2, const MemOperand& dst) {
+    DCHECK(allow_macro_instructions());
+    st1(vt, vt2, dst);
+  }
+  void St1(const VRegister& vt, const VRegister& vt2, const VRegister& vt3,
+           const MemOperand& dst) {
+    DCHECK(allow_macro_instructions());
+    st1(vt, vt2, vt3, dst);
+  }
+  void St1(const VRegister& vt, const VRegister& vt2, const VRegister& vt3,
+           const VRegister& vt4, const MemOperand& dst) {
+    DCHECK(allow_macro_instructions());
+    st1(vt, vt2, vt3, vt4, dst);
+  }
+  void St1(const VRegister& vt, int lane, const MemOperand& dst) {
+    DCHECK(allow_macro_instructions());
+    st1(vt, lane, dst);
+  }
+
 #define NEON_2VREG_SHIFT_MACRO_LIST(V) \
   V(rshrn, Rshrn)                      \
   V(rshrn2, Rshrn2)                    \
@@ -1371,6 +1394,9 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void StoreTaggedField(const Register& value,
                         const MemOperand& dst_field_operand);
 
+  void AtomicStoreTaggedField(const Register& value, const Register& dst_base,
+                              const Register& dst_index, const Register& temp);
+
   void DecompressTaggedSigned(const Register& destination,
                               const MemOperand& field_operand);
   void DecompressTaggedPointer(const Register& destination,
@@ -1379,6 +1405,17 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
                                const Register& source);
   void DecompressAnyTagged(const Register& destination,
                            const MemOperand& field_operand);
+
+  void AtomicDecompressTaggedSigned(const Register& destination,
+                                    const Register& base, const Register& index,
+                                    const Register& temp);
+  void AtomicDecompressTaggedPointer(const Register& destination,
+                                     const Register& base,
+                                     const Register& index,
+                                     const Register& temp);
+  void AtomicDecompressAnyTagged(const Register& destination,
+                                 const Register& base, const Register& index,
+                                 const Register& temp);
 
   // Restore FP and LR from the values stored in the current frame. This will
   // authenticate the LR when pointer authentication is enabled.
@@ -1394,6 +1431,15 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void PopcntHelper(Register dst, Register src);
   void I64x2BitMask(Register dst, VRegister src);
   void I64x2AllTrue(Register dst, VRegister src);
+
+  // ---------------------------------------------------------------------------
+  // V8 Heap sandbox support
+
+  // Loads a field containing off-heap pointer and does necessary decoding
+  // if V8 heap sandbox is enabled.
+  void LoadExternalPointerField(Register destination, MemOperand field_operand,
+                                ExternalPointerTag tag,
+                                Register isolate_root = Register::no_reg());
 
  protected:
   // The actual Push and Pop implementations. These don't generate any code
@@ -1643,28 +1689,6 @@ class V8_EXPORT_PRIVATE MacroAssembler : public TurboAssembler {
             const VRegister& vt4, const MemOperand& src) {
     DCHECK(allow_macro_instructions());
     ld4r(vt, vt2, vt3, vt4, src);
-  }
-  void St1(const VRegister& vt, const MemOperand& dst) {
-    DCHECK(allow_macro_instructions());
-    st1(vt, dst);
-  }
-  void St1(const VRegister& vt, const VRegister& vt2, const MemOperand& dst) {
-    DCHECK(allow_macro_instructions());
-    st1(vt, vt2, dst);
-  }
-  void St1(const VRegister& vt, const VRegister& vt2, const VRegister& vt3,
-           const MemOperand& dst) {
-    DCHECK(allow_macro_instructions());
-    st1(vt, vt2, vt3, dst);
-  }
-  void St1(const VRegister& vt, const VRegister& vt2, const VRegister& vt3,
-           const VRegister& vt4, const MemOperand& dst) {
-    DCHECK(allow_macro_instructions());
-    st1(vt, vt2, vt3, vt4, dst);
-  }
-  void St1(const VRegister& vt, int lane, const MemOperand& dst) {
-    DCHECK(allow_macro_instructions());
-    st1(vt, lane, dst);
   }
   void St2(const VRegister& vt, const VRegister& vt2, const MemOperand& dst) {
     DCHECK(allow_macro_instructions());

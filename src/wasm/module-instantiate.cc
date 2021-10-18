@@ -67,6 +67,8 @@ class CompileImportWrapperJob final : public JobTask {
   void Run(JobDelegate* delegate) override {
     while (base::Optional<WasmImportWrapperCache::CacheKey> key =
                queue_->pop()) {
+      // TODO(wasm): Batch code publishing, to avoid repeated locking and
+      // permission switching.
       CompileImportWrapper(native_module_, counters_, key->kind, key->signature,
                            key->expected_arity, cache_scope_);
       if (delegate->ShouldYield()) return;
@@ -161,6 +163,7 @@ Handle<Map> CreateStructMap(Isolate* isolate, const WasmModule* module,
   map->SetInstanceDescriptors(isolate, *descriptors,
                               descriptors->number_of_descriptors());
   map->set_is_extensible(false);
+  WasmStruct::EncodeInstanceSizeInMap(real_instance_size, *map);
   return map;
 }
 
@@ -186,7 +189,44 @@ Handle<Map> CreateArrayMap(Isolate* isolate, const WasmModule* module,
   map->SetInstanceDescriptors(isolate, *descriptors,
                               descriptors->number_of_descriptors());
   map->set_is_extensible(false);
+  WasmArray::EncodeElementSizeInMap(type->element_type().element_size_bytes(),
+                                    *map);
   return map;
+}
+
+void CreateMapForType(Isolate* isolate, const WasmModule* module,
+                      int type_index, Handle<WasmInstanceObject> instance,
+                      Handle<FixedArray> maps) {
+  // Recursive calls for supertypes may already have created this map.
+  if (maps->get(type_index).IsMap()) return;
+  Handle<Map> rtt_parent;
+  // If the type with {type_index} has an explicit supertype, make sure the
+  // map for that supertype is created first, so that the supertypes list
+  // that's cached on every RTT can be set up correctly.
+  uint32_t supertype = module->supertype(type_index);
+  if (supertype != kNoSuperType && supertype != kGenericSuperType) {
+    // This recursion is safe, because kV8MaxRttSubtypingDepth limits the
+    // number of recursive steps, so we won't overflow the stack.
+    CreateMapForType(isolate, module, supertype, instance, maps);
+    rtt_parent = handle(Map::cast(maps->get(supertype)), isolate);
+  }
+  Handle<Map> map;
+  switch (module->type_kinds[type_index]) {
+    case kWasmStructTypeCode:
+      map = CreateStructMap(isolate, module, type_index, rtt_parent, instance);
+      break;
+    case kWasmArrayTypeCode:
+      map = CreateArrayMap(isolate, module, type_index, rtt_parent, instance);
+      break;
+    case kWasmFunctionTypeCode:
+      // TODO(7748): Think about canonicalizing rtts to make them work for
+      // identical function types.
+      map = Map::Copy(isolate, isolate->wasm_exported_function_map(),
+                      "fresh function map for function type canonical rtt "
+                      "initialization");
+      break;
+  }
+  maps->set(type_index, *map);
 }
 
 namespace {
@@ -385,7 +425,7 @@ class InstanceBuilder {
 
   // Process the imports, including functions, tables, globals, and memory, in
   // order, loading them from the {ffi_} object. Returns the number of imported
-  // functions.
+  // functions, or {-1} on error.
   int ProcessImports(Handle<WasmInstanceObject> instance);
 
   template <typename T>
@@ -613,9 +653,12 @@ MaybeHandle<WasmInstanceObject> InstanceBuilder::Build() {
     Handle<FixedArray> tables = isolate_->factory()->NewFixedArray(table_count);
     for (int i = module_->num_imported_tables; i < table_count; i++) {
       const WasmTable& table = module_->tables[i];
+      // Initialize tables with null for now. We will initialize non-defaultable
+      // tables later, in {InitializeIndirectFunctionTables}.
       Handle<WasmTableObject> table_obj = WasmTableObject::New(
           isolate_, instance, table.type, table.initial_size,
-          table.has_maximum_size, table.maximum_size, nullptr);
+          table.has_maximum_size, table.maximum_size, nullptr,
+          isolate_->factory()->null_value());
       tables->set(i, *table_obj);
     }
     instance->set_tables(*tables);
@@ -638,14 +681,14 @@ MaybeHandle<WasmInstanceObject> InstanceBuilder::Build() {
     instance->set_indirect_function_tables(*tables);
   }
 
-  CodeSpaceWriteScope native_modification_scope(native_module);
-
   //--------------------------------------------------------------------------
   // Process the imports for the module.
   //--------------------------------------------------------------------------
-  int num_imported_functions = ProcessImports(instance);
-  if (num_imported_functions < 0) return {};
-  wasm_module_instantiated.imported_function_count = num_imported_functions;
+  if (!module_->import_table.empty()) {
+    int num_imported_functions = ProcessImports(instance);
+    if (num_imported_functions < 0) return {};
+    wasm_module_instantiated.imported_function_count = num_imported_functions;
+  }
 
   //--------------------------------------------------------------------------
   // Create maps for managed objects (GC proposal).
@@ -656,28 +699,8 @@ MaybeHandle<WasmInstanceObject> InstanceBuilder::Build() {
   if (enabled_.has_gc()) {
     Handle<FixedArray> maps = isolate_->factory()->NewFixedArray(
         static_cast<int>(module_->type_kinds.size()));
-    for (int map_index = 0;
-         map_index < static_cast<int>(module_->type_kinds.size());
-         map_index++) {
-      Handle<Map> map;
-      switch (module_->type_kinds[map_index]) {
-        case kWasmStructTypeCode:
-          map = CreateStructMap(isolate_, module_, map_index, Handle<Map>(),
-                                instance);
-          break;
-        case kWasmArrayTypeCode:
-          map = CreateArrayMap(isolate_, module_, map_index, Handle<Map>(),
-                               instance);
-          break;
-        case kWasmFunctionTypeCode:
-          // TODO(7748): Think about canonicalizing rtts to make them work for
-          // identical function types.
-          map = Map::Copy(isolate_, isolate_->wasm_exported_function_map(),
-                          "fresh function map for function type canonical rtt "
-                          "initialization");
-          break;
-      }
-      maps->set(map_index, *map);
+    for (uint32_t index = 0; index < module_->type_kinds.size(); index++) {
+      CreateMapForType(isolate_, module_, index, instance, maps);
     }
     instance->set_managed_object_maps(*maps);
   }
@@ -1034,7 +1057,8 @@ bool InstanceBuilder::ProcessImportedFunction(
       if (kind == compiler::WasmImportCallKind::kJSFunctionArityMismatch) {
         Handle<JSFunction> function = Handle<JSFunction>::cast(js_receiver);
         SharedFunctionInfo shared = function->shared();
-        expected_arity = shared.internal_formal_parameter_count();
+        expected_arity =
+            shared.internal_formal_parameter_count_without_receiver();
       }
 
       NativeModule* native_module = instance->module_object().native_module();
@@ -1438,7 +1462,8 @@ void InstanceBuilder::CompileImportWrappers(
         compiler::WasmImportCallKind::kJSFunctionArityMismatch) {
       Handle<JSFunction> function = Handle<JSFunction>::cast(resolved.second);
       SharedFunctionInfo shared = function->shared();
-      expected_arity = shared.internal_formal_parameter_count();
+      expected_arity =
+          shared.internal_formal_parameter_count_without_receiver();
     }
 
     WasmImportWrapperCache::CacheKey key(kind, sig, expected_arity);

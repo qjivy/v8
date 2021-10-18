@@ -67,6 +67,8 @@ class V8_EXPORT WriteBarrier final {
   template <typename HeapHandleCallback>
   static V8_INLINE Type GetWriteBarrierType(const void* slot, Params& params,
                                             HeapHandleCallback callback);
+  // Returns the required write barrier for a given  `value`.
+  static V8_INLINE Type GetWriteBarrierType(const void* value, Params& params);
 
   template <typename HeapHandleCallback>
   static V8_INLINE Type GetWriteBarrierTypeForExternallyReferencedObject(
@@ -148,9 +150,27 @@ class V8_EXPORT WriteBarrierTypeForCagedHeapPolicy final {
     return ValueModeDispatch<value_mode>::Get(slot, value, params, callback);
   }
 
+  template <WriteBarrier::ValueMode value_mode, typename HeapHandleCallback>
+  static V8_INLINE WriteBarrier::Type Get(const void* value,
+                                          WriteBarrier::Params& params,
+                                          HeapHandleCallback callback) {
+    return GetNoSlot(value, params, callback);
+  }
+
   template <typename HeapHandleCallback>
   static V8_INLINE WriteBarrier::Type GetForExternallyReferenced(
-      const void* value, WriteBarrier::Params& params, HeapHandleCallback) {
+      const void* value, WriteBarrier::Params& params,
+      HeapHandleCallback callback) {
+    return GetNoSlot(value, params, callback);
+  }
+
+ private:
+  WriteBarrierTypeForCagedHeapPolicy() = delete;
+
+  template <typename HeapHandleCallback>
+  static V8_INLINE WriteBarrier::Type GetNoSlot(const void* value,
+                                                WriteBarrier::Params& params,
+                                                HeapHandleCallback) {
     if (!TryGetCagedHeap(value, value, params)) {
       return WriteBarrier::Type::kNone;
     }
@@ -160,25 +180,14 @@ class V8_EXPORT WriteBarrierTypeForCagedHeapPolicy final {
     return SetAndReturnType<WriteBarrier::Type::kNone>(params);
   }
 
- private:
-  WriteBarrierTypeForCagedHeapPolicy() = delete;
-
   template <WriteBarrier::ValueMode value_mode>
   struct ValueModeDispatch;
 
   static V8_INLINE bool TryGetCagedHeap(const void* slot, const void* value,
                                         WriteBarrier::Params& params) {
-    if (!Platform::StackAddressesSmallerThanHeapAddresses()) {
-      // This method assumes that the stack is allocated in high
-      // addresses. That is not guaranteed on Windows and Fuchsia. Having a
-      // low-address (below api_constants::kCagedHeapReservationSize) on-stack
-      // slot with a nullptr value would cause this method to erroneously return
-      // that the slot resides in a caged heap that starts at a null address.
-      // This check is applied only on Windows because it is not an issue on
-      // other OSes where the stack resides in higher adderesses, and to keep
-      // the write barrier as cheap as possible.
-      if (!value) return false;
-    }
+    // TODO(chromium:1056170): Check if the null check can be folded in with
+    // the rest of the write barrier.
+    if (!value) return false;
     params.start = reinterpret_cast<uintptr_t>(value) &
                    ~(api_constants::kCagedHeapReservationAlignment - 1);
     const uintptr_t slot_offset =
@@ -205,6 +214,11 @@ struct WriteBarrierTypeForCagedHeapPolicy::ValueModeDispatch<
   static V8_INLINE WriteBarrier::Type Get(const void* slot, const void* value,
                                           WriteBarrier::Params& params,
                                           HeapHandleCallback) {
+#if !defined(CPPGC_YOUNG_GENERATION)
+    if (V8_LIKELY(!WriteBarrier::IsAnyIncrementalOrConcurrentMarking())) {
+      return SetAndReturnType<WriteBarrier::Type::kNone>(params);
+    }
+#endif  // !CPPGC_YOUNG_GENERATION
     bool within_cage = TryGetCagedHeap(slot, value, params);
     if (!within_cage) {
       return WriteBarrier::Type::kNone;
@@ -269,6 +283,15 @@ class V8_EXPORT WriteBarrierTypeForNonCagedHeapPolicy final {
     return ValueModeDispatch<value_mode>::Get(slot, value, params, callback);
   }
 
+  template <WriteBarrier::ValueMode value_mode, typename HeapHandleCallback>
+  static V8_INLINE WriteBarrier::Type Get(const void* value,
+                                          WriteBarrier::Params& params,
+                                          HeapHandleCallback callback) {
+    // The slot will never be used in `Get()` below.
+    return Get<WriteBarrier::ValueMode::kValuePresent>(nullptr, value, params,
+                                                       callback);
+  }
+
   template <typename HeapHandleCallback>
   static V8_INLINE WriteBarrier::Type GetForExternallyReferenced(
       const void* value, WriteBarrier::Params& params,
@@ -299,7 +322,10 @@ struct WriteBarrierTypeForNonCagedHeapPolicy::ValueModeDispatch<
                                           HeapHandleCallback callback) {
     // The following check covers nullptr as well as sentinel pointer.
     if (object <= static_cast<void*>(kSentinelPointer)) {
-      return WriteBarrier::Type::kNone;
+      return SetAndReturnType<WriteBarrier::Type::kNone>(params);
+    }
+    if (V8_LIKELY(!WriteBarrier::IsAnyIncrementalOrConcurrentMarking())) {
+      return SetAndReturnType<WriteBarrier::Type::kNone>(params);
     }
     if (IsMarking(object, &params.heap)) {
       return SetAndReturnType<WriteBarrier::Type::kMarking>(params);
@@ -340,6 +366,13 @@ WriteBarrier::Type WriteBarrier::GetWriteBarrierType(
     HeapHandleCallback callback) {
   return WriteBarrierTypePolicy::Get<ValueMode::kNoValuePresent>(
       slot, nullptr, params, callback);
+}
+
+// static
+WriteBarrier::Type WriteBarrier::GetWriteBarrierType(
+    const void* value, WriteBarrier::Params& params) {
+  return WriteBarrierTypePolicy::Get<ValueMode::kValuePresent>(value, params,
+                                                               []() {});
 }
 
 // static

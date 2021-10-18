@@ -615,10 +615,10 @@ ProcessedFeedback const& JSHeapBroker::ReadFeedbackForGlobalAccess(
     int const script_context_index =
         FeedbackNexus::ContextIndexBits::decode(number);
     int const context_slot_index = FeedbackNexus::SlotIndexBits::decode(number);
-    ContextRef context = MakeRef(
+    ContextRef context = MakeRefAssumeMemoryFence(
         this,
         target_native_context().script_context_table().object()->get_context(
-            script_context_index));
+            script_context_index, kAcquireLoad));
 
     base::Optional<ObjectRef> contents = context.get(context_slot_index);
     if (contents.has_value()) CHECK(!contents->IsTheHole());
@@ -864,10 +864,6 @@ ElementAccessFeedback const& JSHeapBroker::ProcessFeedbackMapsForElementAccess(
   MapHandles possible_transition_targets;
   possible_transition_targets.reserve(maps.size());
   for (MapRef& map : maps) {
-    if (!is_concurrent_inlining()) {
-      map.SerializeRootMap(NotConcurrentInliningTag{this});
-    }
-
     if (map.CanInlineElementAccess() &&
         IsFastElementsKind(map.elements_kind()) &&
         GetInitialFastElementsKind() != map.elements_kind()) {

@@ -1398,8 +1398,7 @@ void TurboAssembler::li(Register rd, Operand j, LiFlags mode) {
     BlockGrowBufferScope block_growbuffer(this);
     int offset = pc_offset();
     Address address = j.immediate();
-    saved_handles_for_raw_object_ptr_.push_back(
-        std::make_pair(offset, address));
+    saved_handles_for_raw_object_ptr_.emplace_back(offset, address);
     Handle<HeapObject> object(reinterpret_cast<Address*>(address));
     int32_t immediate = object->ptr();
     RecordRelocInfo(j.rmode(), immediate);
@@ -3279,7 +3278,6 @@ bool TurboAssembler::BranchShortCheck(int32_t offset, Label* L, Condition cond,
       return BranchShortHelper(0, L, cond, rs, rt, bdslot);
     }
   }
-  return false;
 }
 
 void TurboAssembler::BranchShort(int32_t offset, Condition cond, Register rs,
@@ -3631,7 +3629,6 @@ bool TurboAssembler::BranchAndLinkShortCheck(int32_t offset, Label* L,
       return BranchAndLinkShortHelper(0, L, cond, rs, rt, bdslot);
     }
   }
-  return false;
 }
 
 void TurboAssembler::LoadFromConstantsTable(Register destination,
@@ -3978,7 +3975,7 @@ void TurboAssembler::LoadEntryFromBuiltin(Builtin builtin,
 MemOperand TurboAssembler::EntryFromBuiltinAsOperand(Builtin builtin) {
   DCHECK(root_array_available());
   return MemOperand(kRootRegister,
-                    IsolateData::builtin_entry_slot_offset(builtin));
+                    IsolateData::BuiltinEntrySlotOffset(builtin));
 }
 
 void TurboAssembler::CallBuiltinByIndex(Register builtin_index) {
@@ -4987,15 +4984,19 @@ void MacroAssembler::AssertStackIsAligned() {
 }
 
 void TurboAssembler::JumpIfSmi(Register value, Label* smi_label,
-                               Register scratch, BranchDelaySlot bd) {
+                               BranchDelaySlot bd) {
   DCHECK_EQ(0, kSmiTag);
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
   andi(scratch, value, kSmiTagMask);
   Branch(bd, smi_label, eq, scratch, Operand(zero_reg));
 }
 
 void MacroAssembler::JumpIfNotSmi(Register value, Label* not_smi_label,
-                                  Register scratch, BranchDelaySlot bd) {
+                                  BranchDelaySlot bd) {
   DCHECK_EQ(0, kSmiTag);
+  UseScratchRegisterScope temps(this);
+  Register scratch = temps.Acquire();
   andi(scratch, value, kSmiTagMask);
   Branch(bd, not_smi_label, ne, scratch, Operand(zero_reg));
 }
@@ -5524,7 +5525,7 @@ void TurboAssembler::CallForDeoptimization(Builtin target, int, Label* exit,
                                            Label*) {
   BlockTrampolinePoolScope block_trampoline_pool(this);
   Lw(t9,
-     MemOperand(kRootRegister, IsolateData::builtin_entry_slot_offset(target)));
+     MemOperand(kRootRegister, IsolateData::BuiltinEntrySlotOffset(target)));
   Call(t9);
   DCHECK_EQ(SizeOfCodeGeneratedSince(exit),
             (kind == DeoptimizeKind::kLazy)

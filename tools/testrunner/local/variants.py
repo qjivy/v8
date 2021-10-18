@@ -13,11 +13,12 @@ ALL_VARIANT_FLAGS = {
   "infra_staging": [[]],
   "interpreted_regexp": [["--regexp-interpret-all"]],
   "experimental_regexp":  [["--default-to-experimental-regexp-engine"]],
-  "concurrent_inlining":  [["--concurrent-inlining"]],
   "jitless": [["--jitless"]],
   "sparkplug": [["--sparkplug"]],
   "always_sparkplug": [[ "--always-sparkplug", "--sparkplug"]],
   "minor_mc": [["--minor-mc"]],
+  "no_concurrent_inlining":  [["--no-concurrent-inlining",
+                               "--no-stress-concurrent-inlining"]],
   "no_lfa": [["--no-lazy-feedback-allocation"]],
   # No optimization means disable all optimizations. OptimizeFunctionOnNextCall
   # would not force optimization too. It turns into a Nop. Please see
@@ -57,13 +58,14 @@ INCOMPATIBLE_FLAGS_PER_VARIANT = {
   "nooptimization": ["--always-opt"],
   "slow_path": ["--no-force-slow-path"],
   "stress_concurrent_allocation": ["--single-threaded-gc", "--predictable"],
-  "stress_concurrent_inlining": ["--single-threaded", "--predictable", "--turboprop"],
+  "stress_concurrent_inlining": ["--single-threaded", "--predictable",
+                                 "--turboprop", "--lazy-feedback-allocation"],
   "turboprop": ["--stress_concurrent_inlining"],
   # The fast API tests initialize an embedder object that never needs to be
   # serialized to the snapshot, so we don't have a
   # SerializeInternalFieldsCallback for it, so they are incompatible with
   # stress_snapshot.
-  "stress_snapshot": ["--turbo-fast-api-calls"],
+  "stress_snapshot": ["--expose-fast-api"],
   "stress": ["--always-opt", "--no-always-opt",
              "--max-inlined-bytecode-size=*",
              "--max-inlined-bytecode-size-cumulative=*", "--stress-inline",

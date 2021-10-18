@@ -13,7 +13,8 @@
 
 #if V8_ENABLE_WEBASSEMBLY
 #include "src/compiler/wasm-compiler.h"  // Only for static asserts.
-#endif                                   // V8_ENABLE_WEBASSEMBLY
+#include "src/wasm/wasm-engine.h"
+#endif  // V8_ENABLE_WEBASSEMBLY
 
 namespace v8 {
 namespace internal {
@@ -246,11 +247,18 @@ MaybeHandle<Context> NewScriptContext(Isolate* isolate,
   return result;
 }
 
-V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
+V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate, //v8i: key part for hello.js run
                                                  const InvokeParams& params) {
   RCS_SCOPE(isolate, RuntimeCallCounterId::kInvoke);
   DCHECK(!params.receiver->IsJSGlobalObject());
   DCHECK_LE(params.argc, FixedArray::kMaxLength);
+
+#if V8_ENABLE_WEBASSEMBLY
+  // If we have PKU support for Wasm, ensure that code is currently write
+  // protected for this thread.
+  DCHECK_IMPLIES(wasm::GetWasmCodeManager()->HasMemoryProtectionKeySupport(),
+                 !wasm::GetWasmCodeManager()->MemoryProtectionKeyWritable());
+#endif  // V8_ENABLE_WEBASSEMBLY
 
 #ifdef USE_SIMULATOR
   // Simulators use separate stacks for C++ and JS. JS stack overflow checks
@@ -269,11 +277,11 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
 
   // api callbacks can be called directly, unless we want to take the detour
   // through JS to set up a frame for break-at-entry.
-  if (params.target->IsJSFunction()) {
+  if (params.target->IsJSFunction()) { //v8i: hello.js is JSFunction
     Handle<JSFunction> function = Handle<JSFunction>::cast(params.target);
     if ((!params.is_construct || function->IsConstructor()) &&
         function->shared().IsApiFunction() &&
-        !function->shared().BreakAtEntry()) {
+        !function->shared().BreakAtEntry()) { //v8i: but not constructor
       SaveAndSwitchContext save(isolate, function->context());
       DCHECK(function->context().global_object().IsJSGlobalObject());
 
@@ -328,7 +336,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
     return isolate->factory()->undefined_value();
   }
 
-  if (params.execution_target == Execution::Target::kCallable) {
+  if (params.execution_target == Execution::Target::kCallable) { //v8i: yes Callable
     Handle<Context> context = isolate->native_context();
     if (!context->script_execution_callback().IsUndefined(isolate)) {
       v8::Context::AbortScriptExecutionCallback callback =
@@ -346,9 +354,8 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
 
   // Placeholder for return value.
   Object value;
-
   Handle<Code> code =
-      JSEntry(isolate, params.execution_target, params.is_construct);
+      JSEntry(isolate, params.execution_target, params.is_construct);//v8i: here important, that's why first goto JSEntry builtin
   {
     // Save and restore context around invocation and block the
     // allocation of handles without explicit handle scopes.
@@ -361,7 +368,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       // clang-format off
       // {new_target}, {target}, {receiver}, return value: tagged pointers
       // {argv}: pointer to array of tagged pointers
-      using JSEntryFunction = GeneratedCode<Address(
+      using JSEntryFunction = GeneratedCode<Address( //v8i: here is a typedef 
           Address root_register_value, Address new_target, Address target,
           Address receiver, intptr_t argc, Address** argv)>;
       // clang-format on
@@ -373,8 +380,9 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       Address recv = params.receiver->ptr();
       Address** argv = reinterpret_cast<Address**>(params.argv);
       RCS_SCOPE(isolate, RuntimeCallCounterId::kJS_Execution);
-      value = Object(stub_entry.Call(isolate->isolate_data()->isolate_root(),
-                                     orig_func, func, recv, params.argc, argv));
+      value = Object(stub_entry.Call(isolate->isolate_data()->isolate_root(), //v8i: here final kick off to the RISCV64 binary 
+                                     orig_func, func, recv,
+                                     JSParameterCount(params.argc), argv));
     } else {
       DCHECK_EQ(Execution::Target::kRunMicrotasks, params.execution_target);
 
@@ -464,10 +472,10 @@ MaybeHandle<Object> InvokeWithTryCatch(Isolate* isolate,
 }  // namespace
 
 // static
-MaybeHandle<Object> Execution::Call(Isolate* isolate, Handle<Object> callable,
+MaybeHandle<Object> Execution::Call(Isolate* isolate, Handle<Object> callable, //v8i: hello run here kick off
                                     Handle<Object> receiver, int argc,
                                     Handle<Object> argv[]) {
-  return Invoke(isolate, InvokeParams::SetUpForCall(isolate, callable, receiver,
+  return Invoke(isolate, InvokeParams::SetUpForCall(isolate, callable, receiver, //v8i: Invoke is th entry, SetUpForCall fill params for Invoke
                                                     argc, argv));
 }
 

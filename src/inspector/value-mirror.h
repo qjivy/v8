@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "include/v8-inspector.h"
-#include "include/v8.h"
+#include "include/v8-local-handle.h"
 #include "src/base/macros.h"
 #include "src/inspector/protocol/Protocol.h"
 #include "src/inspector/protocol/Runtime.h"
@@ -75,6 +75,7 @@ class ValueMirror {
   static bool getProperties(v8::Local<v8::Context> context,
                             v8::Local<v8::Object> object, bool ownProperties,
                             bool accessorPropertiesOnly,
+                            bool nonIndexedPropertiesOnly,
                             PropertyAccumulator* accumulator);
   static void getInternalProperties(
       v8::Local<v8::Context> context, v8::Local<v8::Object> object,

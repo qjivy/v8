@@ -162,10 +162,11 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
     // passing IsPendingAllocation).
     raw_code.set_inlined_bytecode_size(inlined_bytecode_size_);
     raw_code.set_code_data_container(*data_container, kReleaseStore);
-    raw_code.set_deoptimization_data(*deoptimization_data_);
     if (kind_ == CodeKind::BASELINE) {
+      raw_code.set_bytecode_or_interpreter_data(*interpreter_data_);
       raw_code.set_bytecode_offset_table(*position_table_);
     } else {
+      raw_code.set_deoptimization_data(*deoptimization_data_);
       raw_code.set_source_position_table(*position_table_);
     }
     raw_code.set_handler_table_offset(
@@ -313,7 +314,8 @@ void Factory::CodeBuilder::FinalizeOnHeapCode(Handle<Code> code,
       Code::SizeFor(code_desc_.instruction_size() + code_desc_.metadata_size());
   int size_to_trim = old_object_size - new_object_size;
   DCHECK_GE(size_to_trim, 0);
-  heap->UndoLastAllocationAt(code->address() + new_object_size, size_to_trim);
+  heap->CreateFillerObjectAt(code->address() + new_object_size, size_to_trim,
+                             ClearRecordedSlots::kNo);
 }
 
 MaybeHandle<Code> Factory::NewEmptyCode(CodeKind kind, int buffer_size) {
@@ -457,16 +459,6 @@ Handle<Tuple2> Factory::NewTuple2(Handle<Object> value1, Handle<Object> value2,
   return handle(result, isolate());
 }
 
-Handle<BaselineData> Factory::NewBaselineData(
-    Handle<Code> code, Handle<HeapObject> function_data) {
-  auto baseline_data =
-      NewStructInternal<BaselineData>(BASELINE_DATA_TYPE, AllocationType::kOld);
-  DisallowGarbageCollection no_gc;
-  baseline_data.set_baseline_code(*code);
-  baseline_data.set_data(*function_data);
-  return handle(baseline_data, isolate());
-}
-
 Handle<Oddball> Factory::NewOddball(Handle<Map> map, const char* to_string,
                                     Handle<Object> to_number,
                                     const char* type_of, byte kind) {
@@ -513,8 +505,7 @@ MaybeHandle<FixedArray> Factory::TryNewFixedArray(
   if (!allocation.To(&result)) return MaybeHandle<FixedArray>();
   if ((size > heap->MaxRegularHeapObjectSize(allocation_type)) &&
       FLAG_use_marking_progress_bar) {
-    BasicMemoryChunk* chunk = BasicMemoryChunk::FromHeapObject(result);
-    chunk->SetFlag<AccessMode::ATOMIC>(MemoryChunk::HAS_PROGRESS_BAR);
+    LargePage::FromHeapObject(result)->ProgressBar().Enable();
   }
   DisallowGarbageCollection no_gc;
   result.set_map_after_allocation(*fixed_array_map(), SKIP_WRITE_BARRIER);
@@ -1030,14 +1021,14 @@ Handle<String> Factory::NewProperSubString(Handle<String> str, int begin,
           NewRawOneByteString(length).ToHandleChecked();
       DisallowGarbageCollection no_gc;
       uint8_t* dest = result->GetChars(no_gc);
-      String::WriteToFlat(*str, dest, begin, end);
+      String::WriteToFlat(*str, dest, begin, length);
       return result;
     } else {
       Handle<SeqTwoByteString> result =
           NewRawTwoByteString(length).ToHandleChecked();
       DisallowGarbageCollection no_gc;
       base::uc16* dest = result->GetChars(no_gc);
-      String::WriteToFlat(*str, dest, begin, end);
+      String::WriteToFlat(*str, dest, begin, length);
       return result;
     }
   }
@@ -2873,7 +2864,6 @@ Handle<JSTypedArray> Factory::NewJSTypedArray(ExternalArrayType type,
           map, empty_byte_array(), buffer, byte_offset, byte_length));
   JSTypedArray raw = *typed_array;
   DisallowGarbageCollection no_gc;
-  raw.AllocateExternalPointerEntries(isolate());
   raw.set_length(length);
   raw.SetOffHeapDataPtr(isolate(), buffer->backing_store(), byte_offset);
   raw.set_is_length_tracking(false);
@@ -2888,7 +2878,6 @@ Handle<JSDataView> Factory::NewJSDataView(Handle<JSArrayBuffer> buffer,
                   isolate());
   Handle<JSDataView> obj = Handle<JSDataView>::cast(NewJSArrayBufferView(
       map, empty_fixed_array(), buffer, byte_offset, byte_length));
-  obj->AllocateExternalPointerEntries(isolate());
   obj->set_data_pointer(
       isolate(), static_cast<uint8_t*>(buffer->backing_store()) + byte_offset);
   return obj;

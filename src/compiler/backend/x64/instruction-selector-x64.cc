@@ -16,6 +16,7 @@
 #include "src/compiler/machine-operator.h"
 #include "src/compiler/node-matchers.h"
 #include "src/compiler/node-properties.h"
+#include "src/compiler/opcodes.h"
 #include "src/roots/roots-inl.h"
 
 #if V8_ENABLE_WEBASSEMBLY
@@ -341,16 +342,25 @@ ArchOpcode GetStoreOpcode(StoreRepresentation store_rep) {
   UNREACHABLE();
 }
 
-ArchOpcode GetAtomicStoreOp(MachineRepresentation rep) {
-  switch (rep) {
+ArchOpcode GetSeqCstStoreOpcode(StoreRepresentation store_rep) {
+  switch (store_rep.representation()) {
     case MachineRepresentation::kWord8:
-      return kAtomicExchangeUint8;
+      return kAtomicStoreWord8;
     case MachineRepresentation::kWord16:
-      return kAtomicExchangeUint16;
+      return kAtomicStoreWord16;
     case MachineRepresentation::kWord32:
-      return kAtomicExchangeWord32;
+      return kAtomicStoreWord32;
     case MachineRepresentation::kWord64:
-      return kX64Word64AtomicExchangeUint64;
+      return kX64Word64AtomicStoreWord64;
+    case MachineRepresentation::kTaggedSigned:   // Fall through.
+    case MachineRepresentation::kTaggedPointer:  // Fall through.
+    case MachineRepresentation::kTagged:
+      if (COMPRESS_POINTERS_BOOL) return kAtomicStoreWord32;
+      return kX64Word64AtomicStoreWord64;
+    case MachineRepresentation::kCompressedPointer:  // Fall through.
+    case MachineRepresentation::kCompressed:
+      CHECK(COMPRESS_POINTERS_BOOL);
+      return kAtomicStoreWord32;
     default:
       UNREACHABLE();
   }
@@ -499,15 +509,37 @@ void InstructionSelector::VisitLoad(Node* node) {
 
 void InstructionSelector::VisitProtectedLoad(Node* node) { VisitLoad(node); }
 
-void InstructionSelector::VisitStore(Node* node) {
-  X64OperandGenerator g(this);
+namespace {
+
+// Shared routine for Word32/Word64 Atomic Exchange
+void VisitAtomicExchange(InstructionSelector* selector, Node* node,
+                         ArchOpcode opcode, AtomicWidth width) {
+  X64OperandGenerator g(selector);
+  Node* base = node->InputAt(0);
+  Node* index = node->InputAt(1);
+  Node* value = node->InputAt(2);
+  AddressingMode addressing_mode;
+  InstructionOperand inputs[] = {
+      g.UseUniqueRegister(value), g.UseUniqueRegister(base),
+      g.GetEffectiveIndexOperand(index, &addressing_mode)};
+  InstructionOperand outputs[] = {g.DefineSameAsFirst(node)};
+  InstructionCode code = opcode | AddressingModeField::encode(addressing_mode) |
+                         AtomicWidthField::encode(width);
+  selector->Emit(code, arraysize(outputs), outputs, arraysize(inputs), inputs);
+}
+
+void VisitStoreCommon(InstructionSelector* selector, Node* node,
+                      StoreRepresentation store_rep,
+                      base::Optional<AtomicMemoryOrder> atomic_order) {
+  X64OperandGenerator g(selector);
   Node* base = node->InputAt(0);
   Node* index = node->InputAt(1);
   Node* value = node->InputAt(2);
 
-  StoreRepresentation store_rep = StoreRepresentationOf(node->op());
   DCHECK_NE(store_rep.representation(), MachineRepresentation::kMapWord);
   WriteBarrierKind write_barrier_kind = store_rep.write_barrier_kind();
+  const bool is_seqcst =
+      atomic_order && *atomic_order == AtomicMemoryOrder::kSeqCst;
 
   if (FLAG_enable_unconditional_write_barriers &&
       CanBeTaggedOrCompressedPointer(store_rep.representation())) {
@@ -524,16 +556,13 @@ void InstructionSelector::VisitStore(Node* node) {
     RecordWriteMode record_write_mode =
         WriteBarrierKindToRecordWriteMode(write_barrier_kind);
     InstructionOperand temps[] = {g.TempRegister(), g.TempRegister()};
-    InstructionCode code = kArchStoreWithWriteBarrier;
+    InstructionCode code = is_seqcst ? kArchAtomicStoreWithWriteBarrier
+                                     : kArchStoreWithWriteBarrier;
     code |= AddressingModeField::encode(addressing_mode);
     code |= MiscField::encode(static_cast<int>(record_write_mode));
-    Emit(code, 0, nullptr, arraysize(inputs), inputs, arraysize(temps), temps);
+    selector->Emit(code, 0, nullptr, arraysize(inputs), inputs,
+                   arraysize(temps), temps);
   } else {
-    if ((ElementSizeLog2Of(store_rep.representation()) <
-         kSystemPointerSizeLog2) &&
-        value->opcode() == IrOpcode::kTruncateInt64ToInt32) {
-      value = value->InputAt(0);
-    }
 #ifdef V8_IS_TSAN
     // On TSAN builds we require two scratch registers. Because of this we also
     // have to modify the inputs to take into account possible aliasing and use
@@ -547,20 +576,52 @@ void InstructionSelector::VisitStore(Node* node) {
     auto reg_kind = OperandGenerator::RegisterUseKind::kUseRegister;
 #endif  // V8_IS_TSAN
 
+    // Release and non-atomic stores emit MOV and sequentially consistent stores
+    // emit XCHG.
+    // https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+
+    ArchOpcode opcode;
+    AddressingMode addressing_mode;
     InstructionOperand inputs[4];
     size_t input_count = 0;
-    AddressingMode addressing_mode = g.GetEffectiveAddressMemoryOperand(
-        node, inputs, &input_count, reg_kind);
-    InstructionOperand value_operand = g.CanBeImmediate(value)
-                                           ? g.UseImmediate(value)
-                                           : g.UseRegister(value, reg_kind);
-    inputs[input_count++] = value_operand;
-    ArchOpcode opcode = GetStoreOpcode(store_rep);
+
+    if (is_seqcst) {
+      // SeqCst stores emit XCHG instead of MOV, so encode the inputs as we
+      // would for XCHG. XCHG can't encode the value as an immediate and has
+      // fewer addressing modes available.
+      inputs[input_count++] = g.UseUniqueRegister(value);
+      inputs[input_count++] = g.UseUniqueRegister(base);
+      inputs[input_count++] =
+          g.GetEffectiveIndexOperand(index, &addressing_mode);
+      opcode = GetSeqCstStoreOpcode(store_rep);
+    } else {
+      if ((ElementSizeLog2Of(store_rep.representation()) <
+           kSystemPointerSizeLog2) &&
+          value->opcode() == IrOpcode::kTruncateInt64ToInt32) {
+        value = value->InputAt(0);
+      }
+
+      addressing_mode = g.GetEffectiveAddressMemoryOperand(
+          node, inputs, &input_count, reg_kind);
+      InstructionOperand value_operand = g.CanBeImmediate(value)
+                                             ? g.UseImmediate(value)
+                                             : g.UseRegister(value, reg_kind);
+      inputs[input_count++] = value_operand;
+      opcode = GetStoreOpcode(store_rep);
+    }
+
     InstructionCode code =
         opcode | AddressingModeField::encode(addressing_mode);
-    Emit(code, 0, static_cast<InstructionOperand*>(nullptr), input_count,
-         inputs, temp_count, temps);
+    selector->Emit(code, 0, static_cast<InstructionOperand*>(nullptr),
+                   input_count, inputs, temp_count, temps);
   }
+}
+
+}  // namespace
+
+void InstructionSelector::VisitStore(Node* node) {
+  return VisitStoreCommon(this, node, StoreRepresentationOf(node->op()),
+                          base::nullopt);
 }
 
 void InstructionSelector::VisitProtectedStore(Node* node) {
@@ -1632,15 +1693,12 @@ void VisitFloatBinop(InstructionSelector* selector, Node* node,
 }
 
 void VisitFloatUnop(InstructionSelector* selector, Node* node, Node* input,
-                    ArchOpcode avx_opcode, ArchOpcode sse_opcode) {
+                    ArchOpcode opcode) {
   X64OperandGenerator g(selector);
-  InstructionOperand temps[] = {g.TempDoubleRegister()};
   if (selector->IsSupported(AVX)) {
-    selector->Emit(avx_opcode, g.DefineAsRegister(node), g.UseUnique(input),
-                   arraysize(temps), temps);
+    selector->Emit(opcode, g.DefineAsRegister(node), g.UseRegister(input));
   } else {
-    selector->Emit(sse_opcode, g.DefineSameAsFirst(node), g.UseRegister(input),
-                   arraysize(temps), temps);
+    selector->Emit(opcode, g.DefineSameAsFirst(node), g.UseRegister(input));
   }
 }
 
@@ -1780,7 +1838,7 @@ void InstructionSelector::VisitFloat32Div(Node* node) {
 }
 
 void InstructionSelector::VisitFloat32Abs(Node* node) {
-  VisitFloatUnop(this, node, node->InputAt(0), kAVXFloat32Abs, kSSEFloat32Abs);
+  VisitFloatUnop(this, node, node->InputAt(0), kX64Float32Abs);
 }
 
 void InstructionSelector::VisitFloat32Max(Node* node) {
@@ -1824,7 +1882,7 @@ void InstructionSelector::VisitFloat64Min(Node* node) {
 }
 
 void InstructionSelector::VisitFloat64Abs(Node* node) {
-  VisitFloatUnop(this, node, node->InputAt(0), kAVXFloat64Abs, kSSEFloat64Abs);
+  VisitFloatUnop(this, node, node->InputAt(0), kX64Float64Abs);
 }
 
 void InstructionSelector::VisitFloat64RoundTiesAway(Node* node) {
@@ -1832,11 +1890,11 @@ void InstructionSelector::VisitFloat64RoundTiesAway(Node* node) {
 }
 
 void InstructionSelector::VisitFloat32Neg(Node* node) {
-  VisitFloatUnop(this, node, node->InputAt(0), kAVXFloat32Neg, kSSEFloat32Neg);
+  VisitFloatUnop(this, node, node->InputAt(0), kX64Float32Neg);
 }
 
 void InstructionSelector::VisitFloat64Neg(Node* node) {
-  VisitFloatUnop(this, node, node->InputAt(0), kAVXFloat64Neg, kSSEFloat64Neg);
+  VisitFloatUnop(this, node, node->InputAt(0), kX64Float64Neg);
 }
 
 void InstructionSelector::VisitFloat64Ieee754Binop(Node* node,
@@ -2340,23 +2398,6 @@ void VisitAtomicCompareExchange(InstructionSelector* selector, Node* node,
   selector->Emit(code, arraysize(outputs), outputs, arraysize(inputs), inputs);
 }
 
-// Shared routine for Word32/Word64 Atomic Exchange
-void VisitAtomicExchange(InstructionSelector* selector, Node* node,
-                         ArchOpcode opcode, AtomicWidth width) {
-  X64OperandGenerator g(selector);
-  Node* base = node->InputAt(0);
-  Node* index = node->InputAt(1);
-  Node* value = node->InputAt(2);
-  AddressingMode addressing_mode;
-  InstructionOperand inputs[] = {
-      g.UseUniqueRegister(value), g.UseUniqueRegister(base),
-      g.GetEffectiveIndexOperand(index, &addressing_mode)};
-  InstructionOperand outputs[] = {g.DefineSameAsFirst(node)};
-  InstructionCode code = opcode | AddressingModeField::encode(addressing_mode) |
-                         AtomicWidthField::encode(width);
-  selector->Emit(code, arraysize(outputs), outputs, arraysize(inputs), inputs);
-}
-
 }  // namespace
 
 // Shared routine for word comparison against zero.
@@ -2724,29 +2765,42 @@ void InstructionSelector::VisitMemoryBarrier(Node* node) {
 }
 
 void InstructionSelector::VisitWord32AtomicLoad(Node* node) {
-  LoadRepresentation load_rep = LoadRepresentationOf(node->op());
-  DCHECK(load_rep.representation() == MachineRepresentation::kWord8 ||
-         load_rep.representation() == MachineRepresentation::kWord16 ||
-         load_rep.representation() == MachineRepresentation::kWord32);
-  USE(load_rep);
-  VisitLoad(node);
+  AtomicLoadParameters atomic_load_params = AtomicLoadParametersOf(node->op());
+  LoadRepresentation load_rep = atomic_load_params.representation();
+  DCHECK(IsIntegral(load_rep.representation()) ||
+         IsAnyTagged(load_rep.representation()) ||
+         (COMPRESS_POINTERS_BOOL &&
+          CanBeCompressedPointer(load_rep.representation())));
+  DCHECK_NE(load_rep.representation(), MachineRepresentation::kWord64);
+  DCHECK(!load_rep.IsMapWord());
+  // The memory order is ignored as both acquire and sequentially consistent
+  // loads can emit MOV.
+  // https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+  VisitLoad(node, node, GetLoadOpcode(load_rep));
 }
 
 void InstructionSelector::VisitWord64AtomicLoad(Node* node) {
-  LoadRepresentation load_rep = LoadRepresentationOf(node->op());
-  USE(load_rep);
-  VisitLoad(node);
+  AtomicLoadParameters atomic_load_params = AtomicLoadParametersOf(node->op());
+  DCHECK(!atomic_load_params.representation().IsMapWord());
+  // The memory order is ignored as both acquire and sequentially consistent
+  // loads can emit MOV.
+  // https://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+  VisitLoad(node, node, GetLoadOpcode(atomic_load_params.representation()));
 }
 
 void InstructionSelector::VisitWord32AtomicStore(Node* node) {
-  MachineRepresentation rep = AtomicStoreRepresentationOf(node->op());
-  DCHECK_NE(rep, MachineRepresentation::kWord64);
-  VisitAtomicExchange(this, node, GetAtomicStoreOp(rep), AtomicWidth::kWord32);
+  AtomicStoreParameters params = AtomicStoreParametersOf(node->op());
+  DCHECK_NE(params.representation(), MachineRepresentation::kWord64);
+  DCHECK_IMPLIES(CanBeTaggedOrCompressedPointer(params.representation()),
+                 kTaggedSize == 4);
+  VisitStoreCommon(this, node, params.store_representation(), params.order());
 }
 
 void InstructionSelector::VisitWord64AtomicStore(Node* node) {
-  MachineRepresentation rep = AtomicStoreRepresentationOf(node->op());
-  VisitAtomicExchange(this, node, GetAtomicStoreOp(rep), AtomicWidth::kWord64);
+  AtomicStoreParameters params = AtomicStoreParametersOf(node->op());
+  DCHECK_IMPLIES(CanBeTaggedOrCompressedPointer(params.representation()),
+                 kTaggedSize == 8);
+  VisitStoreCommon(this, node, params.store_representation(), params.order());
 }
 
 void InstructionSelector::VisitWord32AtomicExchange(Node* node) {
@@ -2987,7 +3041,6 @@ VISIT_ATOMIC_BINOP(Xor)
 #define SIMD_UNOP_LIST(V)   \
   V(F64x2Sqrt)              \
   V(F64x2ConvertLowI32x4S)  \
-  V(F64x2PromoteLowF32x4)   \
   V(F32x4SConvertI32x4)     \
   V(F32x4Abs)               \
   V(F32x4Neg)               \
@@ -3240,15 +3293,11 @@ void InstructionSelector::VisitS128AndNot(Node* node) {
 }
 
 void InstructionSelector::VisitF64x2Abs(Node* node) {
-  X64OperandGenerator g(this);
-  Emit(kX64F64x2Abs, g.DefineSameAsFirst(node),
-       g.UseRegister(node->InputAt(0)));
+  VisitFloatUnop(this, node, node->InputAt(0), kX64F64x2Abs);
 }
 
 void InstructionSelector::VisitF64x2Neg(Node* node) {
-  X64OperandGenerator g(this);
-  Emit(kX64F64x2Neg, g.DefineSameAsFirst(node),
-       g.UseRegister(node->InputAt(0)));
+  VisitFloatUnop(this, node, node->InputAt(0), kX64F64x2Neg);
 }
 
 void InstructionSelector::VisitF32x4UConvertI32x4(Node* node) {
@@ -3257,12 +3306,11 @@ void InstructionSelector::VisitF32x4UConvertI32x4(Node* node) {
        g.UseRegister(node->InputAt(0)));
 }
 
-#define VISIT_SIMD_QFMOP(Opcode)                                           \
-  void InstructionSelector::Visit##Opcode(Node* node) {                    \
-    X64OperandGenerator g(this);                                           \
-    Emit(kX64##Opcode, g.DefineSameAsFirst(node),                          \
-         g.UseRegister(node->InputAt(0)), g.UseRegister(node->InputAt(1)), \
-         g.UseRegister(node->InputAt(2)));                                 \
+#define VISIT_SIMD_QFMOP(Opcode)                                             \
+  void InstructionSelector::Visit##Opcode(Node* node) {                      \
+    X64OperandGenerator g(this);                                             \
+    Emit(kX64##Opcode, g.UseRegister(node), g.UseRegister(node->InputAt(0)), \
+         g.UseRegister(node->InputAt(1)), g.UseRegister(node->InputAt(2)));  \
   }
 VISIT_SIMD_QFMOP(F64x2Qfma)
 VISIT_SIMD_QFMOP(F64x2Qfms)
@@ -3792,6 +3840,26 @@ void InstructionSelector::VisitI64x2Abs(Node* node) {
     Emit(kX64I64x2Abs, g.DefineSameAsFirst(node),
          g.UseRegister(node->InputAt(0)));
   }
+}
+
+void InstructionSelector::VisitF64x2PromoteLowF32x4(Node* node) {
+  X64OperandGenerator g(this);
+  InstructionCode code = kX64F64x2PromoteLowF32x4;
+  Node* input = node->InputAt(0);
+  LoadTransformMatcher m(input);
+
+  if (m.Is(LoadTransformation::kS128Load64Zero) && CanCover(node, input)) {
+    if (m.ResolvedValue().kind == MemoryAccessKind::kProtected) {
+      code |= AccessModeField::encode(kMemoryAccessProtected);
+    }
+    // LoadTransforms cannot be eliminated, so they are visited even if
+    // unused. Mark it as defined so that we don't visit it.
+    MarkAsDefined(input);
+    VisitLoad(node, input, code);
+    return;
+  }
+
+  VisitRR(this, node, code);
 }
 
 void InstructionSelector::AddOutputToSelectContinuation(OperandGenerator* g,

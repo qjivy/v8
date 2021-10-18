@@ -211,7 +211,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void LoadRootRelative(Register destination, int32_t offset) final;
 
   inline void GenPCRelativeJump(Register rd, int64_t imm32) {
-    DCHECK(is_int32(imm32));
+    DCHECK(is_int32(imm32 + 0x800));
     int32_t Hi20 = (((int32_t)imm32 + 0x800) >> 12);
     int32_t Lo12 = (int32_t)imm32 << 20 >> 20;
     auipc(rd, Hi20);  // Read PC + Hi20 into scratch.
@@ -219,7 +219,7 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   }
 
   inline void GenPCRelativeJumpAndLink(Register rd, int64_t imm32) {
-    DCHECK(is_int32(imm32));
+    DCHECK(is_int32(imm32 + 0x800));
     int32_t Hi20 = (((int32_t)imm32 + 0x800) >> 12);
     int32_t Lo12 = (int32_t)imm32 << 20 >> 20;
     auipc(rd, Hi20);  // Read PC + Hi20 into scratch.
@@ -571,8 +571,8 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Clz64(Register rd, Register rs);
   void Ctz32(Register rd, Register rs);
   void Ctz64(Register rd, Register rs);
-  void Popcnt32(Register rd, Register rs);
-  void Popcnt64(Register rd, Register rs);
+  void Popcnt32(Register rd, Register rs, Register scratch);
+  void Popcnt64(Register rd, Register rs, Register scratch);
 
   // Bit field starts at bit pos and extending for size bits is extracted from
   // rs and stored zero/sign-extended and right-justified in rt
@@ -591,7 +591,8 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Neg_d(FPURegister fd, FPURegister fs);
 
   // Change endianness
-  void ByteSwap(Register dest, Register src, int operand_size);
+  void ByteSwap(Register dest, Register src, int operand_size,
+                Register scratch);
 
   void Clear_if_nan_d(Register rd, FPURegister fs);
   void Clear_if_nan_s(Register rd, FPURegister fs);
@@ -606,9 +607,11 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
                             Register scratch_other = no_reg);
 
   template <int NBYTES>
-  void UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs);
+  void UnalignedFLoadHelper(FPURegister frd, const MemOperand& rs,
+                            Register scratch);
   template <int NBYTES>
-  void UnalignedFStoreHelper(FPURegister frd, const MemOperand& rs);
+  void UnalignedFStoreHelper(FPURegister frd, const MemOperand& rs,
+                             Register scratch);
 
   template <typename Reg_T, typename Func>
   void AlignedLoadHelper(Reg_T target, const MemOperand& rs, Func generator);
@@ -632,11 +635,11 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Uld(Register rd, const MemOperand& rs);
   void Usd(Register rd, const MemOperand& rs);
 
-  void ULoadFloat(FPURegister fd, const MemOperand& rs);
-  void UStoreFloat(FPURegister fd, const MemOperand& rs);
+  void ULoadFloat(FPURegister fd, const MemOperand& rs, Register scratch);
+  void UStoreFloat(FPURegister fd, const MemOperand& rs, Register scratch);
 
-  void ULoadDouble(FPURegister fd, const MemOperand& rs);
-  void UStoreDouble(FPURegister fd, const MemOperand& rs);
+  void ULoadDouble(FPURegister fd, const MemOperand& rs, Register scratch);
+  void UStoreDouble(FPURegister fd, const MemOperand& rs, Register scratch);
 
   void Lb(Register rd, const MemOperand& rs);
   void Lbu(Register rd, const MemOperand& rs);
@@ -834,6 +837,16 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   void Floor_s_s(FPURegister fd, FPURegister fs, FPURegister fpu_scratch);
   void Ceil_s_s(FPURegister fd, FPURegister fs, FPURegister fpu_scratch);
 
+  void Ceil_f(VRegister dst, VRegister src, Register scratch,
+              VRegister v_scratch);
+
+  void Ceil_d(VRegister dst, VRegister src, Register scratch,
+              VRegister v_scratch);
+
+  void Floor_f(VRegister dst, VRegister src, Register scratch,
+               VRegister v_scratch);
+  void Floor_d(VRegister dst, VRegister src, Register scratch,
+               VRegister v_scratch);
   // Jump the register contains a smi.
   void JumpIfSmi(Register value, Label* smi_label);
 
@@ -907,6 +920,31 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
       Sub64(rd, rs1, rs2);
     }
   }
+  // Wasm into RVV
+  void WasmRvvExtractLane(Register dst, VRegister src, int8_t idx, VSew sew,
+                          Vlmul lmul) {
+    VU.set(kScratchReg, sew, lmul);
+    VRegister Vsrc = idx != 0 ? kSimd128ScratchReg : src;
+    if (idx != 0) {
+      vslidedown_vi(kSimd128ScratchReg, src, idx);
+    }
+    vmv_xs(dst, Vsrc);
+  }
+
+  void WasmRvvEq(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                 Vlmul lmul);
+
+  void WasmRvvNe(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                 Vlmul lmul);
+  void WasmRvvGeS(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                  Vlmul lmul);
+  void WasmRvvGeU(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                  Vlmul lmul);
+  void WasmRvvGtS(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                  Vlmul lmul);
+  void WasmRvvGtU(VRegister dst, VRegister lhs, VRegister rhs, VSew sew,
+                  Vlmul lmul);
+  void WasmRvvS128const(VRegister dst, const uint8_t imms[16]);
 
  protected:
   inline Register GetRtAsRegisterHelper(const Operand& rt, Register scratch);
@@ -949,6 +987,10 @@ class V8_EXPORT_PRIVATE TurboAssembler : public TurboAssemblerBase {
   template <typename F_TYPE>
   void RoundHelper(FPURegister dst, FPURegister src, FPURegister fpu_scratch,
                    RoundingMode mode);
+
+  template <typename F>
+  void RoundHelper(VRegister dst, VRegister src, Register scratch,
+                   VRegister v_scratch, RoundingMode frm);
 
   template <typename TruncFunc>
   void RoundFloatingPointToInteger(Register rd, FPURegister fs, Register result,

@@ -31,7 +31,7 @@
 #include "src/execution/runtime-profiler.h"
 #include "src/execution/v8threads.h"
 #include "src/execution/vm-state-inl.h"
-#include "src/handles/global-handles.h"
+#include "src/handles/global-handles-inl.h"
 #include "src/heap/array-buffer-sweeper.h"
 #include "src/heap/barrier.h"
 #include "src/heap/base/stack.h"
@@ -653,8 +653,8 @@ void Heap::DumpJSONHeapStatistics(std::stringstream& stream) {
 // clang-format off
 #define DICT(s) "{" << s << "}"
 #define LIST(s) "[" << s << "]"
-#define ESCAPE(s) "\"" << s << "\""
-#define MEMBER(s) ESCAPE(s) << ":"
+#define QUOTE(s) "\"" << s << "\""
+#define MEMBER(s) QUOTE(s) << ":"
 
   auto SpaceStatistics = [this](int space_index) {
     HeapSpaceStatistics space_stats;
@@ -663,7 +663,7 @@ void Heap::DumpJSONHeapStatistics(std::stringstream& stream) {
     std::stringstream stream;
     stream << DICT(
       MEMBER("name")
-        << ESCAPE(BaseSpace::GetSpaceName(
+        << QUOTE(BaseSpace::GetSpaceName(
               static_cast<AllocationSpace>(space_index)))
         << ","
       MEMBER("size") << space_stats.space_size() << ","
@@ -674,7 +674,7 @@ void Heap::DumpJSONHeapStatistics(std::stringstream& stream) {
   };
 
   stream << DICT(
-    MEMBER("isolate") << ESCAPE(reinterpret_cast<void*>(isolate())) << ","
+    MEMBER("isolate") << QUOTE(reinterpret_cast<void*>(isolate())) << ","
     MEMBER("id") << gc_count() << ","
     MEMBER("time_ms") << isolate()->time_millis_since_init() << ","
     MEMBER("total_heap_size") << stats.total_heap_size() << ","
@@ -699,7 +699,7 @@ void Heap::DumpJSONHeapStatistics(std::stringstream& stream) {
 
 #undef DICT
 #undef LIST
-#undef ESCAPE
+#undef QUOTE
 #undef MEMBER
   // clang-format on
 }
@@ -1003,7 +1003,6 @@ void Heap::MergeAllocationSitePretenuringFeedback(
 void Heap::AddAllocationObserversToAllSpaces(
     AllocationObserver* observer, AllocationObserver* new_space_observer) {
   DCHECK(observer && new_space_observer);
-  SafepointScope scope(this);
 
   for (SpaceIterator it(this); it.HasNext();) {
     Space* space = it.Next();
@@ -1018,7 +1017,6 @@ void Heap::AddAllocationObserversToAllSpaces(
 void Heap::RemoveAllocationObserversFromAllSpaces(
     AllocationObserver* observer, AllocationObserver* new_space_observer) {
   DCHECK(observer && new_space_observer);
-  SafepointScope scope(this);
 
   for (SpaceIterator it(this); it.HasNext();) {
     Space* space = it.Next();
@@ -1929,14 +1927,7 @@ void Heap::StartIncrementalMarking(int gc_flags,
 }
 
 void Heap::CompleteSweepingFull() {
-  TRACE_GC_EPOCH(tracer(), GCTracer::Scope::MC_COMPLETE_SWEEPING,
-                 ThreadKind::kMain);
-
-  {
-    TRACE_GC(tracer(), GCTracer::Scope::MC_COMPLETE_SWEEP_ARRAY_BUFFERS);
-    array_buffer_sweeper()->EnsureFinished();
-  }
-
+  array_buffer_sweeper()->EnsureFinished();
   mark_compact_collector()->EnsureSweepingCompleted();
   DCHECK(!mark_compact_collector()->sweeping_in_progress());
 }
@@ -2682,7 +2673,7 @@ void Heap::UnprotectAndRegisterMemoryChunk(MemoryChunk* chunk,
       guard.emplace(&unprotected_memory_chunks_mutex_);
     }
     if (unprotected_memory_chunks_.insert(chunk).second) {
-      chunk->SetReadAndWritable();
+      chunk->SetCodeModificationPermissions();
     }
   }
 }
@@ -3476,15 +3467,6 @@ void Heap::RightTrimWeakFixedArray(WeakFixedArray object,
                                        elements_to_trim * kTaggedSize);
 }
 
-void Heap::UndoLastAllocationAt(Address addr, int size) {
-  DCHECK_LE(0, size);
-  if (size == 0) return;
-  if (code_space_->TryFreeLast(addr, size)) {
-    return;
-  }
-  CreateFillerObjectAt(addr, size, ClearRecordedSlots::kNo);
-}
-
 template <typename T>
 void Heap::CreateFillerForArray(T object, int elements_to_trim,
                                 int bytes_to_trim) {
@@ -4159,11 +4141,13 @@ void Heap::RemoveNearHeapLimitCallback(v8::NearHeapLimitCallback callback,
 
 void Heap::AppendArrayBufferExtension(JSArrayBuffer object,
                                       ArrayBufferExtension* extension) {
+  // ArrayBufferSweeper is managing all counters and updating Heap counters.
   array_buffer_sweeper_->Append(object, extension);
 }
 
 void Heap::DetachArrayBufferExtension(JSArrayBuffer object,
                                       ArrayBufferExtension* extension) {
+  // ArrayBufferSweeper is managing all counters and updating Heap counters.
   return array_buffer_sweeper_->Detach(object, extension);
 }
 
@@ -4669,21 +4653,29 @@ void Heap::ZapCodeObject(Address start_address, int size_in_bytes) {
 Code Heap::builtin(Builtin builtin) {
   DCHECK(Builtins::IsBuiltinId(builtin));
   return Code::cast(
-      Object(isolate()->builtins_table()[static_cast<int>(builtin)]));
+      Object(isolate()->builtin_table()[static_cast<int>(builtin)]));
 }
 
 Address Heap::builtin_address(Builtin builtin) {
+  const int index = Builtins::ToInt(builtin);
+  DCHECK(Builtins::IsBuiltinId(builtin) || index == Builtins::kBuiltinCount);
+  // Note: Must return an address within the full builtin_table for
+  // IterateBuiltins to work.
+  return reinterpret_cast<Address>(&isolate()->builtin_table()[index]);
+}
+
+Address Heap::builtin_tier0_address(Builtin builtin) {
   const int index = static_cast<int>(builtin);
   DCHECK(Builtins::IsBuiltinId(builtin) || index == Builtins::kBuiltinCount);
-  return reinterpret_cast<Address>(&isolate()->builtins_table()[index]);
+  return reinterpret_cast<Address>(
+      &isolate()->isolate_data()->builtin_tier0_table()[index]);
 }
 
 void Heap::set_builtin(Builtin builtin, Code code) {
   DCHECK(Builtins::IsBuiltinId(builtin));
   DCHECK(Internals::HasHeapObjectTag(code.ptr()));
-  // The given builtin may be completely uninitialized thus we cannot check its
-  // type here.
-  isolate()->builtins_table()[static_cast<int>(builtin)] = code.ptr();
+  // The given builtin may be uninitialized thus we cannot check its type here.
+  isolate()->builtin_table()[Builtins::ToInt(builtin)] = code.ptr();
 }
 
 void Heap::IterateWeakRoots(RootVisitor* v, base::EnumSet<SkipRoot> options) {
@@ -4912,6 +4904,12 @@ void Heap::IterateBuiltins(RootVisitor* v) {
        ++builtin) {
     v->VisitRootPointer(Root::kBuiltins, Builtins::name(builtin),
                         FullObjectSlot(builtin_address(builtin)));
+  }
+
+  for (Builtin builtin = Builtins::kFirst; builtin <= Builtins::kLastTier0;
+       ++builtin) {
+    v->VisitRootPointer(Root::kBuiltins, Builtins::name(builtin),
+                        FullObjectSlot(builtin_tier0_address(builtin)));
   }
 
   // The entry table doesn't need to be updated since all builtins are embedded.
@@ -7171,7 +7169,7 @@ void Heap::WriteBarrierForRange(HeapObject object, TSlot start_slot,
 
   if (incremental_marking()->IsMarking()) {
     mode |= kDoMarking;
-    if (!source_page->ShouldSkipEvacuationSlotRecording<AccessMode::ATOMIC>()) {
+    if (!source_page->ShouldSkipEvacuationSlotRecording()) {
       mode |= kDoEvacuationSlotRecording;
     }
   }

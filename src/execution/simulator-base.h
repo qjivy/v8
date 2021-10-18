@@ -38,12 +38,12 @@ class SimulatorBase {
 
  protected:
   template <typename Return, typename SimT, typename CallImpl, typename... Args>
-  static Return VariadicCall(SimT* sim, CallImpl call, Address entry,
+  static Return VariadicCall(SimT* sim, CallImpl call, Address entry, //v8i: go
                              Args... args) {
     // Convert all arguments to intptr_t. Fails if any argument is not integral
     // or pointer.
     std::array<intptr_t, sizeof...(args)> args_arr{{ConvertArg(args)...}};
-    intptr_t ret = (sim->*call)(entry, args_arr.size(), args_arr.data());
+    intptr_t ret = (sim->*call)(entry, args_arr.size(), args_arr.data()); //v8i: here go to v8::internal::Simulator::CallImpl
     return ConvertReturn<Return>(ret);
   }
 
@@ -88,9 +88,9 @@ class SimulatorBase {
   static typename std::enable_if<std::is_integral<T>::value, intptr_t>::type
   ConvertArg(T arg) {
     static_assert(sizeof(T) <= sizeof(intptr_t), "type bigger than ptrsize");
-#if V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64
-    // The MIPS64 and RISCV64 calling convention is to sign extend all values,
-    // even unsigned ones.
+#if V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64 || V8_TARGET_ARCH_LOONG64
+    // The MIPS64, LOONG64 and RISCV64 calling convention is to sign extend all
+    // values, even unsigned ones.
     using signed_t = typename std::make_signed<T>::type;
     return static_cast<intptr_t>(static_cast<signed_t>(arg));
 #else

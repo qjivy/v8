@@ -39,8 +39,8 @@ constexpr uint64_t kFullGuardSize = uint64_t{10} * GB;
 
 #endif  // V8_ENABLE_WEBASSEMBLY
 
-#if V8_TARGET_ARCH_MIPS64
-// MIPS64 has a user space of 2^40 bytes on most processors,
+#if V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_LOONG64
+// MIPS64 and LOONG64 has a user space of 2^40 bytes on most processors,
 // address space limits needs to be smaller.
 constexpr size_t kAddressSpaceLimit = 0x8000000000L;  // 512 GiB
 #elif V8_TARGET_ARCH_RISCV64
@@ -53,6 +53,8 @@ constexpr size_t kAddressSpaceLimit = 0xC0000000;  // 3 GiB
 #endif
 
 std::atomic<uint64_t> reserved_address_space_{0};
+
+std::atomic<uint32_t> next_backing_store_id_{1};
 
 // Allocation results are reported to UMA
 //
@@ -145,6 +147,34 @@ void BackingStore::Clear() {
   type_specific_data_.v8_api_array_buffer_allocator = nullptr;
 }
 
+BackingStore::BackingStore(void* buffer_start, size_t byte_length,
+                           size_t max_byte_length, size_t byte_capacity,
+                           SharedFlag shared, ResizableFlag resizable,
+                           bool is_wasm_memory, bool free_on_destruct,
+                           bool has_guard_regions, bool custom_deleter,
+                           bool empty_deleter)
+    : buffer_start_(buffer_start),
+      byte_length_(byte_length),
+      max_byte_length_(max_byte_length),
+      byte_capacity_(byte_capacity),
+      id_(next_backing_store_id_.fetch_add(1)),
+      is_shared_(shared == SharedFlag::kShared),
+      is_resizable_(resizable == ResizableFlag::kResizable),
+      is_wasm_memory_(is_wasm_memory),
+      holds_shared_ptr_to_allocator_(false),
+      free_on_destruct_(free_on_destruct),
+      has_guard_regions_(has_guard_regions),
+      globally_registered_(false),
+      custom_deleter_(custom_deleter),
+      empty_deleter_(empty_deleter) {
+  // TODO(v8:11111): RAB / GSAB - Wasm integration.
+  DCHECK_IMPLIES(is_wasm_memory_, !is_resizable_);
+  DCHECK_IMPLIES(is_resizable_, !custom_deleter_);
+  DCHECK_IMPLIES(is_resizable_, free_on_destruct_);
+  DCHECK_IMPLIES(!is_wasm_memory && !is_resizable_,
+                 byte_length_ == max_byte_length_);
+}
+
 BackingStore::~BackingStore() {
   GlobalBackingStoreRegistry::Unregister(this);
 
@@ -154,11 +184,14 @@ BackingStore::~BackingStore() {
   }
 
   PageAllocator* page_allocator = GetPlatformPageAllocator();
+  // TODO(saelo) here and elsewhere in this file, replace with
+  // GetArrayBufferPageAllocator once the fallback to the platform page
+  // allocator is no longer allowed.
 #ifdef V8_VIRTUAL_MEMORY_CAGE
   if (GetProcessWideVirtualMemoryCage()->Contains(buffer_start_)) {
-    page_allocator = GetPlatformDataCagePageAllocator();
+    page_allocator = GetVirtualMemoryCagePageAllocator();
   } else {
-    DCHECK(kAllowBackingStoresOutsideDataCage);
+    DCHECK(kAllowBackingStoresOutsideCage);
   }
 #endif
 
@@ -274,7 +307,7 @@ std::unique_ptr<BackingStore> BackingStore::Allocate(
       return {};
     }
 
-    DCHECK(isolate->IsValidBackingStorePointer(buffer_start));
+    DCHECK(IsValidBackingStorePointer(buffer_start));
   }
 
   auto result = new BackingStore(buffer_start,                  // start
@@ -415,17 +448,17 @@ std::unique_ptr<BackingStore> BackingStore::TryAllocateAndPartiallyCommitMemory(
   PageAllocator* page_allocator = GetPlatformPageAllocator();
   auto allocate_pages = [&] {
 #ifdef V8_VIRTUAL_MEMORY_CAGE
-    page_allocator = GetPlatformDataCagePageAllocator();
+    page_allocator = GetVirtualMemoryCagePageAllocator();
     allocation_base = AllocatePages(page_allocator, nullptr, reservation_size,
                                     page_size, PageAllocator::kNoAccess);
     if (allocation_base) return true;
     // We currently still allow falling back to the platform page allocator if
-    // the data cage page allocator fails. This will eventually be removed.
+    // the cage page allocator fails. This will eventually be removed.
     // TODO(chromium:1218005) once we forbid the fallback, we should have a
-    // single API, e.g. GetPlatformDataPageAllocator(), that returns the correct
+    // single API, e.g. GetArrayBufferPageAllocator(), that returns the correct
     // page allocator to use here depending on whether the virtual memory cage
     // is enabled or not.
-    if (!kAllowBackingStoresOutsideDataCage) return false;
+    if (!kAllowBackingStoresOutsideCage) return false;
     page_allocator = GetPlatformPageAllocator();
 #endif
     allocation_base = AllocatePages(page_allocator, nullptr, reservation_size,
@@ -440,7 +473,7 @@ std::unique_ptr<BackingStore> BackingStore::TryAllocateAndPartiallyCommitMemory(
     return {};
   }
 
-  DCHECK(isolate->IsValidBackingStorePointer(allocation_base));
+  DCHECK(IsValidBackingStorePointer(allocation_base));
 
   // Get a pointer to the start of the buffer, skipping negative guard region
   // if necessary.
@@ -736,6 +769,7 @@ BackingStore::ResizeOrGrowResult BackingStore::GrowInPlace(
 std::unique_ptr<BackingStore> BackingStore::WrapAllocation(
     Isolate* isolate, void* allocation_base, size_t allocation_length,
     SharedFlag shared, bool free_on_destruct) {
+  DCHECK(IsValidBackingStorePointer(allocation_base));
   auto result = new BackingStore(allocation_base,               // start
                                  allocation_length,             // length
                                  allocation_length,             // max length
@@ -757,6 +791,7 @@ std::unique_ptr<BackingStore> BackingStore::WrapAllocation(
     void* allocation_base, size_t allocation_length,
     v8::BackingStore::DeleterCallback deleter, void* deleter_data,
     SharedFlag shared) {
+  DCHECK(IsValidBackingStorePointer(allocation_base));
   bool is_empty_deleter = (deleter == v8::BackingStore::EmptyDeleter);
   auto result = new BackingStore(allocation_base,               // start
                                  allocation_length,             // length
@@ -794,7 +829,7 @@ std::unique_ptr<BackingStore> BackingStore::EmptyBackingStore(
 
 bool BackingStore::Reallocate(Isolate* isolate, size_t new_byte_length) {
   CHECK(!is_wasm_memory_ && !custom_deleter_ && !globally_registered_ &&
-        free_on_destruct_);
+        free_on_destruct_ && !is_resizable_);
   auto allocator = get_v8_api_array_buffer_allocator();
   CHECK_EQ(isolate->array_buffer_allocator(), allocator);
   CHECK_EQ(byte_length_, byte_capacity_);
@@ -804,6 +839,7 @@ bool BackingStore::Reallocate(Isolate* isolate, size_t new_byte_length) {
   buffer_start_ = new_start;
   byte_capacity_ = new_byte_length;
   byte_length_ = new_byte_length;
+  max_byte_length_ = new_byte_length;
   return true;
 }
 

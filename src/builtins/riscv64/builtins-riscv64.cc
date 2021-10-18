@@ -320,6 +320,15 @@ void Builtins::Generate_JSBuiltinsConstructStub(MacroAssembler* masm) {
   Generate_JSBuiltinsConstructStubHelper(masm);
 }
 
+static void AssertCodeIsBaseline(MacroAssembler* masm, Register code,
+                                 Register scratch) {
+  DCHECK(!AreAliased(code, scratch));
+  // Verify that the code kind is baseline code via the CodeKind.
+  __ Ld(scratch, FieldMemOperand(code, Code::kFlagsOffset));
+  __ DecodeField<Code::KindField>(scratch);
+  __ Assert(eq, AbortReason::kExpectedBaselineData, scratch,
+            Operand(static_cast<int64_t>(CodeKind::BASELINE)));
+}
 // TODO(v8:11429): Add a path for "not_compiled" and unify the two uses under
 // the more general dispatch.
 static void GetSharedFunctionInfoBytecodeOrBaseline(MacroAssembler* masm,
@@ -330,7 +339,8 @@ static void GetSharedFunctionInfoBytecodeOrBaseline(MacroAssembler* masm,
   Label done;
 
   __ GetObjectType(sfi_data, scratch1, scratch1);
-  __ Branch(is_baseline, eq, scratch1, Operand(BASELINE_DATA_TYPE));
+  __ Branch(is_baseline, eq, scratch1, Operand(CODET_TYPE));
+
   __ Branch(&done, ne, scratch1, Operand(INTERPRETER_DATA_TYPE),
             Label::Distance::kNear);
   __ LoadTaggedPointerField(
@@ -401,17 +411,15 @@ void Builtins::Generate_ResumeGeneratorTrampoline(MacroAssembler* masm) {
       a3, FieldMemOperand(a4, JSFunction::kSharedFunctionInfoOffset));
   __ Lhu(a3,
          FieldMemOperand(a3, SharedFunctionInfo::kFormalParameterCountOffset));
-  UseScratchRegisterScope temps(masm);
-  Register scratch = temps.Acquire();
   __ LoadTaggedPointerField(
-      scratch,
+      t1,
       FieldMemOperand(a1, JSGeneratorObject::kParametersAndRegistersOffset));
   {
     Label done_loop, loop;
     __ bind(&loop);
     __ Sub64(a3, a3, Operand(1));
     __ Branch(&done_loop, lt, a3, Operand(zero_reg), Label::Distance::kNear);
-    __ CalcScaledAddress(kScratchReg, scratch, a3, kTaggedSizeLog2);
+    __ CalcScaledAddress(kScratchReg, t1, a3, kTaggedSizeLog2);
     __ LoadAnyTaggedField(
         kScratchReg, FieldMemOperand(kScratchReg, FixedArray::kHeaderSize));
     __ Push(kScratchReg);
@@ -575,9 +583,14 @@ void Generate_JSEntryVariant(MacroAssembler* masm, StackFrame::Type type,
   __ li(s3, Operand(StackFrame::TypeToMarker(type)));
   ExternalReference c_entry_fp = ExternalReference::Create(
       IsolateAddressId::kCEntryFPAddress, masm->isolate());
-  __ li(s4, c_entry_fp);
-  __ Ld(s4, MemOperand(s4));
+  __ li(s5, c_entry_fp);
+  __ Ld(s4, MemOperand(s5));
   __ Push(s1, s2, s3, s4);
+  // Clear c_entry_fp, now we've pushed its previous value to the stack.
+  // If the c_entry_fp is not already zero and we don't clear it, the
+  // SafeStackFrameIterator will assume we are executing C++ and miss the JS
+  // frames on top.
+  __ Sd(zero_reg, MemOperand(s5));
   // Set up frame pointer for the frame to be pushed.
   __ Add64(fp, sp, -EntryFrameConstants::kCallerFPOffset);
   // Registers:
@@ -1010,7 +1023,7 @@ static void AdvanceBytecodeOffsetOrReturn(MacroAssembler* masm,
 // Bailout to the return label if this is a return bytecode.
 #define JUMP_IF_EQUAL(NAME)          \
   __ Branch(if_return, eq, bytecode, \
-            Operand(static_cast<int>(interpreter::Bytecode::k##NAME)));
+            Operand(static_cast<int64_t>(interpreter::Bytecode::k##NAME)));
   RETURN_BYTECODE_LIST(JUMP_IF_EQUAL)
 #undef JUMP_IF_EQUAL
 
@@ -1018,7 +1031,7 @@ static void AdvanceBytecodeOffsetOrReturn(MacroAssembler* masm,
   // of the loop.
   Label end, not_jump_loop;
   __ Branch(&not_jump_loop, ne, bytecode,
-            Operand(static_cast<int>(interpreter::Bytecode::kJumpLoop)),
+            Operand(static_cast<int64_t>(interpreter::Bytecode::kJumpLoop)),
             Label::Distance::kNear);
   // We need to restore the original bytecode_offset since we might have
   // increased it to skip the wide / extra-wide prefix bytecode.
@@ -1237,7 +1250,7 @@ void Builtins::Generate_BaselineOutOfLinePrologue(MacroAssembler* masm) {
 //   o ra: return address
 //
 // The function builds an interpreter frame.  See InterpreterFrameConstants in
-// frames.h for its layout.
+// frames-constants.h for its layout.
 void Builtins::Generate_InterpreterEntryTrampoline(MacroAssembler* masm) {
   Register closure = a1;
   Register feedback_vector = a2;
@@ -1485,9 +1498,7 @@ void Builtins::Generate_InterpreterEntryTrampoline(MacroAssembler* masm) {
         &has_optimized_code_or_marker);
 
     // Load the baseline code into the closure.
-    __ LoadTaggedPointerField(
-        a2, FieldMemOperand(kInterpreterBytecodeArrayRegister,
-                            BaselineData::kBaselineCodeOffset));
+    __ Move(a2, kInterpreterBytecodeArrayRegister);
     static_assert(kJavaScriptCallCodeStartRegister == a2, "ABI mismatch");
     ReplaceClosureCodeWithOptimizedCode(masm, a2, closure, scratch, scratch2);
     __ JumpCodeObject(a2);
@@ -1880,7 +1891,8 @@ void OnStackReplacement(MacroAssembler* masm, bool is_interpreter) {
   // Load deoptimization data from the code object.
   // <deopt_data> = <code>[#deoptimization_data_offset]
   __ LoadTaggedPointerField(
-      a1, MemOperand(a0, Code::kDeoptimizationDataOffset - kHeapObjectTag));
+      a1, MemOperand(a0, Code::kDeoptimizationDataOrInterpreterDataOffset -
+                             kHeapObjectTag));
 
   // Load the OSR entrypoint offset from the deoptimization data.
   // <osr_offset> = <deopt_data>[#header_size + #osr_pc_offset]
@@ -2721,7 +2733,7 @@ void Builtins::Generate_WasmCompileLazy(MacroAssembler* masm) {
     for (Register gp_param_reg : wasm::kGpParamRegisters) {
       gp_regs |= gp_param_reg.bit();
     }
-    // Also push x1, because we must push multiples of 16 bytes (see
+    // Also push a1, because we must push multiples of 16 bytes (see
     // {TurboAssembler::PushCPURegList}.
     CHECK_EQ(0, NumRegs(gp_regs) % 2);
 
@@ -3467,7 +3479,7 @@ void Generate_DeoptimizationEntry(MacroAssembler* masm,
   __ JumpIfSmi(a1, &context_check);
   __ Ld(a0, MemOperand(fp, StandardFrameConstants::kFunctionOffset));
   __ bind(&context_check);
-  __ li(a1, Operand(static_cast<int>(deopt_kind)));
+  __ li(a1, Operand(static_cast<int64_t>(deopt_kind)));
   // a2: bailout id already loaded.
   // a3: code address or 0 already loaded.
   // a4: already has fp-to-sp delta.
@@ -3636,7 +3648,7 @@ void Generate_BaselineOrInterpreterEntry(MacroAssembler* masm,
   __ Ld(closure, MemOperand(fp, StandardFrameConstants::kFunctionOffset));
 
   // Get the Code object from the shared function info.
-  Register code_obj = a4;
+  Register code_obj = s1;
   __ LoadTaggedPointerField(
       code_obj,
       FieldMemOperand(closure, JSFunction::kSharedFunctionInfoOffset));
@@ -3651,7 +3663,7 @@ void Generate_BaselineOrInterpreterEntry(MacroAssembler* masm,
     UseScratchRegisterScope temps(masm);
     Register scratch = temps.Acquire();
     __ GetObjectType(code_obj, scratch, scratch);
-    __ Branch(&start_with_baseline, eq, scratch, Operand(BASELINE_DATA_TYPE));
+    __ Branch(&start_with_baseline, eq, scratch, Operand(CODET_TYPE));
 
     // Start with bytecode as there is no baseline code.
     Builtin builtin_id = next_bytecode
@@ -3667,13 +3679,13 @@ void Generate_BaselineOrInterpreterEntry(MacroAssembler* masm,
     Register scratch = temps.Acquire();
     __ GetObjectType(code_obj, scratch, scratch);
     __ Assert(eq, AbortReason::kExpectedBaselineData, scratch,
-              Operand(BASELINE_DATA_TYPE));
+              Operand(CODET_TYPE));
   }
-
-  // Load baseline code from baseline data.
-  __ LoadTaggedPointerField(
-      code_obj, FieldMemOperand(code_obj, BaselineData::kBaselineCodeOffset));
-
+  if (FLAG_debug_code) {
+    UseScratchRegisterScope temps(masm);
+    Register scratch = temps.Acquire();
+    AssertCodeIsBaseline(masm, code_obj, scratch);
+  }
   // Replace BytecodeOffset with the feedback vector.
   Register feedback_vector = a2;
   __ LoadTaggedPointerField(
@@ -3839,7 +3851,7 @@ void Builtins::Generate_DynamicCheckMapsTrampoline(
 
   Label deopt, bailout;
   __ Branch(&deopt, ne, a0,
-            Operand(static_cast<int>(DynamicCheckMapsStatus::kSuccess)),
+            Operand(static_cast<int64_t>(DynamicCheckMapsStatus::kSuccess)),
             Label::Distance::kNear);
 
   __ MaybeRestoreRegisters(registers);
@@ -3848,11 +3860,11 @@ void Builtins::Generate_DynamicCheckMapsTrampoline(
 
   __ bind(&deopt);
   __ Branch(&bailout, eq, a0,
-            Operand(static_cast<int>(DynamicCheckMapsStatus::kBailout)));
+            Operand(static_cast<int64_t>(DynamicCheckMapsStatus::kBailout)));
 
   if (FLAG_debug_code) {
     __ Assert(eq, AbortReason::kUnexpectedDynamicCheckMapsStatus, a0,
-              Operand(static_cast<int>(DynamicCheckMapsStatus::kDeopt)));
+              Operand(static_cast<int64_t>(DynamicCheckMapsStatus::kDeopt)));
   }
   __ MaybeRestoreRegisters(registers);
   __ LeaveFrame(StackFrame::INTERNAL);

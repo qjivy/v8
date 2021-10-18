@@ -1195,9 +1195,7 @@ void InstructionSelector::VisitBlock(BasicBlock* block) {
     if (node->opcode() == IrOpcode::kStore ||
         node->opcode() == IrOpcode::kUnalignedStore ||
         node->opcode() == IrOpcode::kCall ||
-        node->opcode() == IrOpcode::kProtectedLoad ||
         node->opcode() == IrOpcode::kProtectedStore ||
-        node->opcode() == IrOpcode::kLoadTransform ||
 #define ADD_EFFECT_FOR_ATOMIC_OP(Opcode) \
   node->opcode() == IrOpcode::k##Opcode ||
         MACHINE_ATOMIC_OP_LIST(ADD_EFFECT_FOR_ATOMIC_OP)
@@ -1869,12 +1867,14 @@ void InstructionSelector::VisitNode(Node* node) {
     case IrOpcode::kMemoryBarrier:
       return VisitMemoryBarrier(node);
     case IrOpcode::kWord32AtomicLoad: {
-      LoadRepresentation type = LoadRepresentationOf(node->op());
+      AtomicLoadParameters params = AtomicLoadParametersOf(node->op());
+      LoadRepresentation type = params.representation();
       MarkAsRepresentation(type.representation(), node);
       return VisitWord32AtomicLoad(node);
     }
     case IrOpcode::kWord64AtomicLoad: {
-      LoadRepresentation type = LoadRepresentationOf(node->op());
+      AtomicLoadParameters params = AtomicLoadParametersOf(node->op());
+      LoadRepresentation type = params.representation();
       MarkAsRepresentation(type.representation(), node);
       return VisitWord64AtomicLoad(node);
     }
@@ -2711,7 +2711,8 @@ void InstructionSelector::VisitWord32AtomicPairCompareExchange(Node* node) {
 #endif  // !V8_TARGET_ARCH_IA32 && !V8_TARGET_ARCH_ARM && !V8_TARGET_ARCH_MIPS
 
 #if !V8_TARGET_ARCH_X64 && !V8_TARGET_ARCH_ARM64 && !V8_TARGET_ARCH_MIPS64 && \
-    !V8_TARGET_ARCH_S390 && !V8_TARGET_ARCH_PPC64 && !V8_TARGET_ARCH_RISCV64
+    !V8_TARGET_ARCH_S390 && !V8_TARGET_ARCH_PPC64 &&                          \
+    !V8_TARGET_ARCH_RISCV64 && !V8_TARGET_ARCH_LOONG64
 void InstructionSelector::VisitWord64AtomicLoad(Node* node) { UNIMPLEMENTED(); }
 
 void InstructionSelector::VisitWord64AtomicStore(Node* node) {
@@ -2737,7 +2738,7 @@ void InstructionSelector::VisitWord64AtomicCompareExchange(Node* node) {
 }
 #endif  // !V8_TARGET_ARCH_X64 && !V8_TARGET_ARCH_ARM64 && !V8_TARGET_ARCH_PPC64
         // !V8_TARGET_ARCH_MIPS64 && !V8_TARGET_ARCH_S390 &&
-        // !V8_TARGET_ARCH_RISCV64
+        // !V8_TARGET_ARCH_RISCV64 && !V8_TARGET_ARCH_LOONG64
 
 #if !V8_TARGET_ARCH_IA32 && !V8_TARGET_ARCH_ARM
 // This is only needed on 32-bit to split the 64-bit value into two operands.
@@ -2751,11 +2752,12 @@ void InstructionSelector::VisitI64x2ReplaceLaneI32Pair(Node* node) {
 
 #if !V8_TARGET_ARCH_X64 && !V8_TARGET_ARCH_S390X && !V8_TARGET_ARCH_PPC64
 #if !V8_TARGET_ARCH_ARM64
-#if !V8_TARGET_ARCH_MIPS64
+#if !V8_TARGET_ARCH_MIPS64 && !V8_TARGET_ARCH_LOONG64 && !V8_TARGET_ARCH_RISCV64
 void InstructionSelector::VisitI64x2Splat(Node* node) { UNIMPLEMENTED(); }
 void InstructionSelector::VisitI64x2ExtractLane(Node* node) { UNIMPLEMENTED(); }
 void InstructionSelector::VisitI64x2ReplaceLane(Node* node) { UNIMPLEMENTED(); }
-#endif  // !V8_TARGET_ARCH_MIPS64
+#endif  // !V8_TARGET_ARCH_MIPS64 && !V8_TARGET_ARCH_LOONG64 &&
+        // !V8_TARGET_ARCH_RISCV64
 void InstructionSelector::VisitF64x2Qfma(Node* node) { UNIMPLEMENTED(); }
 void InstructionSelector::VisitF64x2Qfms(Node* node) { UNIMPLEMENTED(); }
 void InstructionSelector::VisitF32x4Qfma(Node* node) { UNIMPLEMENTED(); }
