@@ -2480,7 +2480,7 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
       source->host_defined_options, source->resource_options);
 
   i::MaybeHandle<i::SharedFunctionInfo> maybe_function_info;
-  if (options == kConsumeCodeCache) {
+  if (options == kConsumeCodeCache) { //v8i: Code cache: refer to https://v8.dev/blog/code-caching
     if (source->consume_cache_task) {
       // Take ownership of the internal deserialization task and clear it off
       // the consume task on the source.

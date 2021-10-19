@@ -24248,7 +24248,7 @@ TEST(StreamingWithHarmonyScopes) {
 }
 
 
-TEST(CodeCache) {
+TEST(CodeCache) { //v8i: code cache https://v8.dev/blog/code-caching
   v8::Isolate::CreateParams create_params;
   create_params.array_buffer_allocator = CcTest::array_buffer_allocator();
 
