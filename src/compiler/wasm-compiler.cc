@@ -7886,7 +7886,7 @@ base::Vector<const char> GetDebugName(Zone* zone, int index) {
 
 }  // namespace
 
-wasm::WasmCompilationResult ExecuteTurbofanWasmCompilation(
+wasm::WasmCompilationResult ExecuteTurbofanWasmCompilation( //v8itfwasm: go 
     wasm::CompilationEnv* env, const wasm::WireBytesStorage* wire_bytes_storage,
     const wasm::FunctionBody& func_body, int func_index, Counters* counters,
     wasm::WasmFeatures* detected) {
@@ -7922,7 +7922,7 @@ wasm::WasmCompilationResult ExecuteTurbofanWasmCompilation(
 
   wasm::WasmFeatures unused_detected_features;
   if (!detected) detected = &unused_detected_features;
-  if (!BuildGraphForWasmFunction(env, func_body, func_index, detected, mcgraph,
+  if (!BuildGraphForWasmFunction(env, func_body, func_index, detected, mcgraph, //v8itfwasm:  build graph a mc graph
                                  &loop_infos, node_origins, source_positions)) {
     return wasm::WasmCompilationResult{};
   }
@@ -7942,7 +7942,7 @@ wasm::WasmCompilationResult ExecuteTurbofanWasmCompilation(
     return wasm::WasmCompilationResult{};
   }
 
-  Pipeline::GenerateCodeForWasmFunction(&info, env, wire_bytes_storage, mcgraph,
+  Pipeline::GenerateCodeForWasmFunction(&info, env, wire_bytes_storage, mcgraph, //v8itfwasm: go to compiler.cc
                                         call_descriptor, source_positions,
                                         node_origins, func_body, env->module,
                                         func_index, &loop_infos);

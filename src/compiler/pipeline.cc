@@ -1098,7 +1098,7 @@ class PipelineCompilationJob final : public OptimizedCompilationJob {
   Linkage* linkage_;
 };
 
-PipelineCompilationJob::PipelineCompilationJob(
+PipelineCompilationJob::PipelineCompilationJob( //v8itf: Init a PipelineCompilationJob
     Isolate* isolate, Handle<SharedFunctionInfo> shared_info,
     Handle<JSFunction> function, BytecodeOffset osr_offset,
     JavaScriptFrame* osr_frame, CodeKind code_kind)
@@ -1116,7 +1116,7 @@ PipelineCompilationJob::PipelineCompilationJob(
           compilation_info(), function->GetIsolate(), &zone_stats_)),
       data_(&zone_stats_, function->GetIsolate(), compilation_info(),
             pipeline_statistics_.get()),
-      pipeline_(&data_),
+      pipeline_(&data_), //v8itf: a PipelineImpl, related Data
       linkage_(nullptr) {}
 
 PipelineCompilationJob::~PipelineCompilationJob() = default;
@@ -1133,13 +1133,15 @@ class V8_NODISCARD PipelineJobScope {
   }
 
   ~PipelineJobScope() { data_->set_runtime_call_stats(nullptr); }
-
+ 
  private:
   PipelineData* data_;
+
+
 };
 }  // namespace
 
-PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl(
+PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl( //v8itf: PrepareJob
     Isolate* isolate) {
   // Ensure that the RuntimeCallStats table of main thread is available for
   // phases happening during PrepareJob.
@@ -1193,10 +1195,10 @@ PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl(
   // IsPendingAllocation.
   isolate->heap()->PublishPendingAllocations();
 
-  pipeline_.InitializeHeapBroker();
+  pipeline_.InitializeHeapBroker(); //v8itf: StepA.1 Initialize the heap broker.
 
   if (!data_.broker()->is_concurrent_inlining()) {
-    if (!pipeline_.CreateGraph()) {
+    if (!pipeline_.CreateGraph()) { //v8itf: StepA.2 Run the graph creation and initial optimization passes.
       CHECK(!isolate->has_pending_exception());
       return AbortOptimization(BailoutReason::kGraphBuildingFailed);
     }
@@ -1210,8 +1212,9 @@ PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl(
   return SUCCEEDED;
 }
 
-PipelineCompilationJob::Status PipelineCompilationJob::ExecuteJobImpl(
+PipelineCompilationJob::Status PipelineCompilationJob::ExecuteJobImpl( //v8itf: go
     RuntimeCallStats* stats, LocalIsolate* local_isolate) {
+  std::cout<<"PipelineCompilationJob::ExecuteJobImpl:"<<std::endl;
   // Ensure that the RuntimeCallStats table is only available during execution
   // and not during finalization as that might be on a different thread.
   PipelineJobScope scope(&data_, stats);
@@ -1219,7 +1222,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::ExecuteJobImpl(
                                         local_isolate);
 
   if (data_.broker()->is_concurrent_inlining()) {
-    if (!pipeline_.CreateGraph()) {
+    if (!pipeline_.CreateGraph()) { //v8itf: StepA.2 Run the graph creation and initial optimization passes.
       return AbortOptimization(BailoutReason::kGraphBuildingFailed);
     }
   }
@@ -1227,13 +1230,13 @@ PipelineCompilationJob::Status PipelineCompilationJob::ExecuteJobImpl(
   // We selectively Unpark inside OptimizeGraph*.
   bool success;
   if (compilation_info_.code_kind() == CodeKind::TURBOPROP) {
-    success = pipeline_.OptimizeGraphForMidTier(linkage_);
+    success = pipeline_.OptimizeGraphForMidTier(linkage_); //v8itf: Alternative step B
   } else {
-    success = pipeline_.OptimizeGraph(linkage_);
+    success = pipeline_.OptimizeGraph(linkage_); //v8itf: StepB Run the concurrent optimization passes
   }
   if (!success) return FAILED;
 
-  pipeline_.AssembleCode(linkage_);
+  pipeline_.AssembleCode(linkage_); //v8itf:  Step C
 
   return SUCCEEDED;
 }
@@ -1244,7 +1247,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::FinalizeJobImpl(
   // phases happening during PrepareJob.
   PipelineJobScope scope(&data_, isolate->counters()->runtime_call_stats());
   RCS_SCOPE(isolate, RuntimeCallCounterId::kOptimizeFinalizePipelineJob);
-  MaybeHandle<Code> maybe_code = pipeline_.FinalizeCode();
+  MaybeHandle<Code> maybe_code = pipeline_.FinalizeCode(); //v8itf: Step D
   Handle<Code> code;
   if (!maybe_code.ToHandle(&code)) {
     if (compilation_info()->bailout_reason() == BailoutReason::kNoReason) {
@@ -1252,7 +1255,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::FinalizeJobImpl(
     }
     return FAILED;
   }
-  if (!pipeline_.CommitDependencies(code)) {
+  if (!pipeline_.CommitDependencies(code)) { //v8itf: StepE
     return RetryOptimization(BailoutReason::kBailedOutDueToDependencyChange);
   }
 
@@ -2550,6 +2553,9 @@ Pipeline::NewWasmHeapStubCompilationJob(Isolate* isolate,
                                         std::unique_ptr<char[]> debug_name,
                                         const AssemblerOptions& options,
                                         SourcePositionTable* source_positions) {
+
+
+  std::cout<<"QQ NewWasmHeapStubCompilationJob "<<std::endl;
   return std::make_unique<WasmHeapStubCompilationJob>(
       isolate, call_descriptor, std::move(zone), graph, kind,
       std::move(debug_name), options, source_positions);
@@ -2576,6 +2582,7 @@ CompilationJob::Status WasmHeapStubCompilationJob::ExecuteJobImpl(
         << "Begin compiling method " << info_.GetDebugName().get()
         << " using TurboFan" << std::endl;
   }
+  std::cout<<"QQ Execute WasmHeapStubCompilationJob "<<info_.GetDebugName().get()<<std::endl;
   if (info_.trace_turbo_graph()) {  // Simple textual RPO.
     StdoutStream{} << "-- wasm stub " << CodeKindToString(info_.code_kind())
                    << " graph -- " << std::endl
@@ -2589,7 +2596,7 @@ CompilationJob::Status WasmHeapStubCompilationJob::ExecuteJobImpl(
   }
   pipeline_.RunPrintAndVerify("V8.WasmMachineCode", true);
   pipeline_.Run<MemoryOptimizationPhase>();
-  pipeline_.ComputeScheduledGraph();
+  pipeline_.ComputeScheduledGraph(); //v8itf: pp2
   if (pipeline_.SelectInstructionsAndAssemble(call_descriptor_)) {
     return CompilationJob::SUCCEEDED;
   }
@@ -2660,7 +2667,7 @@ void PipelineImpl::InitializeHeapBroker() {
   data->EndPhaseKind();
 }
 
-bool PipelineImpl::CreateGraph() {
+bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
   PipelineData* data = this->data_;
   UnparkedScopeIfNeeded unparked_scope(data->broker());
 
@@ -2702,7 +2709,7 @@ bool PipelineImpl::CreateGraph() {
   return true;
 }
 
-bool PipelineImpl::OptimizeGraph(Linkage* linkage) {
+bool PipelineImpl::OptimizeGraph(Linkage* linkage) {//v8itf: StepB
   PipelineData* data = this->data_;
 
   data->BeginPhaseKind("V8.TFLowering");
@@ -2822,12 +2829,12 @@ bool PipelineImpl::OptimizeGraph(Linkage* linkage) {
     data->node_origins()->RemoveDecorator();
   }
 
-  ComputeScheduledGraph();
+  ComputeScheduledGraph(); //v8itf: StepB.1
 
-  return SelectInstructions(linkage);
+  return SelectInstructions(linkage); //v8itf: StepB.2
 }
 
-bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) {
+bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) { //v8itf: Alternative step B
   PipelineData* data = this->data_;
 
   data->BeginPhaseKind("V8.TFLowering");
@@ -2901,9 +2908,9 @@ bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) {
     data->node_origins()->RemoveDecorator();
   }
 
-  ComputeScheduledGraph();
+  ComputeScheduledGraph(); //v8itf: StepB.1
 
-  return SelectInstructions(linkage);
+  return SelectInstructions(linkage); //v8itf: StepB.2
 }
 
 namespace {
@@ -3050,7 +3057,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
     data.set_profile_data(profile_data);
   }
 
-  pipeline.ComputeScheduledGraph();
+  pipeline.ComputeScheduledGraph(); //v8itf: pp3
   DCHECK_NOT_NULL(data.schedule());
 
   // First run code generation on a copy of the pipeline, in order to be able to
@@ -3120,6 +3127,8 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
 
   PipelineImpl pipeline(&data);
 
+  std::cout<<"QQ GenerateCodeForWasmNativeStub: "<<info.GetDebugName().get()<<std::endl;
+
   if (info.trace_turbo_json() || info.trace_turbo_graph()) {
     CodeTracer::StreamScope tracing_scope(data.GetCodeTracer());
     tracing_scope.stream()
@@ -3145,7 +3154,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
   pipeline.Run<MemoryOptimizationPhase>();
   pipeline.RunPrintAndVerify(MemoryOptimizationPhase::phase_name(), true);
 
-  pipeline.ComputeScheduledGraph();
+  pipeline.ComputeScheduledGraph(); //v8itf: pp4
 
   Linkage linkage(call_descriptor);
   CHECK(pipeline.SelectInstructions(&linkage));
@@ -3197,7 +3206,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
 }
 
 // static
-void Pipeline::GenerateCodeForWasmFunction(
+void Pipeline::GenerateCodeForWasmFunction( //v8itfwasm: go
     OptimizedCompilationInfo* info, wasm::CompilationEnv* env,
     const wasm::WireBytesStorage* wire_bytes_storage, MachineGraph* mcgraph,
     CallDescriptor* call_descriptor, SourcePositionTable* source_positions,
@@ -3214,6 +3223,7 @@ void Pipeline::GenerateCodeForWasmFunction(
 
   PipelineImpl pipeline(&data);
 
+  std::cout<<"QQ GenerateCodeForWasmFunction: "<<data.info()->GetDebugName().get()<<std::endl;
   if (data.info()->trace_turbo_json() || data.info()->trace_turbo_graph()) {
     CodeTracer::StreamScope tracing_scope(data.GetCodeTracer());
     tracing_scope.stream()
@@ -3255,7 +3265,7 @@ void Pipeline::GenerateCodeForWasmFunction(
   }
 
   data.BeginPhaseKind("V8.InstructionSelection");
-  pipeline.ComputeScheduledGraph();
+  pipeline.ComputeScheduledGraph(); //v8itf: pp5
 
   Linkage linkage(call_descriptor);
   if (!pipeline.SelectInstructions(&linkage)) return;
@@ -3394,7 +3404,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForTesting(
 
   // Ensure we have a schedule.
   if (data.schedule() == nullptr) {
-    pipeline.ComputeScheduledGraph();
+    pipeline.ComputeScheduledGraph(); //v8itf: pp6
   }
 
   Handle<Code> code;
@@ -3406,12 +3416,12 @@ MaybeHandle<Code> Pipeline::GenerateCodeForTesting(
 }
 
 // static
-std::unique_ptr<OptimizedCompilationJob> Pipeline::NewCompilationJob(
+std::unique_ptr<OptimizedCompilationJob> Pipeline::NewCompilationJob( //v8itf: go
     Isolate* isolate, Handle<JSFunction> function, CodeKind code_kind,
     bool has_script, BytecodeOffset osr_offset, JavaScriptFrame* osr_frame) {
   Handle<SharedFunctionInfo> shared =
       handle(function->shared(), function->GetIsolate());
-  return std::make_unique<PipelineCompilationJob>(
+  return std::make_unique<PipelineCompilationJob>( //v8itf:here new PipelineCompilationJob
       isolate, shared, function, osr_offset, osr_frame, code_kind);
 }
 

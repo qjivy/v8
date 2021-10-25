@@ -1348,7 +1348,7 @@ CompilationExecutionResult ExecuteCompilationUnits(
     TRACE_EVENT0("v8.wasm", event_name);
     while (unit->tier() == current_tier) {
       // (asynchronous): Execute the compilation.
-      WasmCompilationResult result = unit->ExecuteCompilation(
+      WasmCompilationResult result = unit->ExecuteCompilation( //v8itfwasm: go
           &env.value(), wire_bytes.get(), counters, &detected_features);
       results_to_publish.emplace_back(std::move(result));
 
@@ -1671,11 +1671,11 @@ class BackgroundCompileJob final : public JobTask {
         engine_barrier_(GetWasmEngine()->GetBarrierForBackgroundCompile()),
         async_counters_(std::move(async_counters)) {}
 
-  void Run(JobDelegate* delegate) override {
+  void Run(JobDelegate* delegate) override { //v8itfwasm: go
     auto engine_scope = engine_barrier_->TryLock();
     if (!engine_scope) return;
     ExecuteCompilationUnits(native_module_, async_counters_.get(), delegate,
-                            kBaselineOrTopTier);
+                            kBaselineOrTopTier); //v8itfwasm:  here compile hello.js go
   }
 
   size_t GetMaxConcurrency(size_t worker_count) const override {

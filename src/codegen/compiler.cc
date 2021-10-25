@@ -955,14 +955,14 @@ bool PrepareJobWithHandleScope(OptimizedCompilationJob* job, Isolate* isolate,
   return job->PrepareJob(isolate) == CompilationJob::SUCCEEDED;
 }
 
-bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
+bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate, //v8itf:go
                          OptimizedCompilationInfo* compilation_info) {
   TimerEventScope<TimerEventRecompileSynchronous> timer(isolate);
   RCS_SCOPE(isolate, RuntimeCallCounterId::kOptimizeNonConcurrent);
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
                "V8.OptimizeNonConcurrent");
 
-  if (!PrepareJobWithHandleScope(job, isolate, compilation_info)) {
+  if (!PrepareJobWithHandleScope(job, isolate, compilation_info)) { //v8itf: here go PrepareJob(Impl)
     CompilerTracer::TraceAbortedJob(isolate, compilation_info);
     return false;
   }
@@ -970,7 +970,7 @@ bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
   {
     // Park main thread here to be in the same state as background threads.
     ParkedScope parked_scope(isolate->main_thread_local_isolate());
-    if (job->ExecuteJob(isolate->counters()->runtime_call_stats(),
+    if (job->ExecuteJob(isolate->counters()->runtime_call_stats(), //v8itf: here Execute
                         isolate->main_thread_local_isolate())) {
       UnparkedScope unparked_scope(isolate->main_thread_local_isolate());
       CompilerTracer::TraceAbortedJob(isolate, compilation_info);
@@ -978,7 +978,7 @@ bool GetOptimizedCodeNow(OptimizedCompilationJob* job, Isolate* isolate,
     }
   }
 
-  if (job->FinalizeJob(isolate) != CompilationJob::SUCCEEDED) {
+  if (job->FinalizeJob(isolate) != CompilationJob::SUCCEEDED) {//v8itf: here FinalizeJob
     CompilerTracer::TraceAbortedJob(isolate, compilation_info);
     return false;
   }
@@ -1143,7 +1143,7 @@ MaybeHandle<Code> GetOptimizedCode(
   // tolerate the lack of a script without bytecode.
   DCHECK_IMPLIES(!has_script, shared->HasBytecodeArray());
   std::unique_ptr<OptimizedCompilationJob> job(
-      compiler::Pipeline::NewCompilationJob(isolate, function, code_kind,
+      compiler::Pipeline::NewCompilationJob(isolate, function, code_kind, //v8itf: here goto pipeline NewCompilationJob, note it's a OptimizedJob
                                             has_script, osr_offset, osr_frame));
   OptimizedCompilationInfo* compilation_info = job->compilation_info();
 
@@ -1159,7 +1159,7 @@ MaybeHandle<Code> GetOptimizedCode(
     }
   } else {
     DCHECK_EQ(mode, ConcurrencyMode::kNotConcurrent);
-    if (GetOptimizedCodeNow(job.get(), isolate, compilation_info)) {
+    if (GetOptimizedCodeNow(job.get(), isolate, compilation_info)) { //v8itf: go
       return compilation_info->code();
     }
   }
@@ -2110,7 +2110,7 @@ bool Compiler::CompileOptimized(Isolate* isolate, Handle<JSFunction> function,
   }
 
   Handle<Code> code;
-  if (!GetOptimizedCode(isolate, function, mode, code_kind).ToHandle(&code)) {
+  if (!GetOptimizedCode(isolate, function, mode, code_kind).ToHandle(&code)) { //v8itf: go
     // Optimization failed, get the existing code. We could have optimized code
     // from a lower tier here. Unoptimized code must exist already if we are
     // optimizing.

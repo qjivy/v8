@@ -32,7 +32,7 @@ ExecutionTier WasmCompilationUnit::GetBaselineExecutionTier(
   return FLAG_liftoff ? ExecutionTier::kLiftoff : ExecutionTier::kTurbofan;
 }
 
-WasmCompilationResult WasmCompilationUnit::ExecuteCompilation(
+WasmCompilationResult WasmCompilationUnit::ExecuteCompilation( //v8itfwasm: go
     CompilationEnv* env, const WireBytesStorage* wire_bytes_storage,
     Counters* counters, WasmFeatures* detected) {
   WasmCompilationResult result;
@@ -40,7 +40,7 @@ WasmCompilationResult WasmCompilationUnit::ExecuteCompilation(
     result = ExecuteImportWrapperCompilation(env);
   } else {
     result =
-        ExecuteFunctionCompilation(env, wire_bytes_storage, counters, detected);
+        ExecuteFunctionCompilation(env, wire_bytes_storage, counters, detected); //v8itfwasm: go
   }
 
   if (result.succeeded() && counters) {
@@ -68,7 +68,7 @@ WasmCompilationResult WasmCompilationUnit::ExecuteImportWrapperCompilation(
   return result;
 }
 
-WasmCompilationResult WasmCompilationUnit::ExecuteFunctionCompilation(
+WasmCompilationResult WasmCompilationUnit::ExecuteFunctionCompilation( //v8itfwasm: go
     CompilationEnv* env, const WireBytesStorage* wire_bytes_storage,
     Counters* counters, WasmFeatures* detected) {
   auto* func = &env->module->functions[func_index_];
@@ -133,7 +133,7 @@ WasmCompilationResult WasmCompilationUnit::ExecuteFunctionCompilation(
       V8_FALLTHROUGH;
 
     case ExecutionTier::kTurbofan:
-      result = compiler::ExecuteTurbofanWasmCompilation(
+      result = compiler::ExecuteTurbofanWasmCompilation( //v8itfwasm: go
           env, wire_bytes_storage, func_body, func_index_, counters, detected);
       result.for_debugging = for_debugging_;
       break;
@@ -204,7 +204,7 @@ JSToWasmWrapperCompilationUnit::JSToWasmWrapperCompilationUnit(
                            !is_import),
       job_(use_generic_wrapper_
                ? nullptr
-               : compiler::NewJSToWasmCompilationJob(
+               : compiler::NewJSToWasmCompilationJob( //v8itfwasm: here will goto wasm compiler pipeline NewWasmHeapStubCompilationJob and new a WasmHeapStubCompilationJob
                      isolate, sig, module, is_import, enabled_features)) {}
 
 JSToWasmWrapperCompilationUnit::~JSToWasmWrapperCompilationUnit() = default;
