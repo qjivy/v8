@@ -714,7 +714,7 @@ Map FeedbackNexus::GetFirstMap() const {
   return Map();
 }
 
-InlineCacheState FeedbackNexus::ic_state() const {
+InlineCacheState FeedbackNexus::ic_state() const { //v8i
   MaybeObject feedback, extra;
   std::tie(feedback, extra) = GetFeedbackPair();
 

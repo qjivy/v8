@@ -835,7 +835,7 @@ static void DebugPrintImpl(MaybeObject maybe_object) {
 #ifdef OBJECT_PRINT
     os << "DebugPrint: ";
     if (weak) os << "[weak] ";
-    object.Print(os);
+    object.Print(os); //v8i
     if (object.IsHeapObject()) {
       HeapObject::cast(object).map().Print(os);
     }

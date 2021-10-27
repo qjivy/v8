@@ -43,7 +43,7 @@ void Object::Print() const {
   os << std::flush;
 }
 
-void Object::Print(std::ostream& os) const {
+void Object::Print(std::ostream& os) const { //v8i: Object print
   if (IsSmi()) {
     os << "Smi: " << std::hex << "0x" << Smi::ToInt(*this);
     os << std::dec << " (" << Smi::ToInt(*this) << ")\n";
@@ -104,7 +104,7 @@ void HeapObject::PrintHeader(std::ostream& os, const char* id) {
   if (!IsMap()) os << "\n - map: " << Brief(map());
 }
 
-void HeapObject::HeapObjectPrint(std::ostream& os) {
+void HeapObject::HeapObjectPrint(std::ostream& os) { //v8i
   InstanceType instance_type = map().instance_type();
 
   if (instance_type < FIRST_NONSTRING_TYPE) {
@@ -216,7 +216,7 @@ void HeapObject::HeapObjectPrint(std::ostream& os) {
       // Every class that has its fields defined in a .tq file and corresponds
       // to exactly one InstanceType value is included in the following list.
       TORQUE_INSTANCE_CHECKERS_SINGLE_FULLY_DEFINED(MAKE_TORQUE_CASE)
-      TORQUE_INSTANCE_CHECKERS_MULTIPLE_FULLY_DEFINED(MAKE_TORQUE_CASE)
+      TORQUE_INSTANCE_CHECKERS_MULTIPLE_FULLY_DEFINED(MAKE_TORQUE_CASE) //v8i
 #undef MAKE_TORQUE_CASE
 
     case ALLOCATION_SITE_TYPE:
@@ -1154,7 +1154,7 @@ void ClosureFeedbackCellArray::ClosureFeedbackCellArrayPrint(std::ostream& os) {
   PrintFixedArrayWithHeader(os, *this, "ClosureFeedbackCellArray");
 }
 
-void FeedbackVector::FeedbackVectorPrint(std::ostream& os) {
+void FeedbackVector::FeedbackVectorPrint(std::ostream& os) { //v8i
   PrintHeader(os, "FeedbackVector");
   os << "\n - length: " << length();
   if (length() == 0) {
@@ -1181,21 +1181,21 @@ void FeedbackVector::FeedbackVectorPrint(std::ostream& os) {
     FeedbackSlotKind kind = iter.kind();
 
     os << "\n - slot " << slot << " " << kind << " ";
-    FeedbackSlotPrint(os, slot);
+    FeedbackSlotPrint(os, slot); //v8i
 
     int entry_size = iter.entry_size();
     if (entry_size > 0) os << " {";
     for (int i = 0; i < entry_size; i++) {
       FeedbackSlot slot_with_offset = slot.WithOffset(i);
       os << "\n     [" << slot_with_offset.ToInt()
-         << "]: " << Brief(Get(slot_with_offset));
+         << "]: " << Brief(Get(slot_with_offset)); //v8i: Brief means to print address and name
     }
     if (entry_size > 0) os << "\n  }";
   }
   os << "\n";
 }
 
-void FeedbackVector::FeedbackSlotPrint(std::ostream& os, FeedbackSlot slot) {
+void FeedbackVector::FeedbackSlotPrint(std::ostream& os, FeedbackSlot slot) { //v8i
   FeedbackNexus nexus(*this, slot);
   nexus.Print(os);
 }
@@ -1219,7 +1219,7 @@ void FeedbackNexus::Print(std::ostream& os) {
     case FeedbackSlotKind::kStoreNamedSloppy:
     case FeedbackSlotKind::kStoreNamedStrict:
     case FeedbackSlotKind::kStoreOwnNamed: {
-      os << InlineCacheState2String(ic_state());
+      os << InlineCacheState2String(ic_state()); //v8i
       break;
     }
     case FeedbackSlotKind::kBinaryOp: {
@@ -1487,7 +1487,7 @@ void JSBoundFunction::JSBoundFunctionPrint(std::ostream& os) {
   JSObjectPrintBody(os, *this);
 }
 
-void JSFunction::JSFunctionPrint(std::ostream& os) {
+void JSFunction::JSFunctionPrint(std::ostream& os) { //v8i
   Isolate* isolate = GetIsolate();
   JSObjectPrintHeader(os, *this, "Function");
   os << "\n - function prototype: ";
@@ -1542,7 +1542,7 @@ void JSFunction::JSFunctionPrint(std::ostream& os) {
   if (!shared().HasFeedbackMetadata()) {
     os << "feedback metadata is not available in SFI\n";
   } else if (has_feedback_vector()) {
-    feedback_vector().FeedbackVectorPrint(os);
+    feedback_vector().FeedbackVectorPrint(os); //v8i: here print fb vector
   } else if (has_closure_feedback_cell_array()) {
     os << "No feedback vector, but we have a closure feedback cell array\n";
     closure_feedback_cell_array().ClosureFeedbackCellArrayPrint(os);
