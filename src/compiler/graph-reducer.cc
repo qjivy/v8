@@ -31,7 +31,7 @@ void Reducer::Finalize() {}
 
 Reduction Reducer::Reduce(Node* node,
                           ObserveNodeManager* observe_node_manager) {
-  Reduction reduction = Reduce(node);
+  Reduction reduction = Reduce(node); //v8i: about goto specific reducdr
   if (V8_UNLIKELY(observe_node_manager && reduction.Changed())) {
     observe_node_manager->OnNodeChanged(reducer_name(), node,
                                         reduction.replacement());
@@ -98,11 +98,12 @@ void GraphReducer::ReduceGraph() { ReduceNode(graph()->end()); }
 
 
 Reduction GraphReducer::Reduce(Node* const node) {
-  auto skip = reducers_.end();
+  auto skip = reducers_.end(); //v8i: here iter from every Reducer
   for (auto i = reducers_.begin(); i != reducers_.end();) {
+     StdoutStream{} <<"Reduce #"<<*node<<" with reducer "<<(*i)->reducer_name() << std::endl;
     if (i != skip) {
       tick_counter_->TickAndMaybeEnterSafepoint();
-      Reduction reduction = (*i)->Reduce(node, observe_node_manager_);
+      Reduction reduction = (*i)->Reduce(node, observe_node_manager_); //v8i reduce by each reducer
       if (!reduction.Changed()) {
         // No change from this reducer.
       } else if (reduction.replacement() == node) {
@@ -175,14 +176,14 @@ void GraphReducer::ReduceTop() {
   NodeId const max_id = static_cast<NodeId>(graph()->NodeCount() - 1);
 
   // All inputs should be visited or on stack. Apply reductions to node.
-  Reduction reduction = Reduce(node);
+  Reduction reduction = Reduce(node); //v8i reduce
 
   // If there was no reduction, pop {node} and continue.
   if (!reduction.Changed()) return Pop();
 
   // Check if the reduction is an in-place update of the {node}.
   Node* const replacement = reduction.replacement();
-  if (replacement == node) {
+  if (replacement == node) { //v8i: inplace 
     for (Node* const user : node->uses()) {
       DCHECK_IMPLIES(user == node, state_.Get(node) != State::kVisited);
       Revisit(user);
@@ -221,7 +222,7 @@ void GraphReducer::Replace(Node* node, Node* replacement, NodeId max_id) {
     // {replacement} is an old node, so unlink {node} and assume that
     // {replacement} was already reduced and finish.
     for (Edge edge : node->use_edges()) {
-      Node* const user = edge.from();
+      Node* const user = edge.from(); //v8i
       Verifier::VerifyEdgeInputReplacement(edge, replacement);
       edge.UpdateTo(replacement);
       // Don't revisit this node if it refers to itself.
