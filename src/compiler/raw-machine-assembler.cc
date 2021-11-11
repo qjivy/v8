@@ -32,7 +32,7 @@ RawMachineAssembler::RawMachineAssembler(
       current_block_(schedule()->start()) {
   int param_count = static_cast<int>(parameter_count());
   // Add an extra input for the JSFunction parameter to the start node.
-  graph->SetStart(graph->NewNode(common_.Start(param_count + 1)));
+  graph->SetStart(graph->NewNode(common_.Start(param_count + 1))); //v8itf: here new a start node 
   if (call_descriptor->IsJSFunctionCall()) {
     target_parameter_ = AddNode(
         common()->Parameter(Linkage::kJSCallClosureParamIndex), graph->start());

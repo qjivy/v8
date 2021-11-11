@@ -2597,7 +2597,7 @@ CompilationJob::Status WasmHeapStubCompilationJob::ExecuteJobImpl(
   pipeline_.RunPrintAndVerify("V8.WasmMachineCode", true);
   pipeline_.Run<MemoryOptimizationPhase>();
   pipeline_.ComputeScheduledGraph(); //v8itf: pp2
-  if (pipeline_.SelectInstructionsAndAssemble(call_descriptor_)) {
+  if (pipeline_.SelectInstructionsAndAssemble(call_descriptor_)) { //v8tf: wasm job
     return CompilationJob::SUCCEEDED;
   }
   return CompilationJob::FAILED;
@@ -2831,7 +2831,7 @@ bool PipelineImpl::OptimizeGraph(Linkage* linkage) {//v8itf: StepB
 
   ComputeScheduledGraph(); //v8itf: StepB.1
 
-  return SelectInstructions(linkage); //v8itf: StepB.2
+  return SelectInstructions(linkage); //v8itf: StepB.2 OpitimizeGraph
 }
 
 bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) { //v8itf: Alternative step B
@@ -2910,7 +2910,7 @@ bool PipelineImpl::OptimizeGraphForMidTier(Linkage* linkage) { //v8itf: Alternat
 
   ComputeScheduledGraph(); //v8itf: StepB.1
 
-  return SelectInstructions(linkage); //v8itf: StepB.2
+  return SelectInstructions(linkage); //v8itf: StepB.2 OptimizeGraphForMidTier
 }
 
 namespace {
@@ -3072,7 +3072,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
                                 isolate->counters()->runtime_call_stats());
   second_data.set_verify_graph(FLAG_verify_csa);
   PipelineImpl second_pipeline(&second_data);
-  second_pipeline.SelectInstructionsAndAssemble(call_descriptor);
+  second_pipeline.SelectInstructionsAndAssemble(call_descriptor); //v8itf: GenerateCodeForCodeStub
 
   if (FLAG_turbo_profiling) {
     info.profiler_data()->SetHash(graph_hash_before_scheduling);
@@ -3080,7 +3080,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
 
   if (jump_opt.is_optimizable()) {
     jump_opt.set_optimizing();
-    return pipeline.GenerateCode(call_descriptor);
+    return pipeline.GenerateCode(call_descriptor); //v8itf: pipelineImpl: GenerateCode Code Stub
   } else {
     return second_pipeline.FinalizeCode();
   }
@@ -3157,7 +3157,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
   pipeline.ComputeScheduledGraph(); //v8itf: pp4
 
   Linkage linkage(call_descriptor);
-  CHECK(pipeline.SelectInstructions(&linkage));
+  CHECK(pipeline.SelectInstructions(&linkage)); //v8itf: GenerateCodeForWasmNativeStub
   pipeline.AssembleCode(&linkage);
 
   CodeGenerator* code_generator = pipeline.code_generator();
@@ -3268,7 +3268,7 @@ void Pipeline::GenerateCodeForWasmFunction( //v8itfwasm: go
   pipeline.ComputeScheduledGraph(); //v8itf: pp5
 
   Linkage linkage(call_descriptor);
-  if (!pipeline.SelectInstructions(&linkage)) return;
+  if (!pipeline.SelectInstructions(&linkage)) return; //v8itf: GenerateCodeForWasmFunction
   pipeline.AssembleCode(&linkage);
 
   auto result = std::make_unique<wasm::WasmCompilationResult>();
@@ -3408,7 +3408,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForTesting(
   }
 
   Handle<Code> code;
-  if (pipeline.GenerateCode(call_descriptor).ToHandle(&code) &&
+  if (pipeline.GenerateCode(call_descriptor).ToHandle(&code) && //v8itf: Gen for testing
       pipeline.CommitDependencies(code)) {
     return code;
   }
@@ -3734,7 +3734,7 @@ bool PipelineImpl::SelectInstructionsAndAssemble(
   Linkage linkage(call_descriptor);
 
   // Perform instruction selection and register allocation.
-  if (!SelectInstructions(&linkage)) return false;
+  if (!SelectInstructions(&linkage)) return false; //v8itf: trival SelectInstructionsAndAssemble
 
   // Generate the final machine code.
   AssembleCode(&linkage);

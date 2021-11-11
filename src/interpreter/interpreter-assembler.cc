@@ -1082,7 +1082,7 @@ TNode<IntPtrT> InterpreterAssembler::Advance(TNode<IntPtrT> delta,
 void InterpreterAssembler::Jump(TNode<IntPtrT> jump_offset, bool backward) {
   DCHECK(!Bytecodes::IsStarLookahead(bytecode_, operand_scale_));
 
-  UpdateInterruptBudget(TruncateIntPtrToInt32(jump_offset), backward);
+  UpdateInterruptBudget(TruncateIntPtrToInt32(jump_offset), backward); //v8i: here update interrupt budget, jump_offset is the size of what repeated executed 
   TNode<IntPtrT> new_bytecode_offset = Advance(jump_offset, backward);
   TNode<RawPtrT> target_bytecode =
       UncheckedCast<RawPtrT>(LoadBytecode(new_bytecode_offset));
