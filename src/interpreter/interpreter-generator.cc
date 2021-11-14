@@ -77,7 +77,7 @@ IGNITION_HANDLER(LdaSmi, InterpreterAssembler) {
   SetAccumulator(smi_int);
   Dispatch();
 }
-
+//v8i-ignition:bytecode-3
 // LdaConstant <idx>
 //
 // Load constant literal at |idx| in the constant pool into the accumulator.
@@ -135,7 +135,6 @@ IGNITION_HANDLER(Ldar, InterpreterAssembler) {
   SetAccumulator(value);
   Dispatch();
 }
-
 // Star <dst>
 //
 // Store accumulator to register <dst>.
@@ -145,6 +144,7 @@ IGNITION_HANDLER(Star, InterpreterAssembler) {
   Dispatch();
 }
 
+//v8i-ignition:bytecode-6
 // Star0 - StarN
 //
 // Store accumulator to one of a special batch of registers, without using a
@@ -202,7 +202,7 @@ class InterpreterLoadGlobalAssembler : public InterpreterAssembler {
                               lazy_name, typeof_mode, &exit_point);
   }
 };
-
+//v8i-ignition:bytecode-1
 // LdaGlobal <name_index> <slot>
 //
 // Load the global with name in constant pool entry <name_index> into the
@@ -1445,7 +1445,7 @@ IGNITION_HANDLER(CallUndefinedReceiver, InterpreterJSCallAssembler) {
 IGNITION_HANDLER(CallUndefinedReceiver0, InterpreterJSCallAssembler) {
   JSCallN(0, ConvertReceiverMode::kNullOrUndefined);
 }
-
+//v8i-ignition:bytecode-5
 IGNITION_HANDLER(CallUndefinedReceiver1, InterpreterJSCallAssembler) {
   JSCallN(1, ConvertReceiverMode::kNullOrUndefined);
 }
@@ -2656,7 +2656,7 @@ IGNITION_HANDLER(Abort, InterpreterAssembler) {
   CallRuntime(Runtime::kAbort, NoContextConstant(), SmiTag(Signed(reason)));
   Unreachable();
 }
-
+//v8i-ignition:bytecode-7
 // Return
 //
 // Return the value in the accumulator.
