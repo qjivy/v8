@@ -1792,7 +1792,7 @@ struct EffectControlLinearizationPhase {
       // fix the effect and control flow for nodes with low-level side
       // effects (such as changing representation to tagged or
       // 'floating' allocation regions.)
-      Schedule* schedule = Scheduler::ComputeSchedule(
+      Schedule* schedule = Scheduler::ComputeSchedule( //v8i: here schedule 1st time
           temp_zone, data->graph(), Scheduler::kTempSchedule,
           &data->info()->tick_counter(), data->profile_data());
       TraceScheduleAndVerify(data->info(), data, schedule,
@@ -3447,7 +3447,7 @@ void PipelineImpl::ComputeScheduledGraph() {
   // We should only schedule the graph if it is not scheduled yet.
   DCHECK_NULL(data->schedule());
 
-  Run<ComputeSchedulePhase>();
+  Run<ComputeSchedulePhase>(); //v8i: here schedule 2nd time
   TraceScheduleAndVerify(data->info(), data, data->schedule(), "schedule");
 }
 

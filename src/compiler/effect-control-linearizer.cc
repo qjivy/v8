@@ -1470,7 +1470,7 @@ Node* EffectControlLinearizer::ChangeBitToTagged(Node* value) {
   return done.PhiAt(0);
 }
 
-Node* EffectControlLinearizer::LowerChangeInt31ToTaggedSigned(Node* node) {
+Node* EffectControlLinearizer::LowerChangeInt31ToTaggedSigned(Node* node) { //v8itf
   Node* value = node->InputAt(0);
   return ChangeInt32ToSmi(value);
 }
@@ -2131,7 +2131,7 @@ Node* EffectControlLinearizer::LowerStringConcat(Node* node) {
   return value;
 }
 
-Node* EffectControlLinearizer::LowerCheckedInt32Add(Node* node,
+Node* EffectControlLinearizer::LowerCheckedInt32Add(Node* node, //v8i: CheckedInt32Add is lowered
                                                     Node* frame_state) {
   Node* lhs = node->InputAt(0);
   Node* rhs = node->InputAt(1);
@@ -2705,7 +2705,7 @@ Node* EffectControlLinearizer::LowerCheckedFloat64ToInt64(Node* node,
                                     frame_state);
 }
 
-Node* EffectControlLinearizer::LowerCheckedTaggedSignedToInt32(
+Node* EffectControlLinearizer::LowerCheckedTaggedSignedToInt32(//v8itf
     Node* node, Node* frame_state) {
   Node* value = node->InputAt(0);
   const CheckParameters& params = CheckParametersOf(node->op());

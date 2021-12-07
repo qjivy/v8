@@ -273,7 +273,7 @@ Instruction* InstructionSelector::Emit(Instruction* instr) {
   return instr;
 }
 
-bool InstructionSelector::CanCover(Node* user, Node* node) const {
+bool InstructionSelector::CanCover(Node* user, Node* node) const { //v8i: user is input, node is consumer
   // 1. Both {user} and {node} must be in the same basic block.
   if (schedule()->block(node) != schedule()->block(user)) {
     return false;
@@ -1235,6 +1235,7 @@ void InstructionSelector::VisitBlock(BasicBlock* block) {
   // Visit code in reverse control flow order, because architecture-specific
   // matching may cover more than one node at a time.
   for (auto node : base::Reversed(*block)) {
+     //node->Print();
     int current_node_end = current_num_instructions();
     // Skip nodes that are unused or already defined.
     if (IsUsed(node) && !IsDefined(node)) {
