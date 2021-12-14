@@ -727,6 +727,7 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate) {
 }
 
 Simulator::~Simulator() {
+  std::cout<<"icount: "<<icount_<<std::endl;
   GlobalMonitor::Get()->RemoveProcessor(&global_monitor_processor_);
   base::Free(stack_);
 }

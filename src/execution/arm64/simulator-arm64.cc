@@ -397,6 +397,7 @@ void Simulator::ResetState() {
 }
 
 Simulator::~Simulator() {
+  std::cout<<"icount: "<<icount<<std::endl;
   GlobalMonitor::Get()->RemoveProcessor(&global_monitor_processor_);
   delete[] reinterpret_cast<byte*>(stack_);
   delete disassembler_decoder_;

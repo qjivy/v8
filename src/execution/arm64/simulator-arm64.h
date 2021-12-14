@@ -768,6 +768,7 @@ class Simulator : public DecoderVisitor, public SimulatorBase {
   Instruction* pc() { return pc_; }
 
   void increment_pc() {
+    icount++;
     if (!pc_modified_) {
       pc_ = pc_->following();
     }
@@ -2320,6 +2321,7 @@ class Simulator : public DecoderVisitor, public SimulatorBase {
   static const size_t stack_protection_size_ = KB;
   size_t stack_size_;
   uintptr_t stack_limit_;
+  uint64_t icount=0;
 
   Decoder<DispatchingDecoderVisitor>* decoder_;
   Decoder<DispatchingDecoderVisitor>* disassembler_decoder_;
