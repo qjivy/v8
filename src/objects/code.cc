@@ -505,11 +505,12 @@ void Code::Disassemble(const char* name, std::ostream& os, Isolate* isolate,
   }
   if ((name != nullptr) && (name[0] != '\0')) {
     os << "name = " << name << "\n";
+    os << "name = " << name ;
   }
   if (CodeKindIsOptimizedJSFunction(kind()) && kind() != CodeKind::BASELINE) {
     os << "stack_slots = " << stack_slots() << "\n";
   }
-  os << "compiler = "
+  os << " compiler = "
      << (is_turbofanned()
              ? "turbofan"
              : kind() == CodeKind::BASELINE ? "baseline" : "unknown")
@@ -526,7 +527,7 @@ void Code::Disassemble(const char* name, std::ostream& os, Isolate* isolate,
 
   {
     int code_size = InstructionSize();
-    os << "Instructions (size = " << code_size << ")\n";
+    os << " size = " << code_size << "\n";
     DisassembleCodeRange(isolate, os, *this, InstructionStart(), code_size,
                          current_pc);
 
@@ -543,7 +544,6 @@ void Code::Disassemble(const char* name, std::ostream& os, Isolate* isolate,
     }
   }
   os << "\n";
-
   // TODO(cbruni): add support for baseline code.
   if (kind() != CodeKind::BASELINE) {
     {

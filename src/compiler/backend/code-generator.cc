@@ -333,7 +333,7 @@ void CodeGenerator::AssembleCode() {
     unwinding_info_writer_.BeginInstructionBlock(tasm()->pc_offset(), block);
     if (FLAG_code_comments) {
       std::ostringstream buffer;
-      buffer << "-- B" << block->rpo_number().ToInt() << " start";
+      buffer << "-- B" << block->rpo_number().ToInt() << " start: s@"<<block->code_start()<<" e@"<<block->code_end();
       if (block->IsDeferred()) buffer << " (deferred)";
       if (!block->needs_frame()) buffer << " (no frame)";
       if (block->must_construct_frame()) buffer << " (construct frame)";
