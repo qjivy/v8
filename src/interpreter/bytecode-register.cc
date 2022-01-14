@@ -120,7 +120,7 @@ bool Register::AreContiguous(Register reg1, Register reg2, Register reg3,
   return true;
 }
 
-std::string Register::ToString(int parameter_count) const {
+std::string Register::ToString(int parameter_count) const { //v8i: here print bytecode's registers
   if (is_current_context()) {
     return std::string("<context>");
   } else if (is_function_closure()) {

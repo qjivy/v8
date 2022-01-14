@@ -1325,9 +1325,11 @@ struct GraphBuilderPhase {
   void Run(PipelineData* data, Zone* temp_zone) {
     BytecodeGraphBuilderFlags flags;
     if (data->info()->analyze_environment_liveness()) {
+      std::cout<<"pipeline data analyze_environment_liveness" <<std::endl;
       flags |= BytecodeGraphBuilderFlag::kAnalyzeEnvironmentLiveness;
     }
     if (data->info()->bailout_on_uninitialized()) {
+      std::cout<<"pipeline bailout_on_uninitialized" <<std::endl;
       flags |= BytecodeGraphBuilderFlag::kBailoutOnUninitialized;
     }
 
@@ -2668,6 +2670,7 @@ void PipelineImpl::InitializeHeapBroker() {
 }
 
 bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
+  std::cout<<"v8i pipeline CreateGraph"<<std::endl;
   PipelineData* data = this->data_;
   UnparkedScopeIfNeeded unparked_scope(data->broker());
 

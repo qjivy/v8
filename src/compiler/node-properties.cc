@@ -203,6 +203,7 @@ void NodeProperties::ReplaceUses(Node* node, Node* value, Node* effect,
 
 // static
 void NodeProperties::ChangeOp(Node* node, const Operator* new_op) {
+  std::cout<<"in ChangeOp id: "<<node->id()<<" old: "<<node->op()->mnemonic()<<" new: "<<new_op->mnemonic()<<std::endl;
   node->set_op(new_op);
   Verifier::VerifyNode(node);
 }

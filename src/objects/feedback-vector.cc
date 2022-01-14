@@ -1304,6 +1304,8 @@ IcCheckType FeedbackNexus::GetKeyType() const {
 BinaryOperationHint FeedbackNexus::GetBinaryOperationFeedback() const {
   DCHECK_EQ(kind(), FeedbackSlotKind::kBinaryOp);
   int feedback = GetFeedback().ToSmi().value();
+    std::cout<<"FeedbackNexus::GetBinaryOperationFeedback: "<<feedback<<std::endl;
+    std::cout<<"BinaryOperationHintFromFeedback "<<BinaryOperationHintFromFeedback(feedback)<<std::endl;
   return BinaryOperationHintFromFeedback(feedback);
 }
 

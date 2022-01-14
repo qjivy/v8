@@ -100,7 +100,7 @@ void GraphReducer::ReduceGraph() { ReduceNode(graph()->end()); }
 Reduction GraphReducer::Reduce(Node* const node) {
   auto skip = reducers_.end(); //v8i: here iter from every Reducer
   for (auto i = reducers_.begin(); i != reducers_.end();) {
-     StdoutStream{} <<"Reduce #"<<*node<<" with reducer "<<(*i)->reducer_name() << std::endl;
+//     StdoutStream{} <<"Reduce #"<<*node<<" with reducer "<<(*i)->reducer_name() << std::endl;
     if (i != skip) {
       tick_counter_->TickAndMaybeEnterSafepoint();
       Reduction reduction = (*i)->Reduce(node, observe_node_manager_); //v8i reduce by each reducer
