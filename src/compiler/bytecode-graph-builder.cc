@@ -129,7 +129,7 @@ class BytecodeGraphBuilder {
   }
 
   template <class... Args>
-  Node* NewNode(const Operator* op, Node* n0, Args... nodes) {
+  Node* NewNode(const Operator* op, Node* n0, Args... nodes) {//v8i: BGB NewNode
     Node* buffer[] = {n0, nodes...};
     return MakeNode(op, arraysize(buffer), buffer);
   }
@@ -3582,7 +3582,7 @@ void BytecodeGraphBuilder::BuildReturn(const BytecodeLivenessState* liveness) {
   BuildUpdateInterruptBudget(-bytecode_iterator().current_offset());
   Node* pop_node = jsgraph()->ZeroConstant(); //v8i: return zero
   Node* control =
-      NewNode(common()->Return(), pop_node, environment()->LookupAccumulator());
+      NewNode(common()->Return(), pop_node, environment()->LookupAccumulator()); //v8i: in BGB BuildReturn
   MergeControlToLeaveFunction(control);
 }
 
@@ -4358,7 +4358,7 @@ Node* BytecodeGraphBuilder::MakeNode(const Operator* op, int value_input_count,
     if (has_control) {
       *current_input++ = environment()->GetControlDependency();
     }
-    result = graph()->NewNode(op, input_count_with_deps, buffer, incomplete);
+    result = graph()->NewNode(op, input_count_with_deps, buffer, incomplete); //v8i: BGB final new a node go here
     // Update the current control dependency for control-producing nodes.
     if (result->op()->ControlOutputCount() > 0) {
       environment()->UpdateControlDependency(result);

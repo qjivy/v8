@@ -129,9 +129,9 @@ Node* Node::NewImpl(Zone* zone, NodeId id, const Operator* op, int input_count,
   return node;
 }
 
-Node* Node::New(Zone* zone, NodeId id, const Operator* op, int input_count,
+Node* Node::New(Zone* zone, NodeId id, const Operator* op, int input_count, //v8i: New Node
                 Node* const* inputs, bool has_extensible_inputs) {
-  return NewImpl(zone, id, op, input_count, inputs, has_extensible_inputs);
+  return NewImpl(zone, id, op, input_count, inputs, has_extensible_inputs);//v8i: godo NewImpl final
 }
 
 Node* Node::Clone(Zone* zone, NodeId id, const Node* node) {

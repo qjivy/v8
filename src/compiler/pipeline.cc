@@ -2586,7 +2586,7 @@ CompilationJob::Status WasmHeapStubCompilationJob::ExecuteJobImpl(
   }
   std::cout<<"QQ Execute WasmHeapStubCompilationJob "<<info_.GetDebugName().get()<<std::endl;
   if (info_.trace_turbo_graph()) {  // Simple textual RPO.
-    StdoutStream{} << "-- wasm stub " << CodeKindToString(info_.code_kind())
+    StdoutStream{} << "-- wasm heap stub " << CodeKindToString(info_.code_kind())
                    << " graph -- " << std::endl
                    << AsRPO(*data_.graph());
   }
@@ -3141,7 +3141,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
   }
 
   if (info.trace_turbo_graph()) {  // Simple textual RPO.
-    StdoutStream{} << "-- wasm stub " << CodeKindToString(kind) << " graph -- "
+    StdoutStream{} << "-- wasm native stub " << CodeKindToString(kind) << " graph -- "
                    << std::endl
                    << AsRPO(*graph);
   }
