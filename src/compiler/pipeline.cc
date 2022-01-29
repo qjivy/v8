@@ -1350,6 +1350,7 @@ struct InliningPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(Inlining)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"Inlining Phase"<<std::endl;
     OptimizedCompilationInfo* info = data->info();
     GraphReducer graph_reducer(temp_zone, data->graph(), &info->tick_counter(),
                                data->broker(), data->jsgraph()->Dead(),
@@ -1404,7 +1405,7 @@ struct InliningPhase {
     if (data->info()->inlining()) {
       AddReducer(data, &graph_reducer, &inlining);
     }
-    graph_reducer.ReduceGraph();
+    graph_reducer.ReduceGraph(); //qj: the third node  
     info->set_inlined_bytecode_size(inlining.total_inlined_bytecode_size());
 
     // Skip the "wasm-inlining" phase if there are no Wasm functions calls.
@@ -1508,6 +1509,7 @@ struct HeapBrokerInitializationPhase {
   DECL_MAIN_THREAD_PIPELINE_PHASE_CONSTANTS(HeapBrokerInitialization)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"HeapBrokerInitializationPhase"<<std::endl;
     data->broker()->InitializeAndStartSerializing();
   }
 };
@@ -1516,6 +1518,7 @@ struct CopyMetadataForConcurrentCompilePhase {
   DECL_MAIN_THREAD_PIPELINE_PHASE_CONSTANTS(SerializeMetadata)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+     std::cout<<"CopyMetadataForConcurrentCompilePhase"<<std::endl;
     GraphReducer graph_reducer(
         temp_zone, data->graph(), &data->info()->tick_counter(), data->broker(),
         data->jsgraph()->Dead(), data->observe_node_manager());
@@ -2677,10 +2680,12 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
   data->BeginPhaseKind("V8.TFGraphCreation");
 
   Run<GraphBuilderPhase>();
+  std::cout<<"finish GraphBuilderPhase"<<std::endl;
   RunPrintAndVerify(GraphBuilderPhase::phase_name(), true);
 
   // Perform function context specialization and inlining (if enabled).
   Run<InliningPhase>();
+  std::cout<<"finish InliningPhase"<<std::endl;
   RunPrintAndVerify(InliningPhase::phase_name(), true);
 
   // Determine the Typer operation flags.
@@ -2689,11 +2694,13 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
         MakeRef(data->broker(), info()->shared_info());
     if (is_sloppy(shared_info.language_mode()) &&
         shared_info.IsUserJavaScript()) {
+       std::cout<<"AddTyperFlag"<<std::endl;
       // Sloppy mode functions always have an Object for this.
       data->AddTyperFlag(Typer::kThisIsReceiver);
     }
     if (IsClassConstructor(shared_info.kind())) {
       // Class constructors cannot be [[Call]]ed.
+       std::cout<<"IsClassConstructor"<<std::endl;
       data->AddTyperFlag(Typer::kNewTargetIsReceiver);
     }
   }
@@ -2701,6 +2708,7 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
   // Run the type-sensitive lowerings and optimizations on the graph.
   {
     if (!data->broker()->is_concurrent_inlining()) {
+       std::cout<<"not concurrent_inlining"<<std::endl;
       Run<HeapBrokerInitializationPhase>();
       Run<CopyMetadataForConcurrentCompilePhase>();
       data->broker()->StopSerializing();

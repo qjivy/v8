@@ -185,6 +185,7 @@ class JSSpeculativeBinopBuilder final {
   }
 
   Node* BuildSpeculativeOperation(const Operator* op) {
+   std::cout<<"in BGB: BuildSpeculativeOperation"<<std::endl;
     DCHECK_EQ(2, op->ValueInputCount());
     DCHECK_EQ(1, op->EffectInputCount());
     DCHECK_EQ(1, op->ControlInputCount());
@@ -200,6 +201,7 @@ class JSSpeculativeBinopBuilder final {
     if (GetBinaryNumberOperationHint(&hint)) {
       const Operator* op = SpeculativeNumberOp(hint); //qj: here return SpeculativeSafeIntegerAdd
       Node* node = BuildSpeculativeOperation(op); //qj: final build it
+      std::cout<<"end TryBuildNumberBinop"<<std::endl;
       return node;
     }
     return nullptr;
@@ -399,6 +401,7 @@ JSTypeHintLowering::LoweringResult JSTypeHintLowering::ReduceBinaryOperation(
         std::cout<<"in BGB: TryBuildSoftDeopt has not null return "<<std::endl;
         return LoweringResult::Exit(node);
       }
+        std::cout<<"in BGB: JSSpeculativeBinopBuilder "<<std::endl;
       JSSpeculativeBinopBuilder b(this, op, left, right, effect, control, slot); //v8i: qj here into here all operands are go along with the constructor
       if (Node* node = b.TryBuildNumberBinop()) {
         std::cout<<"v8i: here return LoweringResult::SideEffectFree"<<std::endl;

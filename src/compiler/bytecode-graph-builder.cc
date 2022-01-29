@@ -194,7 +194,10 @@ class BytecodeGraphBuilder {
   // operation and at the current bytecode offset.
   void PrepareFrameState(Node* node, OutputFrameStateCombine combine) {
   std::cout<<"in BGB: PrepareFrameState1 node:"<<node->id()<<" :"<<node->op()->mnemonic()<<std::endl;
-    if (!OperatorProperties::HasFrameStateInput(node->op())) return;
+    if (!OperatorProperties::HasFrameStateInput(node->op())) {
+ std::cout<<"has no framestateinput"<<std::endl;  
+   return;
+    }
     const int offset = bytecode_iterator().current_offset();
     return PrepareFrameState(node, combine, BytecodeOffset(offset),
                              bytecode_analysis().GetOutLivenessFor(offset));
@@ -209,7 +212,7 @@ class BytecodeGraphBuilder {
     DCHECK_EQ(bytecode_iterator().current_offset(), 0);
     DCHECK(OperatorProperties::HasFrameStateInput(node->op()));
     DCHECK(node->opcode() == IrOpcode::kJSStackCheck);
-    return PrepareFrameState(node, OutputFrameStateCombine::Ignore(),
+    return PrepareFrameState(node, OutputFrameStateCombine::Ignore(), //qj: here directly go to PrepareFrameState2
                              BytecodeOffset(kFunctionEntryBytecodeOffset),
                              bytecode_analysis().GetInLivenessFor(0));
   }
@@ -729,8 +732,10 @@ BytecodeGraphBuilder::Environment::Environment(
 int BytecodeGraphBuilder::Environment::RegisterToValuesIndex(
     interpreter::Register the_register) const {
   if (the_register.is_parameter()) {
+     std::cout<<"in RegisterToValuesIndex is_parameter is true index:"<<the_register.ToParameterIndex(parameter_count())<<std::endl;
     return the_register.ToParameterIndex(parameter_count());
   } else {
+    std::cout<<"in RegisterToValuesIndex is_parameter is false it's index:"<<the_register.index()<<" register_base: "<<register_base()<<std::endl;
     return the_register.index() + register_base();
   }
 }
@@ -1000,6 +1005,7 @@ void BytecodeGraphBuilder::Environment::UpdateStateValues(Node** state_values,
     const Operator* op = common()->StateValues(count, SparseInputMask::Dense());
     std::cout<<"v8i in BGB: NewNode for StateValues"<<std::endl;
     (*state_values) = graph()->NewNode(op, count, values);
+    std::cout<<"v8i in BGB: StateValuesUpdate end"<<std::endl;
   }
 }
 
@@ -1022,11 +1028,13 @@ Node* BytecodeGraphBuilder::Environment::Checkpoint(
     UpdateStateValues(&parameters_state_values_, &values()->at(0),
                       parameter_count());
   }
-
+std::cout<<"register state value"<<std::endl;
   Node* registers_state_values =
       GetStateValuesFromCache(&values()->at(register_base()), register_count(),
                               liveness ? &liveness->bit_vector() : nullptr, 0);
 
+
+std::cout<<"accumulator_state_value"<<std::endl;
   bool accumulator_is_live = !liveness || liveness->AccumulatorIsLive();
   Node* accumulator_state_value =
       accumulator_is_live && combine != OutputFrameStateCombine::PokeAt(0)
@@ -1040,6 +1048,7 @@ Node* BytecodeGraphBuilder::Environment::Checkpoint(
       op, parameters_state_values_, registers_state_values,
       accumulator_state_value, Context(), builder()->GetFunctionClosure(),
       builder()->graph()->start()); //qj: from env get all the param to build statevalue, get all the register to build state, and get the acc, context, closure and start Node.
+  std::cout<<"end checkpoint"<<std::endl;
   return result;
 }
 
@@ -1106,6 +1115,7 @@ BytecodeGraphBuilder::BytecodeGraphBuilder( //v8i: qqcon
 Node* BytecodeGraphBuilder::GetFunctionClosure() {
   if (!function_closure_.is_set()) {
     int index = Linkage::kJSCallClosureParamIndex;
+    std::cout<<"in BGB: GetFunctionClosure"<<std::endl;
     Node* node = GetParameter(index, "%closure");
     function_closure_.set(node);
   }
@@ -1200,23 +1210,23 @@ void BytecodeGraphBuilder::CreateGraph() {
   int start_output_arity = StartNode::OutputArityForFormalParameterCount(
       bytecode_array().parameter_count());
   std::cout<<"v8i in BGB start_output_arity:  "<<start_output_arity<<std::endl;
-  graph()->SetStart(graph()->NewNode(common()->Start(start_output_arity))); //qj first node
+  graph()->SetStart(graph()->NewNode(common()->Start(start_output_arity))); //qj node0
   std::cout<<"v8i end new start"<<std::endl;
   std::cout<<"v8i env new"<<std::endl;
   Environment env(this, bytecode_array().register_count(),
                   bytecode_array().parameter_count(),
                   bytecode_array().incoming_new_target_or_generator_register(),
-                  graph()->start());//qj 2 3 4 5 node
+                  graph()->start());//qj node1 2 3 4
   set_environment(&env);
 
   std::cout<<"v8i CreateFeedbackCellNode"<<std::endl;
-  CreateFeedbackCellNode();
+  CreateFeedbackCellNode(); //qj this code not tier up no node
   std::cout<<"v8i CreateFeedbackVectorNode"<<std::endl;
-  CreateFeedbackVectorNode(); //qj 6 node
+  CreateFeedbackVectorNode(); //qj node 5
   std::cout<<"v8i MaybeBuildTierUpCheck"<<std::endl;
   MaybeBuildTierUpCheck();
   std::cout<<"v8i CreateNativeContextNode"<<std::endl;
-  CreateNativeContextNode();//qj 7 node
+  CreateNativeContextNode();//qj node 6 
 
   std::cout<<"v8i VisitBytecodes"<<std::endl;
   VisitBytecodes();
@@ -1228,6 +1238,7 @@ void BytecodeGraphBuilder::CreateGraph() {
   std::cout<<"v8i New End node"<<std::endl;
   Node* end = graph()->NewNode(common()->End(input_count), input_count, inputs);
   graph()->SetEnd(end);
+  std::cout<<"v8i CreatGraph end"<<std::endl;
 }
 
 void BytecodeGraphBuilder::PrepareEagerCheckpoint() {
@@ -1390,7 +1401,7 @@ void BytecodeGraphBuilder::BuildFunctionEntryStackCheck() {
   if (!skip_first_stack_check()) {
     DCHECK(exception_handlers_.empty());
     Node* node =
-        NewNode(javascript()->StackCheck(StackCheckKind::kJSFunctionEntry));//qj node8a
+        NewNode(javascript()->StackCheck(StackCheckKind::kJSFunctionEntry));//qj node7 8 
    std::cout<<"PrepareFrameStateForFunctionEntryStackCheck"<<std::endl;
     PrepareFrameStateForFunctionEntryStackCheck(node); //qj node10
   }
@@ -1536,7 +1547,7 @@ void BytecodeGraphBuilder::VisitBytecodes() {
     std::cout<<"v8i in BCB visit single bytecode"<<std::endl;
     VisitSingleBytecode();
   }
-
+  std::cout<<"v8i VisitBytecodes finish"<<std::endl;
   DCHECK(exception_handlers_.empty());
 }
 
@@ -1585,7 +1596,9 @@ void BytecodeGraphBuilder::VisitLdar() {
   std::cout<<"in BGB BytecodeGraphBuilder::VisitLdar."<<std::endl;
   Node* value =
       environment()->LookupRegister(bytecode_iterator().GetRegisterOperand(0)); //v8i: Ldar find the Ldar a0 's a0 register
+  std::cout<<"in VisitLdar BindAccumulator"<<std::endl;
   environment()->BindAccumulator(value); //qj: Then bind it to the acc
+  std::cout<<"in VisitLdar BindAccumulator end"<<std::endl;
 }
 
 void BytecodeGraphBuilder::VisitStar() {
@@ -3101,6 +3114,7 @@ void BytecodeGraphBuilder::BuildBinaryOpWithImmediate(const Operator* op) {
   DCHECK(JSOperator::IsBinaryWithFeedback(op->opcode()));
   std::cout<<"in BGB: BuildBinaryOpWithImmediate to PrepareEagerCheckpoint"<<std::endl;
   PrepareEagerCheckpoint();
+  std::cout<<"in BGB: BuildBinaryOpWithImmediate to PrepareEagerCheckpoint end "<<std::endl;
   Node* left = environment()->LookupAccumulator();
   Node* right = jsgraph()->Constant(bytecode_iterator().GetImmediateOperand(0));
 
@@ -3129,7 +3143,7 @@ void BytecodeGraphBuilder::BuildBinaryOpWithImmediate(const Operator* op) {
 
 void BytecodeGraphBuilder::VisitAddSmi() {
   std::cout<<"in BGB BytecodeGraphBuilder::VisitAddSmi."<<std::endl;
-  std::cout<<"in BGB: VisitAddSmi CreateFeedbackSource"<<std::endl;
+  std::cout<<"in BGB: VisitAddSmi CreateFeedbackSource slot:"<<bytecode_iterator().GetSlotOperand(kBinaryOperationSmiHintIndex)<<std::endl;
   FeedbackSource feedback = CreateFeedbackSource(
       bytecode_iterator().GetSlotOperand(kBinaryOperationSmiHintIndex));
   std::cout<<"in BGB: BuildBinaryOpWithImmediate"<<std::endl;
@@ -4262,6 +4276,7 @@ void BytecodeGraphBuilder::ApplyEarlyReduction(
   if (reduction.IsExit()) {
     MergeControlToLeaveFunction(reduction.control());
   } else if (reduction.IsSideEffectFree()) {
+  std::cout<<"in BGB: ApplyEarlyReduction reduction.IsSideEffectFree"<<std::endl;
     environment()->UpdateEffectDependency(reduction.effect());
     environment()->UpdateControlDependency(reduction.control());
   } else {
@@ -4337,6 +4352,7 @@ Node* BytecodeGraphBuilder::MakeNode(const Operator* op, int value_input_count,
     if (has_control) ++input_count_with_deps;
     if (has_effect) ++input_count_with_deps;
     Node** buffer = EnsureInputBufferSize(input_count_with_deps);
+    std::cout<<"in MakeNode value_input_count: "<<value_input_count<<" input_count_with_deps: "<<input_count_with_deps<<std::endl;
     if (value_input_count > 0) {
       memcpy(buffer, value_inputs, kSystemPointerSize * value_input_count);
     }
@@ -4350,6 +4366,7 @@ Node* BytecodeGraphBuilder::MakeNode(const Operator* op, int value_input_count,
       // The frame state will be inserted later. Here we misuse the {Dead} node
       // as a sentinel to be later overwritten with the real frame state by the
       // calls to {PrepareFrameState} within individual visitor methods.
+       std::cout<<"in MakeNode a dead frame state"<<std::endl;
       *current_input++ = jsgraph()->Dead();
     }
     if (has_effect) {
@@ -4358,7 +4375,9 @@ Node* BytecodeGraphBuilder::MakeNode(const Operator* op, int value_input_count,
     if (has_control) {
       *current_input++ = environment()->GetControlDependency();
     }
+std::cout<<"---start to NewNode"<<std::endl;
     result = graph()->NewNode(op, input_count_with_deps, buffer, incomplete); //v8i: BGB final new a node go here
+std::cout<<"---end to NewNode"<<std::endl;
     // Update the current control dependency for control-producing nodes.
     if (result->op()->ControlOutputCount() > 0) {
       environment()->UpdateControlDependency(result);
@@ -4500,6 +4519,7 @@ void BuildGraphFromBytecode(JSHeapBroker* broker, Zone* local_zone, //qj: enter
       source_positions, inlining_id, code_kind, flags, tick_counter,
       observe_node_info);
   builder.CreateGraph();
+  std::cout<<"END CG in BGB"<<std::endl;
 }
 
 }  // namespace compiler
