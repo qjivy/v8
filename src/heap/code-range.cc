@@ -98,6 +98,7 @@ size_t CodeRange::GetWritableReservedAreaSize() {
 
 bool CodeRange::InitReservation(v8::PageAllocator* page_allocator,
                                 size_t requested) {
+  std::cout<<"CodeRange::InitReservation, size: "<<requested<<" kMinimumCodeRangeSize: "<<kMinimumCodeRangeSize<<" kMaximalCodeRangeSize: "<<kMaximalCodeRangeSize<<std::endl;
   DCHECK_NE(requested, 0);
   if (V8_EXTERNAL_CODE_SPACE_BOOL) {
     page_allocator = GetPlatformPageAllocator();
@@ -132,7 +133,10 @@ bool CodeRange::InitReservation(v8::PageAllocator* page_allocator,
   params.requested_start_hint =
       GetCodeRangeAddressHint()->GetAddressHint(requested, allocate_page_size);
 
-  if (!VirtualMemoryCage::InitReservation(params)) return false;
+  if (!VirtualMemoryCage::InitReservation(params)) {
+    std::cout<<"VirtualMemoryCage::InitReservation return"<<std::endl;    
+    return false;
+}
 
   if (V8_EXTERNAL_CODE_SPACE_BOOL) {
     // Ensure that the code range does not cross the 4Gb boundary and thus

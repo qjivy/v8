@@ -122,10 +122,12 @@ class SnapshotImpl : public AllStatic {
 SnapshotData MaybeDecompress(Isolate* isolate,
                              const base::Vector<const byte>& snapshot_data) {
 #ifdef V8_SNAPSHOT_COMPRESSION
+  std::cout<<"V8_SNAPSHOT_COMPRESSION true"<<std::endl;
   TRACE_EVENT0("v8", "V8.SnapshotDecompress");
   RCS_SCOPE(isolate, RuntimeCallCounterId::kSnapshotDecompress);
   return SnapshotCompression::Decompress(snapshot_data);
 #else
+  std::cout<<"V8_SNAPSHOT_COMPRESSION false"<<std::endl;
   return SnapshotData(snapshot_data);
 #endif
 }
@@ -184,6 +186,9 @@ bool Snapshot::Initialize(Isolate* isolate) {
   bool success = isolate->InitWithSnapshot(
       &startup_snapshot_data, &read_only_snapshot_data,
       &shared_heap_snapshot_data, ExtractRehashability(blob));
+  std::cout<<"StartUP data:"<<&startup_snapshot_data<<" "<<startup_data.length()<<std::endl;
+  std::cout<<"read-only data:"<<&read_only_data<<" "<<read_only_data.length()<<std::endl;
+  std::cout<<"share heap data:"<<&shared_heap_data<<" "<<shared_heap_data.length()<<std::endl;
   if (FLAG_profile_deserialization) {
     double ms = timer.Elapsed().InMillisecondsF();
     int bytes = startup_data.length();

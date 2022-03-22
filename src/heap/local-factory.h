@@ -30,7 +30,7 @@ class V8_EXPORT_PRIVATE LocalFactory : public FactoryBase<LocalFactory> {
  public:
   explicit LocalFactory(Isolate* isolate);
 
-  ReadOnlyRoots read_only_roots() const { return roots_; }
+  ReadOnlyRoots read_only_roots() const { std::cout<<"RO-roots"<<std::endl;return roots_; }
 
 #define ROOT_ACCESSOR(Type, name, CamelName) inline Handle<Type> name();
   READ_ONLY_ROOT_LIST(ROOT_ACCESSOR)
