@@ -312,13 +312,14 @@ bool Builtins::IsIsolateIndependentBuiltin(const Code code) {
 void Builtins::InitializeIsolateDataTables(Isolate* isolate) {
   EmbeddedData embedded_data = EmbeddedData::FromBlob(isolate);
   IsolateData* isolate_data = isolate->isolate_data();
-
+  std::cout<<"InitializeIsolateDataTables: Builtins count: "<<ToInt(Builtins::kLast)<<" BuiltinsT0 count: "<<ToInt(Builtins::kLastTier0)<<std::endl;
   // The entry table.
   for (Builtin i = Builtins::kFirst; i <= Builtins::kLast; ++i) {
     DCHECK(Builtins::IsBuiltinId(isolate->builtins()->code(i).builtin_id()));
     DCHECK(isolate->builtins()->code(i).is_off_heap_trampoline());
     isolate_data->builtin_entry_table()[ToInt(i)] =
         embedded_data.InstructionStartOfBuiltin(i);
+   std::cout<<"bt["<<ToInt(i)<<"]: "<<embedded_data.InstructionStartOfBuiltin(i)<<std::endl;
   }
 
   // T0 tables.
@@ -326,7 +327,9 @@ void Builtins::InitializeIsolateDataTables(Isolate* isolate) {
     const int ii = ToInt(i);
     isolate_data->builtin_tier0_entry_table()[ii] =
         isolate_data->builtin_entry_table()[ii];
+   std::cout<<"btt0et["<<ii<<"]: "<<isolate_data->builtin_tier0_entry_table()[ii]<<std::endl;
     isolate_data->builtin_tier0_table()[ii] = isolate_data->builtin_table()[ii];
+   std::cout<<"btt0["<<ii<<"]: "<<isolate_data->builtin_table()[ii]<<std::endl;
   }
 }
 
