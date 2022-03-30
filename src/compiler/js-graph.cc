@@ -98,6 +98,7 @@ Node* JSGraph::HeapConstant(Handle<HeapObject> value) {
 }
 
 void JSGraph::GetCachedNodes(NodeVector* nodes) {
+  std::cout<<"in JSGraph GetCachedNodes"<<std::endl;
   cache_.GetCachedNodes(nodes);
 #define DO_CACHED_FIELD(name) \
   if (name##_) nodes->push_back(name##_);

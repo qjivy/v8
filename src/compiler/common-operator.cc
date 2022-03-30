@@ -890,7 +890,7 @@ const Operator* CommonOperatorBuilder::End(size_t control_input_count) {
       0, 0, control_input_count, 0, 0, 0);  // counts
 }
 
-const Operator* CommonOperatorBuilder::Return(int value_input_count) {
+const Operator* CommonOperatorBuilder::Return(int value_input_count) { //v8i: return OP
   switch (value_input_count) {
 #define CACHED_RETURN(input_count) \
   case input_count:                \

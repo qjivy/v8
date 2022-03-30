@@ -96,12 +96,14 @@ void GraphReducer::ReduceNode(Node* node) {
 
 void GraphReducer::ReduceGraph() { ReduceNode(graph()->end()); }
 
-
 Reduction GraphReducer::Reduce(Node* const node) {
+static int countq=0;
+int countqq=0;
   auto skip = reducers_.end(); //v8i: here iter from every Reducer
   for (auto i = reducers_.begin(); i != reducers_.end();) {
-     StdoutStream{} <<"Reduce #"<<*node<<" with reducer "<<(*i)->reducer_name() << std::endl;
+    // StdoutStream{} <<countqq<<" : "<<countq++<<" Iter in reducer Reduce #"<<node->id()<<" "<<node->op()->mnemonic()<<" with reducer "<<(*i)->reducer_name() << std::endl;
     if (i != skip) {
+     StdoutStream{} <<" Iter in reducer Reduce #"<<node->id()<<" "<<node->op()->mnemonic()<<" with reducer "<<(*i)->reducer_name() << std::endl;
       tick_counter_->TickAndMaybeEnterSafepoint();
       Reduction reduction = (*i)->Reduce(node, observe_node_manager_); //v8i reduce by each reducer
       if (!reduction.Changed()) {
@@ -135,6 +137,7 @@ Reduction GraphReducer::Reduce(Node* const node) {
         return reduction;
       }
     }
+   // std::cout<<"++i"<<std::endl;
     ++i;
   }
   if (skip == reducers_.end()) {
@@ -176,7 +179,8 @@ void GraphReducer::ReduceTop() {
   NodeId const max_id = static_cast<NodeId>(graph()->NodeCount() - 1);
 
   // All inputs should be visited or on stack. Apply reductions to node.
-  Reduction reduction = Reduce(node); //v8i reduce
+  std::cout<<"Reduce()"<<std::endl;
+  Reduction reduction = Reduce(node); //v8i reduce dh
 
   // If there was no reduction, pop {node} and continue.
   if (!reduction.Changed()) return Pop();

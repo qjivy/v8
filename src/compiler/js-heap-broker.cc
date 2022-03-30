@@ -450,7 +450,7 @@ bool JSHeapBroker::HasFeedback(FeedbackSource const& source) const {
 ProcessedFeedback const& JSHeapBroker::GetFeedback(
     FeedbackSource const& source) const {
   DCHECK(source.IsValid());
-  auto it = feedback_.find(source);
+  auto it = feedback_.find(source); //qj: feedback_ is a map which map source to a id
   CHECK_NE(it, feedback_.end());
   return *it->second;
 }
@@ -637,11 +637,11 @@ ProcessedFeedback const& JSHeapBroker::ReadFeedbackForGlobalAccess(
       nexus.kind());
 }
 
-ProcessedFeedback const& JSHeapBroker::ReadFeedbackForBinaryOperation(
+ProcessedFeedback const& JSHeapBroker::ReadFeedbackForBinaryOperation( //v8i: ReadFB
     FeedbackSource const& source) const {
   FeedbackNexus nexus(source.vector, source.slot, feedback_nexus_config());
   if (nexus.IsUninitialized()) return NewInsufficientFeedback(nexus.kind());
-  BinaryOperationHint hint = nexus.GetBinaryOperationFeedback();
+  BinaryOperationHint hint = nexus.GetBinaryOperationFeedback(); //v8i: here final
   DCHECK_NE(hint, BinaryOperationHint::kNone);  // Not uninitialized.
   return *zone()->New<BinaryOperationFeedback>(hint, nexus.kind());
 }
@@ -753,6 +753,7 @@ ProcessedFeedback const& JSHeapBroker::ReadFeedbackForCall(
 
 BinaryOperationHint JSHeapBroker::GetFeedbackForBinaryOperation(
     FeedbackSource const& source) {
+  std::cout<<"GetFeedbackForBinaryOperation3"<<std::endl;
   ProcessedFeedback const& feedback = ProcessFeedbackForBinaryOperation(source);
   return feedback.IsInsufficient() ? BinaryOperationHint::kNone
                                    : feedback.AsBinaryOperation().value();
@@ -799,7 +800,12 @@ ProcessedFeedback const& JSHeapBroker::GetFeedbackForTemplateObject(
 
 ProcessedFeedback const& JSHeapBroker::ProcessFeedbackForBinaryOperation(
     FeedbackSource const& source) {
-  if (HasFeedback(source)) return GetFeedback(source);
+  if (HasFeedback(source)) 
+{
+std::cout<<"v8i: JSHeapBroker::ProcessFeedbackForBinaryOperation HasFeedback true"<<std::endl;  
+return GetFeedback(source);
+}
+std::cout<<"v8i: JSHeapBroker::ProcessFeedbackForBinaryOperation ReadFB"<<std::endl;
   ProcessedFeedback const& feedback = ReadFeedbackForBinaryOperation(source);
   SetFeedback(source, &feedback);
   return feedback;

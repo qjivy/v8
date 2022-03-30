@@ -328,7 +328,10 @@ void Typer::Run(const NodeVector& roots,
   Visitor visitor(this, induction_vars);
   GraphReducer graph_reducer(zone(), graph(), tick_counter_, broker());
   graph_reducer.AddReducer(&visitor);
-  for (Node* const root : roots) graph_reducer.ReduceNode(root);
+  for (Node* const root : roots) {
+    std::cout<<"in Typer run root loop : "<<root->id()<<" nodeop: "<<root->op()->mnemonic()<<std::endl;
+    graph_reducer.ReduceNode(root);
+   }
   graph_reducer.ReduceGraph();
 
   if (induction_vars != nullptr) {
@@ -1193,7 +1196,7 @@ Type Typer::Visitor::JSExponentiateTyper(Type lhs, Type rhs, Typer* t) {
 }
 
 // JS unary operators.
-
+//qj2
 #define DEFINE_METHOD(Name)                       \
   Type Typer::Visitor::TypeJS##Name(Type input) { \
     return TypeUnaryOp(input, Name);              \

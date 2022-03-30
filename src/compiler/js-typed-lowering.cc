@@ -381,6 +381,7 @@ class JSBinopReduction final {
   }
 
   BinaryOperationHint GetBinaryOperationHint(Node* node) const {
+    std::cout<<"GetBinaryOperationHint"<<std::endl;
     const FeedbackParameter& p = FeedbackParameterOf(node->op());
     return lowering_->broker()->GetFeedbackForBinaryOperation(p.feedback());
   }

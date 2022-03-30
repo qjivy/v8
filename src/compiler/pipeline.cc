@@ -1198,6 +1198,7 @@ PipelineCompilationJob::Status PipelineCompilationJob::PrepareJobImpl( //v8itf: 
   pipeline_.InitializeHeapBroker(); //v8itf: StepA.1 Initialize the heap broker.
 
   if (!data_.broker()->is_concurrent_inlining()) {
+    std::cout<<"PrepareJobImpl CreateGraph"<<std::endl;
     if (!pipeline_.CreateGraph()) { //v8itf: StepA.2 Run the graph creation and initial optimization passes.
       CHECK(!isolate->has_pending_exception());
       return AbortOptimization(BailoutReason::kGraphBuildingFailed);
@@ -1222,11 +1223,12 @@ PipelineCompilationJob::Status PipelineCompilationJob::ExecuteJobImpl( //v8itf: 
                                         local_isolate);
 
   if (data_.broker()->is_concurrent_inlining()) {
+    std::cout<<"ExecuteJobImpl CreateGraph"<<std::endl;
     if (!pipeline_.CreateGraph()) { //v8itf: StepA.2 Run the graph creation and initial optimization passes.
       return AbortOptimization(BailoutReason::kGraphBuildingFailed);
     }
   }
-
+  std::cout<<"PipelineCompilationJob Finish CreateGraph"<<std::endl;
   // We selectively Unpark inside OptimizeGraph*.
   bool success;
   if (compilation_info_.code_kind() == CodeKind::TURBOPROP) {
@@ -1325,9 +1327,11 @@ struct GraphBuilderPhase {
   void Run(PipelineData* data, Zone* temp_zone) {
     BytecodeGraphBuilderFlags flags;
     if (data->info()->analyze_environment_liveness()) {
+      std::cout<<"pipeline data analyze_environment_liveness" <<std::endl;
       flags |= BytecodeGraphBuilderFlag::kAnalyzeEnvironmentLiveness;
     }
     if (data->info()->bailout_on_uninitialized()) {
+      std::cout<<"pipeline bailout_on_uninitialized" <<std::endl;
       flags |= BytecodeGraphBuilderFlag::kBailoutOnUninitialized;
     }
 
@@ -1348,6 +1352,7 @@ struct InliningPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(Inlining)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"Inlining Phase"<<std::endl;
     OptimizedCompilationInfo* info = data->info();
     GraphReducer graph_reducer(temp_zone, data->graph(), &info->tick_counter(),
                                data->broker(), data->jsgraph()->Dead(),
@@ -1402,7 +1407,7 @@ struct InliningPhase {
     if (data->info()->inlining()) {
       AddReducer(data, &graph_reducer, &inlining);
     }
-    graph_reducer.ReduceGraph();
+    graph_reducer.ReduceGraph(); //qj: the third node  
     info->set_inlined_bytecode_size(inlining.total_inlined_bytecode_size());
 
     // Skip the "wasm-inlining" phase if there are no Wasm functions calls.
@@ -1442,11 +1447,13 @@ struct EarlyGraphTrimmingPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(EarlyGraphTrimming)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+   std::cout<<"EarlyGraphTrimmingPhase Begin"<<std::endl;
     GraphTrimmer trimmer(temp_zone, data->graph());
     NodeVector roots(temp_zone);
     data->jsgraph()->GetCachedNodes(&roots);
     UnparkedScopeIfNeeded scope(data->broker(), FLAG_trace_turbo_trimming);
     trimmer.TrimGraph(roots.begin(), roots.end());
+   std::cout<<"EarlyGraphTrimmingPhase End"<<std::endl;
   }
 };
 
@@ -1454,13 +1461,14 @@ struct TyperPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(Typer)
 
   void Run(PipelineData* data, Zone* temp_zone, Typer* typer) {
+   std::cout<<"TyperPhase"<<std::endl;
     NodeVector roots(temp_zone);
     data->jsgraph()->GetCachedNodes(&roots);
 
     // Make sure we always type True and False. Needed for escape analysis.
     roots.push_back(data->jsgraph()->TrueConstant());
     roots.push_back(data->jsgraph()->FalseConstant());
-
+    std::cout<<" Finish True false"<<std::endl;
     LoopVariableOptimizer induction_vars(data->jsgraph()->graph(),
                                          data->common(), temp_zone);
     if (FLAG_turbo_loop_variable) induction_vars.Run();
@@ -1468,6 +1476,7 @@ struct TyperPhase {
     // The typer inspects heap objects, so we need to unpark the local heap.
     UnparkedScopeIfNeeded scope(data->broker());
     typer->Run(roots, &induction_vars);
+    std::cout<<"Finish TyperPhase"<<std::endl;
   }
 };
 
@@ -1506,6 +1515,7 @@ struct HeapBrokerInitializationPhase {
   DECL_MAIN_THREAD_PIPELINE_PHASE_CONSTANTS(HeapBrokerInitialization)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"HeapBrokerInitializationPhase"<<std::endl;
     data->broker()->InitializeAndStartSerializing();
   }
 };
@@ -1514,6 +1524,7 @@ struct CopyMetadataForConcurrentCompilePhase {
   DECL_MAIN_THREAD_PIPELINE_PHASE_CONSTANTS(SerializeMetadata)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+     std::cout<<"CopyMetadataForConcurrentCompilePhase"<<std::endl;
     GraphReducer graph_reducer(
         temp_zone, data->graph(), &data->info()->tick_counter(), data->broker(),
         data->jsgraph()->Dead(), data->observe_node_manager());
@@ -1532,6 +1543,7 @@ struct TypedLoweringPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(TypedLowering)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+     std::cout<<"TypedLoweringPhase"<<std::endl;
     GraphReducer graph_reducer(
         temp_zone, data->graph(), &data->info()->tick_counter(), data->broker(),
         data->jsgraph()->Dead(), data->observe_node_manager());
@@ -1569,6 +1581,7 @@ struct TypedLoweringPhase {
     UnparkedScopeIfNeeded scope(data->broker());
 
     graph_reducer.ReduceGraph();
+     std::cout<<"Finished TypedLoweringPhase"<<std::endl;
   }
 };
 
@@ -2584,7 +2597,7 @@ CompilationJob::Status WasmHeapStubCompilationJob::ExecuteJobImpl(
   }
   std::cout<<"QQ Execute WasmHeapStubCompilationJob "<<info_.GetDebugName().get()<<std::endl;
   if (info_.trace_turbo_graph()) {  // Simple textual RPO.
-    StdoutStream{} << "-- wasm stub " << CodeKindToString(info_.code_kind())
+    StdoutStream{} << "-- wasm heap stub " << CodeKindToString(info_.code_kind())
                    << " graph -- " << std::endl
                    << AsRPO(*data_.graph());
   }
@@ -2668,16 +2681,19 @@ void PipelineImpl::InitializeHeapBroker() {
 }
 
 bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
+  std::cout<<"v8i pipeline CreateGraph"<<std::endl;
   PipelineData* data = this->data_;
   UnparkedScopeIfNeeded unparked_scope(data->broker());
 
   data->BeginPhaseKind("V8.TFGraphCreation");
 
   Run<GraphBuilderPhase>();
+  std::cout<<"finish GraphBuilderPhase"<<std::endl;
   RunPrintAndVerify(GraphBuilderPhase::phase_name(), true);
 
   // Perform function context specialization and inlining (if enabled).
   Run<InliningPhase>();
+  std::cout<<"finish InliningPhase"<<std::endl;
   RunPrintAndVerify(InliningPhase::phase_name(), true);
 
   // Determine the Typer operation flags.
@@ -2686,11 +2702,13 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
         MakeRef(data->broker(), info()->shared_info());
     if (is_sloppy(shared_info.language_mode()) &&
         shared_info.IsUserJavaScript()) {
+       std::cout<<"AddTyperFlag for kThisIsReceiver"<<std::endl;
       // Sloppy mode functions always have an Object for this.
       data->AddTyperFlag(Typer::kThisIsReceiver);
     }
     if (IsClassConstructor(shared_info.kind())) {
       // Class constructors cannot be [[Call]]ed.
+       std::cout<<"AddTyperFlag for kNewTargetIsReceiver"<<std::endl;
       data->AddTyperFlag(Typer::kNewTargetIsReceiver);
     }
   }
@@ -2698,6 +2716,7 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
   // Run the type-sensitive lowerings and optimizations on the graph.
   {
     if (!data->broker()->is_concurrent_inlining()) {
+       std::cout<<"not concurrent_inlining"<<std::endl;
       Run<HeapBrokerInitializationPhase>();
       Run<CopyMetadataForConcurrentCompilePhase>();
       data->broker()->StopSerializing();
@@ -2705,13 +2724,13 @@ bool PipelineImpl::CreateGraph() { //v8itf: prepare is create
   }
 
   data->EndPhaseKind();
-
+   std::cout<<"Finish CreateGraph in pipelinie"<<std::endl;
   return true;
 }
 
 bool PipelineImpl::OptimizeGraph(Linkage* linkage) {//v8itf: StepB
   PipelineData* data = this->data_;
-
+  std::cout<<"PipelineCompilationJob : OptimizeGraph"<<std::endl;
   data->BeginPhaseKind("V8.TFLowering");
 
   // Trim the graph before typing to ensure all nodes are typed.
@@ -3138,7 +3157,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
   }
 
   if (info.trace_turbo_graph()) {  // Simple textual RPO.
-    StdoutStream{} << "-- wasm stub " << CodeKindToString(kind) << " graph -- "
+    StdoutStream{} << "-- wasm native stub " << CodeKindToString(kind) << " graph -- "
                    << std::endl
                    << AsRPO(*graph);
   }

@@ -30,8 +30,11 @@ class V8_EXPORT_PRIVATE GraphTrimmer final {
   // or any of the roots in the sequence [{begin},{end}[.
   template <typename ForwardIterator>
   void TrimGraph(ForwardIterator begin, ForwardIterator end) {
+    std::cout<<"TrimGraph from begin to end"<<std::endl;
+  //  std::cout<<"In TrimGraph begin: "<<*begin<<" end: "<<*end<<std::endl;
     while (begin != end) {
       Node* const node = *begin++;
+      std::cout<<"mark node: "<<node->id()<<" nodeop: "<<node->op()->mnemonic()<<std::endl;
       if (!node->IsDead()) MarkAsLive(node);
     }
     TrimGraph();

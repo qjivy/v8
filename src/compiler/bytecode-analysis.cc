@@ -80,7 +80,7 @@ ResumeJumpTarget ResumeJumpTarget::AtLoopHeader(int loop_header_offset,
 
 BytecodeAnalysis::BytecodeAnalysis(Handle<BytecodeArray> bytecode_array,
                                    Zone* zone, BytecodeOffset osr_bailout_id,
-                                   bool analyze_liveness)
+                                   bool analyze_liveness) //v8i before create graph
     : bytecode_array_(bytecode_array),
       zone_(zone),
       osr_bailout_id_(osr_bailout_id),
@@ -275,7 +275,7 @@ void UpdateLiveness(Bytecode bytecode, BytecodeLiveness const& liveness,
                     BytecodeLivenessState** next_bytecode_in_liveness,
                     const interpreter::BytecodeArrayIterator& iterator,
                     Handle<BytecodeArray> bytecode_array,
-                    const BytecodeLivenessMap& liveness_map) {
+                    const BytecodeLivenessMap& liveness_map) { //v8i for each bytecode update
   UpdateOutLiveness(bytecode, liveness.out, *next_bytecode_in_liveness,
                     iterator, bytecode_array, liveness_map);
   liveness.in->CopyFrom(*liveness.out);
@@ -322,7 +322,7 @@ void UpdateAssignments(Bytecode bytecode, BytecodeLoopAssignments* assignments,
 
 }  // namespace
 
-void BytecodeAnalysis::Analyze() {
+void BytecodeAnalysis::Analyze() { //v8i: important func
   loop_stack_.push({-1, nullptr});
 
   BytecodeLivenessState* next_bytecode_in_liveness = nullptr;

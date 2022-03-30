@@ -41,11 +41,13 @@ void LoopVariableOptimizer::Run() {
     queue.pop();
     queued.Set(node, false);
 
+    std::cout<<"in LoopVariableOptimizer node: "<<node->id()<<" nodeop: "<<node->op()->mnemonic()<<std::endl;
     DCHECK(!reduced_.Get(node));
     bool all_inputs_visited = true;
     int inputs_end = (node->opcode() == IrOpcode::kLoop)
                          ? kFirstBackedge
                          : node->op()->ControlInputCount();
+    std::cout<<"in LoopVariableOptimizer node: "<<node->id()<<" nodeop: "<<node->op()->mnemonic()<<" inputs_end: "<<inputs_end<<std::endl;
     for (int i = 0; i < inputs_end; i++) {
       if (!reduced_.Get(NodeProperties::GetControlInput(node, i))) {
         all_inputs_visited = false;
@@ -62,6 +64,9 @@ void LoopVariableOptimizer::Run() {
       if (NodeProperties::IsControlEdge(edge) &&
           edge.from()->op()->ControlOutputCount() > 0) {
         Node* use = edge.from();
+        Node* qj = edge.to();
+        std::cout<<"use node: "<<node->id()<<" nodeop: "<<node->op()->mnemonic()<<std::endl;
+        std::cout<<"to node: "<<qj->id()<<" nodeop: "<<qj->op()->mnemonic()<<std::endl;
         if (use->opcode() == IrOpcode::kLoop &&
             edge.index() != kAssumedLoopEntryIndex) {
           VisitBackedge(node, use);
@@ -118,6 +123,7 @@ void LoopVariableOptimizer::VisitBackedge(Node* from, Node* loop) {
 }
 
 void LoopVariableOptimizer::VisitNode(Node* node) {
+ std::cout<<"in LoopVariableOptimizer visit node"<<std::endl;
   switch (node->opcode()) {
     case IrOpcode::kMerge:
       return VisitMerge(node);
@@ -307,7 +313,7 @@ void LoopVariableOptimizer::ChangeToInductionVariablePhis() {
     }
     NodeProperties::ChangeOp(
         induction_var->phi(),
-        common()->InductionVariablePhi(induction_var->phi()->InputCount() - 1));
+        common()->InductionVariablePhi(induction_var->phi()->InputCount() - 1)); //qj: here make change
   }
 }
 

@@ -47,7 +47,7 @@ void Graph::RemoveDecorator(GraphDecorator* decorator) {
   decorators_.erase(it);
 }
 
-Node* Graph::NewNode(const Operator* op, int input_count, Node* const* inputs,
+Node* Graph::NewNode(const Operator* op, int input_count, Node* const* inputs, //v8i: BGB NewNode from BGB
                      bool incomplete) {
   Node* node = NewNodeUnchecked(op, input_count, inputs, incomplete);
   Verifier::VerifyNode(node);

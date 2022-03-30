@@ -116,7 +116,7 @@ class JSSpeculativeBinopBuilder final {
     switch (op_->opcode()) {
       case IrOpcode::kJSAdd:
         if (hint == NumberOperationHint::kSignedSmall) {
-          return simplified()->SpeculativeSafeIntegerAdd(hint);
+          return simplified()->SpeculativeSafeIntegerAdd(hint); //qj: here final
         } else {
           return simplified()->SpeculativeNumberAdd(hint);
         }
@@ -185,6 +185,7 @@ class JSSpeculativeBinopBuilder final {
   }
 
   Node* BuildSpeculativeOperation(const Operator* op) {
+   std::cout<<"in BGB: BuildSpeculativeOperation"<<std::endl;
     DCHECK_EQ(2, op->ValueInputCount());
     DCHECK_EQ(1, op->EffectInputCount());
     DCHECK_EQ(1, op->ControlInputCount());
@@ -192,14 +193,15 @@ class JSSpeculativeBinopBuilder final {
     DCHECK_EQ(false, OperatorProperties::HasContextInput(op));
     DCHECK_EQ(1, op->EffectOutputCount());
     DCHECK_EQ(0, op->ControlOutputCount());
-    return graph()->NewNode(op, left_, right_, effect_, control_);
+    return graph()->NewNode(op, left_, right_, effect_, control_); //qj node 17
   }
 
   Node* TryBuildNumberBinop() {
     NumberOperationHint hint;
     if (GetBinaryNumberOperationHint(&hint)) {
-      const Operator* op = SpeculativeNumberOp(hint);
-      Node* node = BuildSpeculativeOperation(op);
+      const Operator* op = SpeculativeNumberOp(hint); //qj: here return SpeculativeSafeIntegerAdd
+      Node* node = BuildSpeculativeOperation(op); //qj: final build it
+      std::cout<<"end TryBuildNumberBinop"<<std::endl;
       return node;
     }
     return nullptr;
@@ -234,6 +236,7 @@ class JSSpeculativeBinopBuilder final {
 
  private:
   BinaryOperationHint GetBinaryOperationHint() {
+    std::cout<<"GetBinaryOperationHint1"<<std::endl;
     return lowering_->GetBinaryOperationHint(slot_);
   }
 
@@ -262,8 +265,9 @@ Isolate* JSTypeHintLowering::isolate() const { return jsgraph()->isolate(); }
 
 BinaryOperationHint JSTypeHintLowering::GetBinaryOperationHint(
     FeedbackSlot slot) const {
+  std::cout<<"GetBinaryOperationHint2"<<std::endl;
   FeedbackSource source(feedback_vector(), slot);
-  return broker()->GetFeedbackForBinaryOperation(source);
+  return broker()->GetFeedbackForBinaryOperation(source); //v8i: Use feedback
 }
 
 CompareOperationHint JSTypeHintLowering::GetCompareOperationHint(
@@ -342,7 +346,8 @@ JSTypeHintLowering::LoweringResult JSTypeHintLowering::ReduceUnaryOperation(
 
 JSTypeHintLowering::LoweringResult JSTypeHintLowering::ReduceBinaryOperation(
     const Operator* op, Node* left, Node* right, Node* effect, Node* control,
-    FeedbackSlot slot) const {
+    FeedbackSlot slot) const { //v8i
+  std::cout<<"in BGB: ReduceBinaryOperation"<<std::endl;
   switch (op->opcode()) {
     case IrOpcode::kJSStrictEqual: {
       if (Node* node = TryBuildSoftDeopt(
@@ -395,11 +400,14 @@ JSTypeHintLowering::LoweringResult JSTypeHintLowering::ReduceBinaryOperation(
       if (Node* node = TryBuildSoftDeopt(
               slot, effect, control,
               DeoptimizeReason::kInsufficientTypeFeedbackForBinaryOperation)) {
+        std::cout<<"in BGB: TryBuildSoftDeopt has not null return "<<std::endl;
         return LoweringResult::Exit(node);
       }
-      JSSpeculativeBinopBuilder b(this, op, left, right, effect, control, slot);
+        std::cout<<"in BGB: JSSpeculativeBinopBuilder "<<std::endl;
+      JSSpeculativeBinopBuilder b(this, op, left, right, effect, control, slot); //v8i: qj here into here all operands are go along with the constructor
       if (Node* node = b.TryBuildNumberBinop()) {
-        return LoweringResult::SideEffectFree(node, node, control);
+        std::cout<<"v8i: here return LoweringResult::SideEffectFree"<<std::endl;
+        return LoweringResult::SideEffectFree(node, node, control); //qj here return the effect and control of node
       }
       if (op->opcode() == IrOpcode::kJSAdd ||
           op->opcode() == IrOpcode::kJSSubtract) {
@@ -558,10 +566,16 @@ JSTypeHintLowering::ReduceStoreKeyedOperation(const Operator* op, Node* obj,
 Node* JSTypeHintLowering::TryBuildSoftDeopt(FeedbackSlot slot, Node* effect,
                                             Node* control,
                                             DeoptimizeReason reason) const {
-  if (!(flags() & kBailoutOnUninitialized)) return nullptr;
+  if (!(flags() & kBailoutOnUninitialized)) {
+    std::cout<<"TryBuildSoftDeopt: no kBailoutOnUninitialized"<<std::endl;
+    return nullptr;
+  }
 
   FeedbackSource source(feedback_vector(), slot);
-  if (!broker()->FeedbackIsInsufficient(source)) return nullptr;
+  if (!broker()->FeedbackIsInsufficient(source)) {
+      std::cout<<"TryBuildSoftDeopt: FeedbackIsInsufficient: false"<<std::endl;
+      return nullptr;
+   }
 
   Node* deoptimize = jsgraph()->graph()->NewNode(
       jsgraph()->common()->Deoptimize(DeoptimizeKind::kSoft, reason,
