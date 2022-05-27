@@ -349,7 +349,7 @@ const uint8_t* Isolate::embedded_blob_code() const {
   return embedded_blob_code_;
 }
 uint32_t Isolate::embedded_blob_code_size() const {
-  std::cout<<"embedded_blob_code_size:"<<embedded_blob_code_size_<<std::endl;
+//  std::cout<<"embedded_blob_code_size:"<<embedded_blob_code_size_<<std::endl;
   return embedded_blob_code_size_;
 }
 const uint8_t* Isolate::embedded_blob_data() const {
