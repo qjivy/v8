@@ -1022,7 +1022,7 @@ void InstructionSelector::VisitFloat32RoundTruncate(Node* node) {
 }
 
 void InstructionSelector::VisitFloat64RoundTruncate(Node* node) {
-  VisitRR(this, kRiscvFloat64RoundTruncate, node);
+  VisitRR(this, kRiscvFloat64RoundTruncate, node); //here emit Float64RoundTruncate to RISCV machine code
 }
 
 void InstructionSelector::VisitFloat64RoundTiesAway(Node* node) {
@@ -2529,13 +2529,9 @@ InstructionSelector::SupportedMachineOperatorFlags() {
   return flags | MachineOperatorBuilder::kWord32ShiftIsSafe |
          MachineOperatorBuilder::kInt32DivIsSafe |
          MachineOperatorBuilder::kUint32DivIsSafe |
-         MachineOperatorBuilder::kFloat64RoundDown |
          MachineOperatorBuilder::kFloat32RoundDown |
-         MachineOperatorBuilder::kFloat64RoundUp |
          MachineOperatorBuilder::kFloat32RoundUp |
-         MachineOperatorBuilder::kFloat64RoundTruncate |
          MachineOperatorBuilder::kFloat32RoundTruncate |
-         MachineOperatorBuilder::kFloat64RoundTiesEven |
          MachineOperatorBuilder::kFloat32RoundTiesEven;
 }
 

@@ -1964,7 +1964,7 @@ void TurboAssembler::Ceil_d_d(FPURegister dst, FPURegister src,
 
 void TurboAssembler::Trunc_d_d(FPURegister dst, FPURegister src,
                                FPURegister fpu_scratch) {
-  RoundDouble(dst, src, fpu_scratch, RTZ);
+  RoundDouble(dst, src, fpu_scratch, RTZ); //here go to RoundDouble helper func
 }
 
 void TurboAssembler::Round_d_d(FPURegister dst, FPURegister src,

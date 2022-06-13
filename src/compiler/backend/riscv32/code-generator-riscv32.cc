@@ -1248,7 +1248,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     }
     case kRiscvFloat64RoundTruncate: {
       __ Trunc_d_d(i.OutputDoubleRegister(), i.InputDoubleRegister(0),
-                   kScratchDoubleReg);
+                   kScratchDoubleReg); //here emit RiscvFloat64RoundTruncate to Trunc_d_d macro assemble code , go to code-gen directory
       break;
     }
     case kRiscvFloat32RoundTruncate: {
