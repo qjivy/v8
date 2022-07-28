@@ -1,0 +1,35 @@
+add-type-assertions-reducer.cc:Reduction AddTypeAssertionsReducer::Reduce(Node* node) {
+branch-elimination.cc:Reduction BranchElimination::Reduce(Node* node) {
+checkpoint-elimination.cc:Reduction CheckpointElimination::Reduce(Node* node) {
+common-operator-reducer.cc:Reduction CommonOperatorReducer::Reduce(Node* node) {
+constant-folding-reducer.cc:Reduction ConstantFoldingReducer::Reduce(Node* node) {
+csa-load-elimination.cc:Reduction CsaLoadElimination::Reduce(Node* node) {
+dead-code-elimination.cc:Reduction DeadCodeElimination::Reduce(Node* node) {
+escape-analysis.cc:void EscapeAnalysis::Reduce(Node* node, Reduction* reduction) {
+escape-analysis.cc:          [this](Node* node, Reduction* reduction) { Reduce(node, reduction); },
+escape-analysis-reducer.cc:Reduction EscapeAnalysisReducer::Reduce(Node* node) {
+graph-reducer.cc:Reduction Reducer::Reduce(Node* node,
+graph-reducer.cc:Reduction GraphReducer::Reduce(Node* const node) {
+js-call-reducer.cc:Reduction JSCallReducer::Reduce(Node* node) {
+js-context-specialization.cc:Reduction JSContextSpecialization::Reduce(Node* node) {
+js-create-lowering.cc:Reduction JSCreateLowering::Reduce(Node* node) {
+js-generic-lowering.cc:Reduction JSGenericLowering::Reduce(Node* node) {
+js-heap-copy-reducer.cc:Reduction JSHeapCopyReducer::Reduce(Node* node) {
+js-inlining-heuristic.cc:Reduction JSInliningHeuristic::Reduce(Node* node) {
+js-intrinsic-lowering.cc:Reduction JSIntrinsicLowering::Reduce(Node* node) {
+js-native-context-specialization.cc:Reduction JSNativeContextSpecialization::Reduce(Node* node) {
+js-typed-lowering.cc:Reduction JSTypedLowering::Reduce(Node* node) {
+load-elimination.cc:Reduction LoadElimination::Reduce(Node* node) {
+machine-operator-reducer.cc:Reduction MachineOperatorReducer::Reduce(Node* node) {
+memory-lowering.cc:Reduction MemoryLowering::Reduce(Node* node) {
+pipeline.cc:  Reduction Reduce(Node* node) final {
+pipeline.cc:  Reduction Reduce(Node* node) final {
+pipeline.cc:      Reduction Reduce(Node* node) final {
+redundancy-elimination.cc:Reduction RedundancyElimination::Reduce(Node* node) {
+select-lowering.cc:Reduction SelectLowering::Reduce(Node* node) {
+simplified-operator-reducer.cc:Reduction SimplifiedOperatorReducer::Reduce(Node* node) {
+typed-optimization.cc:Reduction TypedOptimization::Reduce(Node* node) {
+type-narrowing-reducer.cc:Reduction TypeNarrowingReducer::Reduce(Node* node) {
+typer.cc:  Reduction Reduce(Node* node) override {
+value-numbering-reducer.cc:Reduction ValueNumberingReducer::Reduce(Node* node) {
+wasm-inlining.cc:Reduction WasmInliner::Reduce(Node* node) {

@@ -152,7 +152,7 @@ void ProfilerEventsProcessor::AddDeoptStack(Address from, int fp_to_sp_delta) {
   ticks_from_vm_buffer_.Enqueue(record);
 }
 
-void ProfilerEventsProcessor::AddCurrentStack(bool update_stats) {
+void ProfilerEventsProcessor::AddCurrentStack(bool update_stats) { //qj1
   TickSampleEventRecord record(last_code_event_id_);
   RegisterState regs;
   StackFrameIterator it(isolate_);
@@ -589,7 +589,7 @@ CpuProfilingStatus CpuProfiler::StartProfiling(
       status == CpuProfilingStatus::kAlreadyStarted) {
     TRACE_EVENT0("v8", "CpuProfiler::StartProfiling");
     AdjustSamplingInterval();
-    StartProcessorIfNotStarted();
+    StartProcessorIfNotStarted(); //qj3
   }
 
   return status;
@@ -604,7 +604,7 @@ CpuProfilingStatus CpuProfiler::StartProfiling(
 
 void CpuProfiler::StartProcessorIfNotStarted() {
   if (processor_) {
-    processor_->AddCurrentStack();
+    processor_->AddCurrentStack(); //qj2
     return;
   }
 

@@ -1617,6 +1617,7 @@ struct TypeAssertionsPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(TypeAssertions)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"TypeAssertionsPhase run"<<std::endl;
     GraphReducer graph_reducer(
         temp_zone, data->graph(), &data->info()->tick_counter(), data->broker(),
         data->jsgraph()->Dead(), data->observe_node_manager());
@@ -1647,6 +1648,7 @@ struct LoopPeelingPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(LoopPeeling)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"LoopPeelingPhase run"<<std::endl;
     GraphTrimmer trimmer(temp_zone, data->graph());
     NodeVector roots(temp_zone);
     data->jsgraph()->GetCachedNodes(&roots);
@@ -1663,6 +1665,7 @@ struct LoopPeelingPhase {
     LoopPeeler(data->graph(), data->common(), loop_tree, temp_zone,
                data->source_positions(), data->node_origins())
         .PeelInnerLoopsOfTree();
+    std::cout<<"Finish LoopPeelingPhase"<<std::endl;
   }
 };
 
@@ -1729,6 +1732,7 @@ struct LoopExitEliminationPhase {
   DECL_PIPELINE_PHASE_CONSTANTS(LoopExitElimination)
 
   void Run(PipelineData* data, Zone* temp_zone) {
+    std::cout<<"EliminateLoopExits run"<<std::endl;
     LoopPeeler::EliminateLoopExits(data->graph(), temp_zone);
   }
 };

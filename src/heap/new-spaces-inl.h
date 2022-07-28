@@ -88,6 +88,7 @@ HeapObject SemiSpaceObjectIterator::Next() {
 AllocationResult NewSpace::AllocateRaw(int size_in_bytes,
                                        AllocationAlignment alignment,
                                        AllocationOrigin origin) {
+  std::cout<<"qq17 NewSpace::AllocateRaw: "<<std::endl;
   DCHECK(!FLAG_single_generation);
   DCHECK(!FLAG_enable_third_party_heap);
 #if DEBUG
@@ -97,8 +98,10 @@ AllocationResult NewSpace::AllocateRaw(int size_in_bytes,
   AllocationResult result;
 
   if (alignment != kWordAligned) {
+    
     result = AllocateFastAligned(size_in_bytes, nullptr, alignment, origin);
   } else {
+    std::cout<<"qq18: alignment == kWordAligned call into AllocateFastUnaligned"<<std::endl;
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
 
@@ -111,11 +114,15 @@ AllocationResult NewSpace::AllocateRaw(int size_in_bytes,
 
 AllocationResult NewSpace::AllocateFastUnaligned(int size_in_bytes,
                                                  AllocationOrigin origin) {
+  std::cout<<"qq19 AllocationResult NewSpace::AllocateFastUnaligned"<<std::endl; 
   if (!allocation_info_.CanIncrementTop(size_in_bytes)) {
+  std::cout<<"qq20 call AllocationResult::Retry"<<std::endl;
     return AllocationResult::Retry(NEW_SPACE);
   }
+  std::cout<<"qq21 call IncrementTop"<<std::endl;
   HeapObject obj =
       HeapObject::FromAddress(allocation_info_.IncrementTop(size_in_bytes));
+//  obj.Print();
   DCHECK_SEMISPACE_ALLOCATION_INFO(allocation_info_, to_space_);
 
   MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size_in_bytes);

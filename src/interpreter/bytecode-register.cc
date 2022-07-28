@@ -47,6 +47,23 @@ Register Register::FromParameterIndex(int index, int parameter_count) {
 
 int Register::ToParameterIndex(int parameter_count) const {
   DCHECK(is_parameter());
+  #if 0
+   std::cout<<std::endl<<"========================="<<std::endl;
+   std::cout<<"InterpreterFrameConstants::kRegisterFileFromFp: "<<InterpreterFrameConstants::kRegisterFileFromFp<<std::endl
+            <<"InterpreterFrameConstants::kFirstParamFromFp: "<<InterpreterFrameConstants::kFirstParamFromFp<<std::endl
+            <<"StandardFrameConstants::kFunctionOffset:"<<StandardFrameConstants::kFunctionOffset<<std::endl
+            <<"StandardFrameConstants::kContextOffset:"<<StandardFrameConstants::kContextOffset<<std::endl
+            <<"InterpreterFrameConstants::kBytecodeArrayFromFp:"<<InterpreterFrameConstants::kBytecodeArrayFromFp<<std::endl
+            <<"InterpreterFrameConstants::kBytecodeOffsetFromFp:"<<InterpreterFrameConstants::kBytecodeOffsetFromFp<<std::endl
+            <<"InterpreterFrameConstants::kCallerPCOffset:"<<InterpreterFrameConstants::kCallerPCOffset<<std::endl
+            <<"InterpreterF:kArgCOffset:"<<InterpreterFrameConstants::kArgCOffset<<std::endl
+            <<"StandardFrameConstants::kFixedFrameSizeFromFp:"<<StandardFrameConstants::kFixedFrameSizeFromFp<<std::endl
+            <<"StandardFrameConstants::FixedFrameSize:"<<StandardFrameConstants::kFixedFrameSize<<std::endl
+            <<"StandardFrameConstants::kFixedSlotCountFromFp:"<<StandardFrameConstants::kFixedSlotCountFromFp<<std::endl
+            <<"StandardFrameConstants::kExpressionsOffset:"<<StandardFrameConstants::kExpressionsOffset<<std::endl
+            <<"kFirstParamRegisterIndex: "<<kFirstParamRegisterIndex<<std::endl;
+   std::cout<<std::endl<<"in ToParameterIndex kFirstParamRegisterIndex: "<<kFirstParamRegisterIndex<<" index():"<<index()<<std::endl;
+   #endif
   return kFirstParamRegisterIndex - index();
 }
 
@@ -120,7 +137,7 @@ bool Register::AreContiguous(Register reg1, Register reg2, Register reg3,
   return true;
 }
 
-std::string Register::ToString(int parameter_count) const {
+std::string Register::ToString(int parameter_count) const { //v8i: here print bytecode's registers
   if (is_current_context()) {
     return std::string("<context>");
   } else if (is_function_closure()) {

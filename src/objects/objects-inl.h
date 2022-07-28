@@ -711,6 +711,7 @@ ReadOnlyRoots HeapObject::GetReadOnlyRoots(PtrComprCageBase cage_base) const {
 }
 
 DEF_GETTER(HeapObject, map, Map) {
+//  std::cout<<"HeapObject.map cage_base: "<<cage_base<<std::endl;
   return map_word(cage_base, kRelaxedLoad).ToMap();
 }
 
@@ -761,7 +762,7 @@ void HeapObject::set_map_no_write_barrier(Map value) {
 }
 
 void HeapObject::set_map_after_allocation(Map value, WriteBarrierMode mode) {
-  MapWord mapword = MapWord::FromMap(value);
+  MapWord mapword = MapWord::FromMap(value); //the value is a heapobject, mapword is its ptr_
   set_map_word(mapword, kRelaxedStore);
 #ifndef V8_DISABLE_WRITE_BARRIERS
   if (mode != SKIP_WRITE_BARRIER) {

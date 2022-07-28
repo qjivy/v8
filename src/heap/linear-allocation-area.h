@@ -41,6 +41,7 @@ class LinearAllocationArea final {
     Address old_top = top_;
     top_ += bytes;
     Verify();
+    std::cout<<"qq22: LinearAllocationArea::Address IncrementTop old_top: "<<std::hex<<old_top<<" top: "<<top_<<" bytes: "<<bytes<<std::endl;
     return old_top;
   }
 

@@ -88,7 +88,7 @@ class AsAtomicImpl {
                         cast_helper<T>::to_storage_type(new_value));
   }
 
-  template <typename T>
+  template <typename T> //qq
   static void Relaxed_Store(T* addr,
                             typename std::remove_reference<T>::type new_value) {
     STATIC_ASSERT(sizeof(T) <= sizeof(AtomicStorageType));

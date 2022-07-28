@@ -4,7 +4,6 @@
 
 #ifndef V8_INTERPRETER_BYTECODE_ARRAY_ITERATOR_H_
 #define V8_INTERPRETER_BYTECODE_ARRAY_ITERATOR_H_
-
 #include <memory>
 
 #include "src/base/optional.h"
@@ -77,6 +76,9 @@ class V8_EXPORT_PRIVATE BytecodeArrayIterator {
   BytecodeArrayIterator& operator=(const BytecodeArrayIterator&) = delete;
 
   inline void Advance() {
+    std::cout<<"Advance BC: ";
+    //StdoutStream of;
+    this->PrintTo(std::cout) << std::endl;
     cursor_ += Bytecodes::Size(current_bytecode(), current_operand_scale());
     UpdateOperandScale();
   }

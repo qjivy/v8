@@ -206,6 +206,7 @@ int Heap::MaxRegularHeapObjectSize(AllocationType allocation) {
 AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
                                    AllocationOrigin origin,
                                    AllocationAlignment alignment) {
+  std::cout<<"qq15 AllocationResult Heap::AllocateRaw"<<std::endl; 
   DCHECK(AllowHandleAllocation::IsAllowed());
   DCHECK(AllowHeapAllocation::IsAllowed());
   DCHECK_IMPLIES(type == AllocationType::kCode || type == AllocationType::kMap,
@@ -253,6 +254,7 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
           allocation = lo_space_->AllocateRaw(size_in_bytes);
         }
       } else {
+        std::cout<<"qq16 into new_space_->AllocateRaw"<<std::endl;
         allocation = new_space_->AllocateRaw(size_in_bytes, alignment, origin);
       }
     } else if (AllocationType::kOld == type) {
@@ -318,6 +320,7 @@ template <Heap::AllocationRetryMode mode>
 HeapObject Heap::AllocateRawWith(int size, AllocationType allocation,
                                  AllocationOrigin origin,
                                  AllocationAlignment alignment) {
+  std::cout<<"qq11 HeapObject Heap::AllocateRawWith"<<std::endl;				 
   DCHECK(AllowHandleAllocation::IsAllowed());
   DCHECK(AllowHeapAllocation::IsAllowed());
   DCHECK_EQ(gc_state(), NOT_IN_GC);
@@ -327,11 +330,14 @@ HeapObject Heap::AllocateRawWith(int size, AllocationType allocation,
       size <= MaxRegularHeapObjectSize(allocation) && !FLAG_single_generation) {
     Address* top = heap->NewSpaceAllocationTopAddress();
     Address* limit = heap->NewSpaceAllocationLimitAddress();
+    std::cout<<"qq12 top: "<<top<<" limit: "<<limit<<std::endl;
+    std::cout<<"qq12-1 top: "<<*top<<" limit: "<<*limit<<std::endl;
     if ((*limit - *top >= static_cast<unsigned>(size)) &&
         V8_LIKELY(!FLAG_single_generation && FLAG_inline_new &&
                   FLAG_gc_interval == 0)) {
       DCHECK(IsAligned(size, kTaggedSize));
-      HeapObject obj = HeapObject::FromAddress(*top);
+      HeapObject obj = HeapObject::FromAddress(*top);//v8i: yes here from top
+      std::cout<<"top: "<<top<<" limit: "<<limit<<" obj: "<<obj<<std::endl;
       *top += size;
       heap->CreateFillerObjectAt(obj.address(), size, ClearRecordedSlots::kNo);
       MSAN_ALLOCATED_UNINITIALIZED_MEMORY(obj.address(), size);
@@ -343,7 +349,7 @@ HeapObject Heap::AllocateRawWith(int size, AllocationType allocation,
       return AllocateRawWithLightRetrySlowPath(size, allocation, origin,
                                                alignment);
     case kRetryOrFail:
-      return AllocateRawWithRetryOrFailSlowPath(size, allocation, origin,
+      return AllocateRawWithRetryOrFailSlowPath(size, allocation, origin, //v8i
                                                 alignment);
   }
   UNREACHABLE();

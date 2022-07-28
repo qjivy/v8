@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
 
     {
       // Create a string containing the JavaScript source code.
+      printf("qq1 call into AllocationResult Heap::AllocateRaw\n");
       v8::Local<v8::String> source =
           v8::String::NewFromUtf8Literal(isolate, "'Hello' + ', World!'");
 
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
       v8::String::Utf8Value utf8(isolate, result);
       printf("%s\n", *utf8);
     }
-
+#if 0
     {
       // Use the JavaScript API to generate a WebAssembly module.
       //
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
       uint32_t number = result->Uint32Value(context).ToChecked();
       printf("3 + 4 = %u\n", number);
     }
+    #endif
   }
 
   // Dispose the isolate and tear down V8.

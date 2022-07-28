@@ -307,6 +307,7 @@ inline bool ToLocal(v8::internal::MaybeHandle<v8::internal::Object> maybe,
   v8::internal::Handle<v8::internal::Object> handle;
   if (maybe.ToHandle(&handle)) {
     *local = Utils::Convert<v8::internal::Object, T>(handle);
+//    std::cout<<"ToLocal: "<<local<<" : "<<*local<<std::endl;
     return true;
   }
   return false;

@@ -5447,6 +5447,7 @@ void Heap::DisableInlineAllocation() {
 HeapObject Heap::AllocateRawWithLightRetrySlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+  std::cout<<"qq14 HeapObject Heap::AllocateRawWithLightRetrySlowPath: "<<std::endl;
   HeapObject result;
   AllocationResult alloc = AllocateRaw(size, allocation, origin, alignment);
   if (alloc.To(&result)) {
@@ -5480,6 +5481,7 @@ HeapObject Heap::AllocateRawWithLightRetrySlowPath(
 HeapObject Heap::AllocateRawWithRetryOrFailSlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+  std::cout<<"qq13 HeapObject Heap::AllocateRawWithRetryOrFailSlowPath"<<std::endl;
   AllocationResult alloc;
   HeapObject result =
       AllocateRawWithLightRetrySlowPath(size, allocation, origin, alignment);

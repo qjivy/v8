@@ -20,7 +20,7 @@ Address TaggedField<T, kFieldOffset>::address(HeapObject host, int offset) {
 
 // static
 template <typename T, int kFieldOffset>
-Tagged_t* TaggedField<T, kFieldOffset>::location(HeapObject host, int offset) {
+Tagged_t* TaggedField<T, kFieldOffset>::location(HeapObject host, int offset) { //qq
   return reinterpret_cast<Tagged_t*>(address(host, offset));
 }
 

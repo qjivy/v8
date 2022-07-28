@@ -549,7 +549,7 @@ MaybeHandle<SeqOneByteString> FactoryBase<Impl>::NewRawOneByteString(
   DCHECK_GT(length, 0);  // Use Factory::empty_string() instead.
   int size = SeqOneByteString::SizeFor(length);
   DCHECK_GE(SeqOneByteString::kMaxSize, size);
-
+  std::cout<<"qq8 FactoryBase<Impl>::NewRawOneByteString: size: "<<size<<" call into AllocateRawWithImmortalMap "<<std::endl;
   SeqOneByteString string = SeqOneByteString::cast(AllocateRawWithImmortalMap(
       size, allocation, read_only_roots().one_byte_string_map()));
   DisallowGarbageCollection no_gc;
@@ -845,6 +845,7 @@ template <typename Impl>
 HeapObject FactoryBase<Impl>::AllocateRawWithImmortalMap(
     int size, AllocationType allocation, Map map,
     AllocationAlignment alignment) {
+     std::cout<<"qq9 FactoryBase<Impl>::AllocateRawWithImmortalMap: "<<map<<std::endl;
   // TODO(delphick): Potentially you could also pass a immortal immovable Map
   // from MAP_SPACE here, like external_map or message_object_map, but currently
   // noone does so this check is sufficient.
@@ -858,6 +859,7 @@ HeapObject FactoryBase<Impl>::AllocateRawWithImmortalMap(
 template <typename Impl>
 HeapObject FactoryBase<Impl>::AllocateRaw(int size, AllocationType allocation,
                                           AllocationAlignment alignment) {
+  std::cout<<" FactoryBase<Impl>::AllocateRaw: "<<std::endl;
   return impl()->AllocateRaw(size, allocation, alignment);
 }
 

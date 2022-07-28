@@ -49,7 +49,7 @@ bool ParseProgram(ParseInfo* info, Handle<Script> script,
   Handle<String> source(String::cast(script->source()), isolate);
   isolate->counters()->total_parse_size()->Increment(source->length());
   std::unique_ptr<Utf16CharacterStream> stream(
-      ScannerStream::For(isolate, source));
+      ScannerStream::For(isolate, source)); //qj
   info->set_character_stream(std::move(stream));
 
   Parser parser(info);

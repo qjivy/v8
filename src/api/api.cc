@@ -6678,6 +6678,7 @@ V8_WARN_UNUSED_RESULT
 inline i::MaybeHandle<i::String> NewString(i::Factory* factory,
                                            NewStringType type,
                                            base::Vector<const char> string) {
+  std::cout<<"qq3 inline i::MaybeHandle<i::String> NewString: "<<std::endl;//v8i: here we can see factory 
   if (type == NewStringType::kInternalized) {
     return factory->InternalizeUtf8String(string);
   }
@@ -6729,14 +6730,15 @@ STATIC_ASSERT(v8::String::kMaxLength == i::String::kMaxLength);
   }
 
 Local<String> String::NewFromUtf8Literal(Isolate* isolate, const char* literal,
-                                         NewStringType type, int length) {
+                                         NewStringType type, int length) { //v8i
+  std::cout<<"qq2 Local<String> String::NewFromUtf8Literal literal: "<<literal<<" length: "<<length<<std::endl;
   DCHECK_LE(length, i::String::kMaxLength);
   i::Isolate* i_isolate = reinterpret_cast<internal::Isolate*>(isolate);
   ENTER_V8_NO_SCRIPT_NO_EXCEPTION(i_isolate);
   LOG_API(i_isolate, String, NewFromUtf8Literal);
   i::Handle<i::String> handle_result =
-      NewString(i_isolate->factory(), type,
-                base::Vector<const char>(literal, length))
+      NewString(i_isolate->factory(), type, //v8i: here we can see factory is from i_isolate
+                base::Vector<const char>(literal, length)) //v8i: note the vector
           .ToHandleChecked();
   return Utils::ToLocal(handle_result);
 }

@@ -80,6 +80,7 @@ class OnHeapStream {
   // is used along with other implementations that require V8 heap access.
   Range<Char> GetDataAt(size_t pos, RuntimeCallStats* stats,
                         DisallowGarbageCollection* no_gc) {
+    std::cout<<"OnHeapStream::GetDataAt: "<<pos<<std::endl;			
     return {&string_->GetChars(*no_gc)[start_offset_ + std::min(length_, pos)],
             &string_->GetChars(*no_gc)[start_offset_ + length_]};
   }
@@ -253,6 +254,7 @@ class BufferedCharacterStream : public Utf16CharacterStream {
 
  protected:
   bool ReadBlock() final {
+    std::cout<<"ReadBlock"<<std::endl;
     size_t position = pos();
     buffer_pos_ = position;
     buffer_start_ = &buffer_[0];
@@ -846,7 +848,7 @@ size_t Utf8ExternalStreamingStream::FillBuffer(size_t position) {
 
 Utf16CharacterStream* ScannerStream::For(Isolate* isolate,
                                          Handle<String> data) {
-  return ScannerStream::For(isolate, data, 0, data->length());
+  return ScannerStream::For(isolate, data, 0, data->length()); //qj: here start_pos is 0
 }
 
 Utf16CharacterStream* ScannerStream::For(Isolate* isolate, Handle<String> data,
@@ -873,10 +875,12 @@ Utf16CharacterStream* ScannerStream::For(Isolate* isolate, Handle<String> data,
         static_cast<size_t>(start_pos), ExternalTwoByteString::cast(*data),
         start_offset, static_cast<size_t>(end_pos));
   } else if (data->IsSeqOneByteString()) {
+    std::cout<<"ScannerStream::For BufferedCharacterStream<OnHeapStream>: "<<start_pos<<" : "<<start_offset<<" : "<<end_pos<<std::endl;
     return new BufferedCharacterStream<OnHeapStream>(
         static_cast<size_t>(start_pos), Handle<SeqOneByteString>::cast(data),
         start_offset, static_cast<size_t>(end_pos));
   } else if (data->IsSeqTwoByteString()) {
+    std::cout<<"ScannerStream::For RelocatingCharacterStream: "<<start_pos<<" : "<<start_offset<<" : "<<end_pos<<std::endl;
     return new RelocatingCharacterStream(
         isolate, static_cast<size_t>(start_pos),
         Handle<SeqTwoByteString>::cast(data), start_offset,

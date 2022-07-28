@@ -367,6 +367,7 @@ Handle<Code> Factory::CodeBuilder::Build() {
 
 HeapObject Factory::AllocateRaw(int size, AllocationType allocation,
                                 AllocationAlignment alignment) {
+  std::cout<<"qq10 Factory::AllocateRaw: "<<std::endl;
   return isolate()->heap()->AllocateRawWith<Heap::kRetryOrFail>(
       size, allocation, AllocationOrigin::kRuntime, alignment);
 }
@@ -739,8 +740,10 @@ MaybeHandle<String> Factory::NewStringFromUtf8(
   Utf8Decoder decoder(utf8_data);
 
   if (decoder.utf16_length() == 0) return empty_string();
+  std::cout<<"qq4 into Factory::NewStringFromUtf8: length: "<<decoder.utf16_length()<<" is_ascii: "<<decoder.is_ascii()<<" is_1byte: "<<decoder.is_one_byte()<<std::endl;
 
   if (decoder.is_one_byte()) {
+   std::cout<<"qq7 call into NewRawOneByteString"<<std::endl;
     // Allocate string.
     Handle<SeqOneByteString> result;
     ASSIGN_RETURN_ON_EXCEPTION(
@@ -748,7 +751,7 @@ MaybeHandle<String> Factory::NewStringFromUtf8(
         NewRawOneByteString(decoder.utf16_length(), allocation), String);
 
     DisallowGarbageCollection no_gc;
-    decoder.Decode(result->GetChars(no_gc), utf8_data);
+    decoder.Decode(result->GetChars(no_gc), utf8_data); //v8i: here decode all the data into uft16 code?
     return result;
   }
 

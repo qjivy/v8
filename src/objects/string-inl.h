@@ -824,6 +824,7 @@ uint8_t* SeqOneByteString::GetChars(
 uint8_t* SeqOneByteString::GetChars(
     const DisallowGarbageCollection& no_gc,
     const SharedStringAccessGuardIfNeeded& access_guard) const {
+//  std::cout<<"SeqOneByteString::GetChars with acc_guard: "<<GetCharsAddress()<<std::endl;
   USE(no_gc);
   USE(access_guard);
   return reinterpret_cast<uint8_t*>(GetCharsAddress());
@@ -843,6 +844,7 @@ base::uc16* SeqTwoByteString::GetChars(
 base::uc16* SeqTwoByteString::GetChars(
     const DisallowGarbageCollection& no_gc,
     const SharedStringAccessGuardIfNeeded& access_guard) const {
+  std::cout<<"SeqTwoByteString::GetChars with acc_guard"<<GetCharsAddress()<<std::endl;
   USE(no_gc);
   USE(access_guard);
   return reinterpret_cast<base::uc16*>(GetCharsAddress());

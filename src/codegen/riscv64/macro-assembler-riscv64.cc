@@ -3341,7 +3341,9 @@ void TurboAssembler::Call(Handle<Code> code, RelocInfo::Mode rmode,
     BlockTrampolinePoolScope block_trampoline_pool(this);
     RecordCommentForOffHeapTrampoline(builtin);
     if (cond != al) {
+      RecordComment("Branch begin");
       Branch(&skip, NegateCondition(cond), rs, rt);
+      RecordComment("Branch end");
     }
     RecordRelocInfo(RelocInfo::RELATIVE_CODE_TARGET);
     GenPCRelativeJumpAndLink(t6, code_target_index);

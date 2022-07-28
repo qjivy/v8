@@ -14,7 +14,10 @@ Utf8Decoder::Utf8Decoder(const base::Vector<const uint8_t>& chars)
     : encoding_(Encoding::kAscii),
       non_ascii_start_(NonAsciiStart(chars.begin(), chars.length())),
       utf16_length_(non_ascii_start_) {
-  if (non_ascii_start_ == chars.length()) return;
+  if (non_ascii_start_ == chars.length()) { 
+    std::cout<<"qq5 ascii return"<<std::endl;
+    return;
+  }
 
   const uint8_t* cursor = chars.begin() + non_ascii_start_;
   const uint8_t* end = chars.begin() + chars.length();
@@ -40,6 +43,7 @@ Utf8Decoder::Utf8Decoder(const base::Vector<const uint8_t>& chars)
   }
 
   encoding_ = is_one_byte ? Encoding::kLatin1 : Encoding::kUtf16;
+  std::cout<<"qq6 in Utf8Decoder encoding_ is changed"<<std::endl;
 }
 
 template <typename Char>

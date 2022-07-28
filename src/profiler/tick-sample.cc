@@ -200,7 +200,7 @@ DISABLE_ASAN void TickSample::Init(Isolate* v8_isolate,
   timestamp = base::TimeTicks::HighResolutionNow();
 }
 
-bool TickSample::GetStackSample(Isolate* v8_isolate, RegisterState* regs,
+bool TickSample::GetStackSample(Isolate* v8_isolate, RegisterState* regs, //qj
                                 RecordCEntryFrame record_c_entry_frame,
                                 void** frames, size_t frames_limit,
                                 v8::SampleInfo* sample_info,
