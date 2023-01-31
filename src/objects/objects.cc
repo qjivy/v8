@@ -2183,10 +2183,10 @@ bool HeapObject::IsValidSlot(Map map, int offset) {
 }
 
 int HeapObject::SizeFromMap(Map map) const {
-  int instance_size = map.instance_size();
+  int instance_size = map.instance_size(); //qj: get byte from kInstanceSizeInWordsOffset, if 0, the size is variable, need to look into the objects itself.
   if (instance_size != kVariableSizeSentinel) return instance_size;
   // Only inline the most frequent cases.
-  InstanceType instance_type = map.instance_type();
+  InstanceType instance_type = map.instance_type(); //qj: get uint16 from koffset 12 from map
   if (base::IsInRange(instance_type, FIRST_FIXED_ARRAY_TYPE,
                       LAST_FIXED_ARRAY_TYPE)) {
     return FixedArray::SizeFor(

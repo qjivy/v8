@@ -172,7 +172,7 @@ Address* HandleScope::CreateHandle(Isolate* isolate, Address value) {
             reinterpret_cast<Address>(data->limit));
   data->next = reinterpret_cast<Address*>(reinterpret_cast<Address>(result) +
                                           sizeof(Address));
-  *result = value;
+  *result = value; //qj: now you can see the handle store the object's heap address
   return result;
 }
 

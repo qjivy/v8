@@ -27,7 +27,7 @@ Tagged_t* TaggedField<T, kFieldOffset>::location(HeapObject host, int offset) { 
 // static
 template <typename T, int kFieldOffset>
 template <typename TOnHeapAddress>
-Address TaggedField<T, kFieldOffset>::tagged_to_full(
+Address TaggedField<T, kFieldOffset>::tagged_to_full( //qj0728: here is the tagged_to_full pointer 
     TOnHeapAddress on_heap_addr, Tagged_t tagged_value) {
 #ifdef V8_COMPRESS_POINTERS
   if (kIsSmi) {
@@ -44,7 +44,7 @@ Address TaggedField<T, kFieldOffset>::tagged_to_full(
 
 // static
 template <typename T, int kFieldOffset>
-Tagged_t TaggedField<T, kFieldOffset>::full_to_tagged(Address value) {
+Tagged_t TaggedField<T, kFieldOffset>::full_to_tagged(Address value) { //qj0728: here is the full pointer _to_tagged 
 #ifdef V8_COMPRESS_POINTERS
   return CompressTagged(value);
 #else

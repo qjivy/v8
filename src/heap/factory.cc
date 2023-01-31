@@ -760,7 +760,12 @@ MaybeHandle<String> Factory::NewStringFromUtf8(
   ASSIGN_RETURN_ON_EXCEPTION(
       isolate(), result,
       NewRawTwoByteString(decoder.utf16_length(), allocation), String);
-
+/*
+(gdb) p result 
+$225 = {<v8::internal::HandleBase> = {location_ = 0x555a14e79198}, <No data fields>}
+(gdb) p &result 
+$226 = (v8::internal::Handle<v8::internal::SeqOneByteString> *) 0x7ffe0780d150
+*/
   DisallowGarbageCollection no_gc;
   decoder.Decode(result->GetChars(no_gc), utf8_data);
   return result;
