@@ -354,6 +354,8 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvVwaddu:
     case kRiscvVrgather:
     case kRiscvVslidedown:
+    case kRiscvF32x8Add:
+    case kRiscvF32x8Sub:
     case kRiscvSar32:
     case kRiscvSignExtendByte:
     case kRiscvSignExtendShort:
@@ -400,6 +402,9 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS128Load64ExtendU:
     case kRiscvS128Load64ExtendS:
     case kRiscvS128LoadLane:
+    case kRiscvMovdqu256:
+    case kRiscvS256Load32Splat:
+    case kRiscvS256Load64Splat:
       return kIsLoadOperation;
 
 #if V8_TARGET_ARCH_RISCV64

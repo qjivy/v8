@@ -245,6 +245,10 @@ void InstructionSelector::VisitAbortCSADcheck(Node* node) {
 void EmitS128Load(InstructionSelector* selector, Node* node,
                   InstructionCode opcode, VSew sew, Vlmul lmul);
 
+void EmitS256Load(InstructionSelector* selector, Node* node,
+                  InstructionCode opcode, VSew sew, Vlmul lmul);
+
+
 void InstructionSelector::VisitLoadTransform(Node* node) {
   LoadTransformParameters params = LoadTransformParametersOf(node->op());
 
@@ -284,6 +288,13 @@ void InstructionSelector::VisitLoadTransform(Node* node) {
       break;
     case LoadTransformation::kS128Load64Zero:
       EmitS128Load(this, node, kRiscvS128Load64Zero, E64, m1);
+      break;
+     // Simd256
+     case LoadTransformation::kS256Load32Splat:
+      EmitS256Load(this, node, kRiscvS256Load32Splat, E32, m1); //rv256 todo
+      break;
+     case LoadTransformation::kS256Load64Splat:
+      EmitS256Load(this, node, kRiscvS256Load64Splat, E32, m1);//rvv256 todo
       break;
     default:
       UNIMPLEMENTED();
@@ -971,6 +982,10 @@ void InstructionSelector::VisitI16x8ExtAddPairwiseI8x16U(Node* node) {
   V(S128Xor, kRiscvS128Xor)                             \
   V(S128AndNot, kRiscvS128AndNot)
 
+#define SIMD256_BINOP_LIST(V) \
+  V(F32x8Add, kRiscvF32x8Add)                         \
+  V(F32x8Sub, kRiscvF32x8Sub)
+
 void InstructionSelector::VisitS128Const(Node* node) {
   RiscvOperandGenerator g(this);
   static const int kUint32Immediates = kSimd128Size / sizeof(uint32_t);
@@ -1046,6 +1061,14 @@ SIMD_SHIFT_OP_LIST(SIMD_VISIT_SHIFT_OP)
   }
 SIMD_BINOP_LIST(SIMD_VISIT_BINOP)
 #undef SIMD_VISIT_BINOP
+
+//rvv256 todo
+#define SIMD256_VISIT_BINOP(Name, instruction)           \
+  void InstructionSelector::Visit##Name(Node* node) { \
+    VisitRRR(this, instruction, node);                \
+  }
+SIMD256_BINOP_LIST(SIMD256_VISIT_BINOP)
+#undef SIMD256_VISIT_BINOP
 
 void InstructionSelector::VisitS128Select(Node* node) {
   VisitRRRR(this, kRiscvS128Select, node);
@@ -1234,6 +1257,7 @@ void InstructionSelector::AddOutputToSelectContinuation(OperandGenerator* g,
 }  // namespace v8
 
 #undef SIMD_BINOP_LIST
+#undef SIMD256_BINOP_LIST
 #undef SIMD_SHIFT_OP_LIST
 #undef SIMD_UNOP_LIST
 #undef SIMD_TYPE_LIST
