@@ -319,10 +319,14 @@ RegisterConfiguration::RegisterConfiguration(
     allocatable_float_codes_mask_ = allocatable_double_codes_mask_;
     for (int i = 0; i < num_allocatable_simd128_registers; i++) {
       allocatable_simd128_codes_[i] = independent_allocatable_simd128_codes[i];
+      allocatable_simd256_codes_[i] = independent_allocatable_simd128_codes[i];
     }
     for (int i = 0; i < num_allocatable_simd128_registers_; ++i) {
       allocatable_simd128_codes_mask_ |= (1 << allocatable_simd128_codes_[i]);
+      allocatable_simd256_codes_mask_ |= (1 << allocatable_simd128_codes_[i]);
     }
+    num_simd256_registers_ = num_simd128_registers_;
+    num_allocatable_simd256_registers_ = num_allocatable_simd128_registers_;
   }
 }
 
