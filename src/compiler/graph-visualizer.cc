@@ -774,7 +774,7 @@ void GraphC1Visualizer::PrintLiveRange(const LiveRange* range, const char* type,
         os_ << " \"" << DoubleRegister::from_code(op.register_code()) << "\"";
       } else if (op.IsFloatRegister()) {
         os_ << " \"" << FloatRegister::from_code(op.register_code()) << "\"";
-#if defined(V8_TARGET_ARCH_X64)
+#if defined(V8_TARGET_ARCH_X64) || defined(V8_TARGET_ARCH_RISCV64)
       } else if (op.IsSimd256Register()) {
         os_ << " \"" << Simd256Register::from_code(op.register_code()) << "\"";
 #endif
@@ -1243,7 +1243,7 @@ std::ostream& operator<<(std::ostream& os, const InstructionOperandAsJSON& o) {
         os << DoubleRegister::from_code(allocated->register_code());
       } else if (op->IsFloatRegister()) {
         os << FloatRegister::from_code(allocated->register_code());
-#if defined(V8_TARGET_ARCH_X64)
+#if defined(V8_TARGET_ARCH_X64) || defined(V8_TARGET_ARCH_RISCV64)
       } else if (op->IsSimd256Register()) {
         os << Simd256Register::from_code(allocated->register_code());
 #endif

@@ -224,6 +224,27 @@ void EmitS128Load(InstructionSelector* selector, Node* node,
                    g.UseImmediate(sew), g.UseImmediate(lmul));
   }
 }
+void EmitS256Load(InstructionSelector* selector, Node* node,
+                  InstructionCode opcode, VSew sew, Vlmul lmul) {
+  RiscvOperandGenerator g(selector);
+  Node* base = node->InputAt(0);
+  Node* index = node->InputAt(1);
+
+  if (g.CanBeImmediate(index, opcode)) {
+    selector->Emit(opcode | AddressingModeField::encode(kMode_MRI),
+                   g.DefineAsRegister(node), g.UseRegister(base),
+                   g.UseImmediate(index), g.UseImmediate(sew),
+                   g.UseImmediate(lmul));
+  } else {
+    InstructionOperand addr_reg = g.TempRegister();
+    selector->Emit(kRiscvAdd64 | AddressingModeField::encode(kMode_None),
+                   addr_reg, g.UseRegister(index), g.UseRegister(base));
+    // Emit desired load opcode, using temp addr_reg.
+    selector->Emit(opcode | AddressingModeField::encode(kMode_MRI),
+                   g.DefineAsRegister(node), addr_reg, g.TempImmediate(0),
+                   g.UseImmediate(sew), g.UseImmediate(lmul));
+  }
+}
 
 void InstructionSelector::VisitStoreLane(Node* node) {
   StoreLaneParameters params = StoreLaneParametersOf(node->op());
@@ -312,6 +333,8 @@ void InstructionSelector::VisitLoad(Node* node) {
                                                  // Fall through.
 #endif
     case MachineRepresentation::kSimd256:           // Fall through.
+      opcode = kRiscvMovdqu256;
+      break;
     case MachineRepresentation::kSandboxedPointer:  // Fall through.
     case MachineRepresentation::kMapWord:           // Fall through.
     case MachineRepresentation::kNone:
@@ -388,6 +411,9 @@ void InstructionSelector::VisitStore(Node* node) {
         UNREACHABLE();
 #endif
       case MachineRepresentation::kSimd256:           // Fall through.
+        opcode =  kRiscvMovdqu256;
+	break;
+
       case MachineRepresentation::kSandboxedPointer:  // Fall through.
       case MachineRepresentation::kMapWord:           // Fall through.
       case MachineRepresentation::kNone:
