@@ -1,0 +1,36 @@
+From e9c1884e81d2124c8c678afb5450770a2cf63845 Mon Sep 17 00:00:00 2001
+From: jiepan <jie.pan@intel.com>
+Date: Wed, 3 Aug 2022 18:33:10 +0800
+Subject: [PATCH 5484/9026] [turbofan][x64] Use leaq for Int64Mul if possiable
+
+Change-Id: Ic81be39ed0666c708f9129bef1e75268afc7faf1
+Reviewed-on: https://chromium-review.googlesource.com/c/v8/v8/+/3807123
+Reviewed-by: Tobias Tebbi <tebbi@chromium.org>
+Commit-Queue: Jie Pan <jie.pan@intel.com>
+Cr-Commit-Position: refs/heads/main@{#82374}
+---
+ src/compiler/backend/x64/instruction-selector-x64.cc | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/src/compiler/backend/x64/instruction-selector-x64.cc b/src/compiler/backend/x64/instruction-selector-x64.cc
+index 677e7b96b4..0ea1748714 100644
+--- a/src/compiler/backend/x64/instruction-selector-x64.cc
++++ b/src/compiler/backend/x64/instruction-selector-x64.cc
+@@ -1453,6 +1453,14 @@ void InstructionSelector::VisitInt32MulWithOverflow(Node* node) {
+ }
+ 
+ void InstructionSelector::VisitInt64Mul(Node* node) {
++  Int64ScaleMatcher m(node, true);
++  if (m.matches()) {
++    Node* index = node->InputAt(0);
++    Node* base = m.power_of_two_plus_one() ? index : nullptr;
++    EmitLea(this, kX64Lea, node, index, m.scale(), base, nullptr,
++            kPositiveDisplacement);
++    return;
++  }
+   VisitMul(this, node, kX64Imul);
+ }
+ 
+-- 
+2.25.1
+
