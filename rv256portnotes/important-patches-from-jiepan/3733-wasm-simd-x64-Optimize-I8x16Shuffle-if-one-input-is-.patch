@@ -1,0 +1,139 @@
+From 852e0756395dace302f3dfd884facc88fc6e7774 Mon Sep 17 00:00:00 2001
+From: jiepan <jie.pan@intel.com>
+Date: Wed, 18 May 2022 16:24:27 +0800
+Subject: [PATCH 3733/9026] [wasm-simd][x64] Optimize I8x16Shuffle if one input
+ is S128Zero
+
+If b is S128Zero, Shuffle(a,b,s) can be optimized to
+Swizzle(a,s). By setting s[i] to 0x80, we can avoid access b.
+If a is S128Zero, we can swap a and b first.
+
+If one input of I8x16Shuffle is S128Zero, this patch can save
+~60% instructions(7 of 12), and more than 30% improvement is
+observed in local microbenchmarks.
+
+Change-Id: I5953fa9064e01203cd4cf423c55dd5ed33cad57e
+Reviewed-on: https://chromium-review.googlesource.com/c/v8/v8/+/3544992
+Reviewed-by: Deepti Gandluri <gdeepti@chromium.org>
+Commit-Queue: Jie Pan <jie.pan@intel.com>
+Cr-Commit-Position: refs/heads/main@{#80623}
+---
+ .../backend/x64/instruction-selector-x64.cc   | 46 +++++++++++++++++++
+ test/cctest/wasm/test-run-wasm-simd.cc        | 30 ++++++++++++
+ 2 files changed, 76 insertions(+)
+
+diff --git a/src/compiler/backend/x64/instruction-selector-x64.cc b/src/compiler/backend/x64/instruction-selector-x64.cc
+index f18d317a28..15a28bedb5 100644
+--- a/src/compiler/backend/x64/instruction-selector-x64.cc
++++ b/src/compiler/backend/x64/instruction-selector-x64.cc
+@@ -3618,6 +3618,34 @@ bool TryMatchShufps(const uint8_t* shuffle32x4) {
+          shuffle32x4[3] > 3;
+ }
+ 
++static bool IsV128ZeroConst(Node* node) {
++  if (node->opcode() == IrOpcode::kS128Zero) {
++    return true;
++  }
++  // If the node is a V128 const, check all the elements
++  auto m = V128ConstMatcher(node);
++  if (m.HasResolvedValue()) {
++    auto imms = m.ResolvedValue().immediate();
++    return std::all_of(imms.begin(), imms.end(), [](auto i) { return i == 0; });
++  }
++  return false;
++}
++
++static bool TryMatchOneInputIsZeros(Node* node, uint8_t* shuffle,
++                                    bool* needs_swap) {
++  *needs_swap = false;
++  bool input0_is_zero = IsV128ZeroConst(node->InputAt(0));
++  bool input1_is_zero = IsV128ZeroConst(node->InputAt(1));
++  if (!input0_is_zero && !input1_is_zero) {
++    return false;
++  }
++
++  if (input0_is_zero) {
++    *needs_swap = true;
++  }
++  return true;
++}
++
+ }  // namespace
+ 
+ void InstructionSelector::VisitI8x16Shuffle(Node* node) {
+@@ -3648,6 +3676,7 @@ void InstructionSelector::VisitI8x16Shuffle(Node* node) {
+   uint8_t shuffle16x8[8];
+   int index;
+   const ShuffleEntry* arch_shuffle;
++  bool needs_swap;
+   if (wasm::SimdShuffle::TryMatchConcat(shuffle, &offset)) {
+     if (wasm::SimdShuffle::TryMatch32x4Rotate(shuffle, shuffle32x4,
+                                               is_swizzle)) {
+@@ -3746,6 +3775,23 @@ void InstructionSelector::VisitI8x16Shuffle(Node* node) {
+     no_same_as_first = false;
+     src0_needs_reg = true;
+     imms[imm_count++] = index;
++  } else if (TryMatchOneInputIsZeros(node, shuffle, &needs_swap)) {
++    is_swizzle = true;
++    // Swap zeros to input1
++    if (needs_swap) {
++      SwapShuffleInputs(node);
++      for (int i = 0; i < kSimd128Size; ++i) {
++        shuffle[i] ^= kSimd128Size;
++      }
++    }
++    // If the most significant bit (bit 7) of each byte of the shuffle control
++    // mask is set, then constant zero is written in the result byte. Input1 is
++    // zeros now, we can avoid using input1 by setting bit 7 of shuffle[i] to 1.
++    for (int i = 0; i < kSimd128Size; ++i) {
++      if (shuffle[i] >= kSimd128Size) {
++        shuffle[i] = 0x80;
++      }
++    }
+   }
+   if (opcode == kX64I8x16Shuffle) {
+     // Use same-as-first for general swizzle, but not shuffle.
+diff --git a/test/cctest/wasm/test-run-wasm-simd.cc b/test/cctest/wasm/test-run-wasm-simd.cc
+index ef87b869e9..6ac16725f8 100644
+--- a/test/cctest/wasm/test-run-wasm-simd.cc
++++ b/test/cctest/wasm/test-run-wasm-simd.cc
+@@ -2656,6 +2656,36 @@ WASM_SIMD_TEST(ShuffleShufps) {
+   }
+ }
+ 
++WASM_SIMD_TEST(I8x16ShuffleWithZeroInput) {
++  WasmRunner<int32_t> r(execution_tier);
++  static const int kElems = kSimd128Size / sizeof(uint8_t);
++  uint8_t* dst = r.builder().AddGlobal<uint8_t>(kWasmS128);
++  uint8_t* src0 = r.builder().AddGlobal<uint8_t>(kWasmS128);
++  uint8_t* src1 = r.builder().AddGlobal<uint8_t>(kWasmS128);
++
++  // src0 is zero, it's used to zero extend src1
++  for (int i = 0; i < kElems; i++) {
++    LANE(src0, i) = 0;
++    LANE(src1, i) = i;
++  }
++
++  // Zero extend first 4 elments of src1 to 32 bit
++  constexpr std::array<int8_t, 16> shuffle = {16, 1, 2,  3,  17, 5,  6,  7,
++                                              18, 9, 10, 11, 19, 13, 14, 15};
++  constexpr std::array<int8_t, 16> expected = {0, 0, 0, 0, 1, 0, 0, 0,
++                                               2, 0, 0, 0, 3, 0, 0, 0};
++
++  BUILD(r,
++        WASM_GLOBAL_SET(0, WASM_SIMD_I8x16_SHUFFLE_OP(
++                               kExprI8x16Shuffle, shuffle, WASM_GLOBAL_GET(1),
++                               WASM_GLOBAL_GET(2))),
++        WASM_ONE);
++  CHECK_EQ(1, r.Call());
++  for (int i = 0; i < kElems; i++) {
++    CHECK_EQ(LANE(dst, i), expected[i]);
++  }
++}
++
+ struct SwizzleTestArgs {
+   const Shuffle input;
+   const Shuffle indices;
+-- 
+2.25.1
+
