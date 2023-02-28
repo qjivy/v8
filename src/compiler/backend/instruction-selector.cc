@@ -2385,12 +2385,12 @@ void InstructionSelector::VisitNode(Node* node) {
       return MarkAsSimd128(node), VisitI32x4DotI8x16I7x16AddS(node);
 
       // SIMD256
-#if V8_TARGET_ARCH_X64
+#if V8_TARGET_ARCH_X64 || V8_TARGET_ARCH_RISCV64
     case IrOpcode::kF32x8Add:
       return MarkAsSimd256(node), VisitF32x8Add(node);
     case IrOpcode::kF32x8Sub:
       return MarkAsSimd256(node), VisitF32x8Sub(node);
-#endif  //  V8_TARGET_ARCH_X64
+#endif  //  V8_TARGET_ARCH_X64 || V8_TARGET_ARCH_RISCV64
     default:
       FATAL("Unexpected operator #%d:%s @ node #%d", node->opcode(),
             node->op()->mnemonic(), node->id());

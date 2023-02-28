@@ -3668,6 +3668,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
                  i.InputSimd128Register(1));
       break;
     }
+    // SIMD256
+    case kRiscvF32x8Add:
+    case kRiscvF32x8Sub:
+    case kRiscvS256Load32Splat:
+    case kRiscvS256Load64Splat:
+    case kRiscvMovdqu256:
+      UNIMPLEMENTED();
+
     default:
 #ifdef DEBUG
       switch (arch_opcode) {
