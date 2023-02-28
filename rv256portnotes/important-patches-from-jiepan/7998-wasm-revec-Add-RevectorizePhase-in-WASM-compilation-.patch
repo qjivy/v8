@@ -1,0 +1,2026 @@
+From 256546319c53cc1178e9957c63ecb51490afba48 Mon Sep 17 00:00:00 2001
+From: jiepan <jie.pan@intel.com>
+Date: Fri, 16 Dec 2022 12:55:40 +0800
+Subject: [PATCH 7998/9026] [wasm][revec] Add RevectorizePhase in WASM
+ compilation pipeline
+
+Bug: v8:12716
+
+Change-Id: I7ef53709e9757b58951086fc01af6b2eda296b27
+Reviewed-on: https://chromium-review.googlesource.com/c/v8/v8/+/3411357
+Reviewed-by: Maya Lekova <mslekova@chromium.org>
+Reviewed-by: Deepti Gandluri <gdeepti@chromium.org>
+Commit-Queue: Jie Pan <jie.pan@intel.com>
+Cr-Commit-Position: refs/heads/main@{#84888}
+---
+ BUILD.gn                                     |  17 +-
+ src/compiler/backend/instruction-selector.h  |   3 +-
+ src/compiler/graph.cc                        |   8 +-
+ src/compiler/graph.h                         |   8 +
+ src/compiler/linear-scheduler.cc             |   4 +-
+ src/compiler/machine-operator.cc             |  37 +-
+ src/compiler/machine-operator.h              |  18 +
+ src/compiler/node-properties.h               |   3 +
+ src/compiler/opcodes.h                       | 508 ++++++++-------
+ src/compiler/operator-properties.cc          |   3 +-
+ src/compiler/pipeline.cc                     |  30 +
+ src/compiler/revectorizer.cc                 | 647 +++++++++++++++++++
+ src/compiler/revectorizer.h                  | 197 ++++++
+ src/compiler/simplified-lowering-verifier.cc |   3 +-
+ src/compiler/typer.cc                        |   3 +-
+ src/compiler/verifier.cc                     |   3 +-
+ src/compiler/wasm-compiler.cc                |  28 +-
+ src/flags/flag-definitions.h                 |   7 +
+ src/logging/runtime-call-stats.h             |   1 +
+ test/unittests/BUILD.gn                      |  16 +-
+ test/unittests/compiler/revec-unittest.cc    | 106 +++
+ 21 files changed, 1390 insertions(+), 260 deletions(-)
+ create mode 100644 src/compiler/revectorizer.cc
+ create mode 100644 src/compiler/revectorizer.h
+ create mode 100644 test/unittests/compiler/revec-unittest.cc
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 9f4cd5e9fe..1b11431a41 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -554,6 +554,10 @@ assert(!v8_enable_static_roots ||
+                 v8_enable_webassembly && v8_enable_i18n_support),
+        "Trying to enable static roots in a configuration that is not supported")
+ 
++if (v8_enable_webassembly && !target_is_simulator && v8_current_cpu == "x64") {
++  v8_enable_wasm_simd256_revec = true
++}
++
+ assert(!v8_disable_write_barriers || v8_enable_single_generation,
+        "Disabling write barriers works only with single generation")
+ 
+@@ -1091,6 +1095,9 @@ config("features") {
+   if (v8_value_deserializer_hard_fail) {
+     defines += [ "V8_VALUE_DESERIALIZER_HARD_FAIL" ]
+   }
++  if (v8_enable_wasm_simd256_revec) {
++    defines += [ "V8_ENABLE_WASM_SIMD256_REVEC" ]
++  }
+ }
+ 
+ config("toolchain") {
+@@ -3746,7 +3753,10 @@ v8_header_set("v8_internal_headers") {
+   }
+ 
+   if (v8_enable_wasm_simd256_revec) {
+-    sources += [ "src/compiler/linear-scheduler.h" ]
++    sources += [
++      "src/compiler/linear-scheduler.h",
++      "src/compiler/revectorizer.h",
++    ]
+   }
+ 
+   if (!v8_enable_third_party_heap) {
+@@ -4258,7 +4268,10 @@ if (v8_enable_webassembly) {
+ }
+ 
+ if (v8_enable_wasm_simd256_revec) {
+-  v8_compiler_sources += [ "src/compiler/linear-scheduler.cc" ]
++  v8_compiler_sources += [
++    "src/compiler/linear-scheduler.cc",
++    "src/compiler/revectorizer.cc",
++  ]
+ }
+ 
+ # The src/compiler files with optimizations.
+diff --git a/src/compiler/backend/instruction-selector.h b/src/compiler/backend/instruction-selector.h
+index 181cb20f54..53a09793f7 100644
+--- a/src/compiler/backend/instruction-selector.h
++++ b/src/compiler/backend/instruction-selector.h
+@@ -588,7 +588,8 @@ class V8_EXPORT_PRIVATE InstructionSelector final {
+ 
+ #define DECLARE_GENERATOR(x) void Visit##x(Node* node);
+   MACHINE_OP_LIST(DECLARE_GENERATOR)
+-  MACHINE_SIMD_OP_LIST(DECLARE_GENERATOR)
++  MACHINE_SIMD128_OP_LIST(DECLARE_GENERATOR)
++  MACHINE_SIMD256_OP_LIST(DECLARE_GENERATOR)
+ #undef DECLARE_GENERATOR
+ 
+   // Visit the load node with a value and opcode to replace with.
+diff --git a/src/compiler/graph.cc b/src/compiler/graph.cc
+index fa4aeb8031..3ef88e418b 100644
+--- a/src/compiler/graph.cc
++++ b/src/compiler/graph.cc
+@@ -20,7 +20,9 @@ Graph::Graph(Zone* zone)
+       end_(nullptr),
+       mark_max_(0),
+       next_node_id_(0),
+-      decorators_(zone) {
++      decorators_(zone),
++      has_simd_(false),
++      simd_stores_(zone) {
+   // Nodes use compressed pointers, so zone must support pointer compression.
+   // If the check fails, ensure the zone is created with kCompressGraphZone
+   // flag.
+@@ -78,6 +80,10 @@ NodeId Graph::NextNodeId() {
+ 
+ void Graph::Print() const { StdoutStream{} << AsRPO(*this); }
+ 
++void Graph::RecordSimdStore(Node* store) { simd_stores_.push_back(store); }
++
++ZoneVector<Node*> const& Graph::GetSimdStoreNodes() { return simd_stores_; }
++
+ }  // namespace compiler
+ }  // namespace internal
+ }  // namespace v8
+diff --git a/src/compiler/graph.h b/src/compiler/graph.h
+index a51142d735..6851e67f53 100644
+--- a/src/compiler/graph.h
++++ b/src/compiler/graph.h
+@@ -95,6 +95,12 @@ class V8_EXPORT_PRIVATE Graph final : public NON_EXPORTED_BASE(ZoneObject) {
+   // Very simple print API usable in a debugger.
+   void Print() const;
+ 
++  bool HasSimd() const { return has_simd_; }
++  void SetSimd(bool has_simd) { has_simd_ = has_simd; }
++
++  void RecordSimdStore(Node* store);
++  ZoneVector<Node*> const& GetSimdStoreNodes();
++
+  private:
+   friend class NodeMarkerBase;
+ 
+@@ -106,6 +112,8 @@ class V8_EXPORT_PRIVATE Graph final : public NON_EXPORTED_BASE(ZoneObject) {
+   Mark mark_max_;
+   NodeId next_node_id_;
+   ZoneVector<GraphDecorator*> decorators_;
++  bool has_simd_;
++  ZoneVector<Node*> simd_stores_;
+ };
+ 
+ 
+diff --git a/src/compiler/linear-scheduler.cc b/src/compiler/linear-scheduler.cc
+index c6fe65b482..a8df8ac1e3 100644
+--- a/src/compiler/linear-scheduler.cc
++++ b/src/compiler/linear-scheduler.cc
+@@ -99,8 +99,8 @@ Node* LinearScheduler::GetEarlySchedulePosition(Node* node) {
+       NodeState& use = stack.top();
+       if (use.early_schedule_position == nullptr ||
+           GetControlLevel(use.early_schedule_position) <
+-              GetControlLevel(top.early_schedule_position)) {
+-        use.early_schedule_position = top.early_schedule_position;
++              GetControlLevel(early_schedule_position)) {
++        use.early_schedule_position = early_schedule_position;
+       }
+     }
+   }
+diff --git a/src/compiler/machine-operator.cc b/src/compiler/machine-operator.cc
+index 5a7ccfe3dc..398bec9b48 100644
+--- a/src/compiler/machine-operator.cc
++++ b/src/compiler/machine-operator.cc
+@@ -126,6 +126,11 @@ std::ostream& operator<<(std::ostream& os, LoadTransformation rep) {
+       return os << "kS128Load32Zero";
+     case LoadTransformation::kS128Load64Zero:
+       return os << "kS128Load64Zero";
++    // Simd256
++    case LoadTransformation::kS256Load32Splat:
++      return os << "kS256Load32Splat";
++    case LoadTransformation::kS256Load64Splat:
++      return os << "kS256Load64Splat";
+   }
+   UNREACHABLE();
+ }
+@@ -637,7 +642,18 @@ std::ostream& operator<<(std::ostream& os, TruncateKind kind) {
+   V(I32x4RelaxedTruncF64x2UZero, Operator::kNoProperties, 1, 0, 1)         \
+   V(I16x8RelaxedQ15MulRS, Operator::kCommutative, 2, 0, 1)                 \
+   V(I16x8DotI8x16I7x16S, Operator::kCommutative, 2, 0, 1)                  \
+-  V(I32x4DotI8x16I7x16AddS, Operator::kNoProperties, 3, 0, 1)
++  V(I32x4DotI8x16I7x16AddS, Operator::kNoProperties, 3, 0, 1)              \
++  V(F32x8Add, Operator::kCommutative, 2, 0, 1)                             \
++  V(F32x8Sub, Operator::kNoProperties, 2, 0, 1)                            \
++  V(F32x8Mul, Operator::kCommutative, 2, 0, 1)                             \
++  V(F32x8Div, Operator::kNoProperties, 2, 0, 1)                            \
++  V(F32x8Pmin, Operator::kNoProperties, 2, 0, 1)                           \
++  V(F32x8Pmax, Operator::kNoProperties, 2, 0, 1)                           \
++  V(F32x8Eq, Operator::kCommutative, 2, 0, 1)                              \
++  V(F32x8Ne, Operator::kCommutative, 2, 0, 1)                              \
++  V(F32x8Lt, Operator::kNoProperties, 2, 0, 1)                             \
++  V(F32x8Le, Operator::kNoProperties, 2, 0, 1)                             \
++  V(S256Select, Operator::kNoProperties, 3, 0, 1)
+ 
+ // The format is:
+ // V(Name, properties, value_input_count, control_input_count, output_count)
+@@ -729,7 +745,9 @@ std::ostream& operator<<(std::ostream& os, TruncateKind kind) {
+   V(S128Load32x2S)             \
+   V(S128Load32x2U)             \
+   V(S128Load32Zero)            \
+-  V(S128Load64Zero)
++  V(S128Load64Zero)            \
++  V(S256Load32Splat)           \
++  V(S256Load64Splat)
+ 
+ #if TAGGED_SIZE_8_BYTES
+ 
+@@ -2226,6 +2244,21 @@ StackCheckKind StackCheckKindOf(Operator const* op) {
+   return OpParameter<StackCheckKind>(op);
+ }
+ 
++const Operator* MachineOperatorBuilder::ExtractF128(int32_t lane_index) {
++  DCHECK(0 <= lane_index && lane_index < 2);
++  class ExtractF128Operator final : public Operator1<int32_t> {
++   public:
++    explicit ExtractF128Operator(int32_t lane_index)
++        : Operator1<int32_t>(IrOpcode::kExtractF128, Operator::kPure,
++                             "ExtractF128", 1, 0, 0, 1, 0, 0, lane_index) {
++      lane_index_ = lane_index;
++    }
++
++    int32_t lane_index_;
++  };
++  return zone_->New<ExtractF128Operator>(lane_index);
++}
++
+ #undef PURE_BINARY_OP_LIST_32
+ #undef PURE_BINARY_OP_LIST_64
+ #undef MACHINE_PURE_OP_LIST
+diff --git a/src/compiler/machine-operator.h b/src/compiler/machine-operator.h
+index 5e28ea15f6..af6591e851 100644
+--- a/src/compiler/machine-operator.h
++++ b/src/compiler/machine-operator.h
+@@ -126,6 +126,8 @@ enum class LoadTransformation {
+   kS128Load32x2U,
+   kS128Load32Zero,
+   kS128Load64Zero,
++  kS256Load32Splat,
++  kS256Load64Splat,
+ };
+ 
+ size_t hash_value(LoadTransformation);
+@@ -964,6 +966,22 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
+ 
+   const Operator* TraceInstruction(uint32_t markid);
+ 
++  // SIMD256
++  const Operator* F32x8Add();
++  const Operator* F32x8Sub();
++  const Operator* F32x8Mul();
++  const Operator* F32x8Div();
++  const Operator* F32x8Min();
++  const Operator* F32x8Max();
++  const Operator* F32x8Pmin();
++  const Operator* F32x8Pmax();
++  const Operator* F32x8Eq();
++  const Operator* F32x8Ne();
++  const Operator* F32x8Lt();
++  const Operator* F32x8Le();
++  const Operator* S256Select();
++  const Operator* ExtractF128(int32_t lane_index);
++
+   // load [base + index]
+   const Operator* Load(LoadRepresentation rep);
+   const Operator* LoadImmutable(LoadRepresentation rep);
+diff --git a/src/compiler/node-properties.h b/src/compiler/node-properties.h
+index 8f64f90b6b..528154ad28 100644
+--- a/src/compiler/node-properties.h
++++ b/src/compiler/node-properties.h
+@@ -117,6 +117,9 @@ class V8_EXPORT_PRIVATE NodeProperties {
+   static bool IsPhi(Node* node) {
+     return IrOpcode::IsPhiOpcode(node->opcode());
+   }
++  static bool IsSimd128Operation(Node* node) {
++    return IrOpcode::IsSimd128Opcode(node->opcode());
++  }
+ 
+   // Determines whether exceptions thrown by the given node are handled locally
+   // within the graph (i.e. an IfException projection is present). Optionally
+diff --git a/src/compiler/opcodes.h b/src/compiler/opcodes.h
+index b8f82f0146..477de8f45f 100644
+--- a/src/compiler/opcodes.h
++++ b/src/compiler/opcodes.h
+@@ -825,248 +825,264 @@
+   V(StackPointerGreaterThan)             \
+   V(TraceInstruction)
+ 
+-#define MACHINE_SIMD_OP_LIST(V)  \
+-  V(F64x2Splat)                  \
+-  V(F64x2ExtractLane)            \
+-  V(F64x2ReplaceLane)            \
+-  V(F64x2Abs)                    \
+-  V(F64x2Neg)                    \
+-  V(F64x2Sqrt)                   \
+-  V(F64x2Add)                    \
+-  V(F64x2Sub)                    \
+-  V(F64x2Mul)                    \
+-  V(F64x2Div)                    \
+-  V(F64x2Min)                    \
+-  V(F64x2Max)                    \
+-  V(F64x2Eq)                     \
+-  V(F64x2Ne)                     \
+-  V(F64x2Lt)                     \
+-  V(F64x2Le)                     \
+-  V(F64x2Qfma)                   \
+-  V(F64x2Qfms)                   \
+-  V(F64x2Pmin)                   \
+-  V(F64x2Pmax)                   \
+-  V(F64x2Ceil)                   \
+-  V(F64x2Floor)                  \
+-  V(F64x2Trunc)                  \
+-  V(F64x2NearestInt)             \
+-  V(F64x2ConvertLowI32x4S)       \
+-  V(F64x2ConvertLowI32x4U)       \
+-  V(F64x2PromoteLowF32x4)        \
+-  V(F32x4Splat)                  \
+-  V(F32x4ExtractLane)            \
+-  V(F32x4ReplaceLane)            \
+-  V(F32x4SConvertI32x4)          \
+-  V(F32x4UConvertI32x4)          \
+-  V(F32x4Abs)                    \
+-  V(F32x4Neg)                    \
+-  V(F32x4Sqrt)                   \
+-  V(F32x4Add)                    \
+-  V(F32x4Sub)                    \
+-  V(F32x4Mul)                    \
+-  V(F32x4Div)                    \
+-  V(F32x4Min)                    \
+-  V(F32x4Max)                    \
+-  V(F32x4Eq)                     \
+-  V(F32x4Ne)                     \
+-  V(F32x4Lt)                     \
+-  V(F32x4Le)                     \
+-  V(F32x4Gt)                     \
+-  V(F32x4Ge)                     \
+-  V(F32x4Qfma)                   \
+-  V(F32x4Qfms)                   \
+-  V(F32x4Pmin)                   \
+-  V(F32x4Pmax)                   \
+-  V(F32x4Ceil)                   \
+-  V(F32x4Floor)                  \
+-  V(F32x4Trunc)                  \
+-  V(F32x4NearestInt)             \
+-  V(F32x4DemoteF64x2Zero)        \
+-  V(I64x2Splat)                  \
+-  V(I64x2SplatI32Pair)           \
+-  V(I64x2ExtractLane)            \
+-  V(I64x2ReplaceLane)            \
+-  V(I64x2ReplaceLaneI32Pair)     \
+-  V(I64x2Abs)                    \
+-  V(I64x2Neg)                    \
+-  V(I64x2SConvertI32x4Low)       \
+-  V(I64x2SConvertI32x4High)      \
+-  V(I64x2UConvertI32x4Low)       \
+-  V(I64x2UConvertI32x4High)      \
+-  V(I64x2BitMask)                \
+-  V(I64x2Shl)                    \
+-  V(I64x2ShrS)                   \
+-  V(I64x2Add)                    \
+-  V(I64x2Sub)                    \
+-  V(I64x2Mul)                    \
+-  V(I64x2Eq)                     \
+-  V(I64x2Ne)                     \
+-  V(I64x2GtS)                    \
+-  V(I64x2GeS)                    \
+-  V(I64x2ShrU)                   \
+-  V(I64x2ExtMulLowI32x4S)        \
+-  V(I64x2ExtMulHighI32x4S)       \
+-  V(I64x2ExtMulLowI32x4U)        \
+-  V(I64x2ExtMulHighI32x4U)       \
+-  V(I32x4Splat)                  \
+-  V(I32x4ExtractLane)            \
+-  V(I32x4ReplaceLane)            \
+-  V(I32x4SConvertF32x4)          \
+-  V(I32x4SConvertI16x8Low)       \
+-  V(I32x4SConvertI16x8High)      \
+-  V(I32x4Neg)                    \
+-  V(I32x4Shl)                    \
+-  V(I32x4ShrS)                   \
+-  V(I32x4Add)                    \
+-  V(I32x4Sub)                    \
+-  V(I32x4Mul)                    \
+-  V(I32x4MinS)                   \
+-  V(I32x4MaxS)                   \
+-  V(I32x4Eq)                     \
+-  V(I32x4Ne)                     \
+-  V(I32x4LtS)                    \
+-  V(I32x4LeS)                    \
+-  V(I32x4GtS)                    \
+-  V(I32x4GeS)                    \
+-  V(I32x4UConvertF32x4)          \
+-  V(I32x4UConvertI16x8Low)       \
+-  V(I32x4UConvertI16x8High)      \
+-  V(I32x4ShrU)                   \
+-  V(I32x4MinU)                   \
+-  V(I32x4MaxU)                   \
+-  V(I32x4LtU)                    \
+-  V(I32x4LeU)                    \
+-  V(I32x4GtU)                    \
+-  V(I32x4GeU)                    \
+-  V(I32x4Abs)                    \
+-  V(I32x4BitMask)                \
+-  V(I32x4DotI16x8S)              \
+-  V(I32x4ExtMulLowI16x8S)        \
+-  V(I32x4ExtMulHighI16x8S)       \
+-  V(I32x4ExtMulLowI16x8U)        \
+-  V(I32x4ExtMulHighI16x8U)       \
+-  V(I32x4ExtAddPairwiseI16x8S)   \
+-  V(I32x4ExtAddPairwiseI16x8U)   \
+-  V(I32x4TruncSatF64x2SZero)     \
+-  V(I32x4TruncSatF64x2UZero)     \
+-  V(I16x8Splat)                  \
+-  V(I16x8ExtractLaneU)           \
+-  V(I16x8ExtractLaneS)           \
+-  V(I16x8ReplaceLane)            \
+-  V(I16x8SConvertI8x16Low)       \
+-  V(I16x8SConvertI8x16High)      \
+-  V(I16x8Neg)                    \
+-  V(I16x8Shl)                    \
+-  V(I16x8ShrS)                   \
+-  V(I16x8SConvertI32x4)          \
+-  V(I16x8Add)                    \
+-  V(I16x8AddSatS)                \
+-  V(I16x8Sub)                    \
+-  V(I16x8SubSatS)                \
+-  V(I16x8Mul)                    \
+-  V(I16x8MinS)                   \
+-  V(I16x8MaxS)                   \
+-  V(I16x8Eq)                     \
+-  V(I16x8Ne)                     \
+-  V(I16x8LtS)                    \
+-  V(I16x8LeS)                    \
+-  V(I16x8GtS)                    \
+-  V(I16x8GeS)                    \
+-  V(I16x8UConvertI8x16Low)       \
+-  V(I16x8UConvertI8x16High)      \
+-  V(I16x8ShrU)                   \
+-  V(I16x8UConvertI32x4)          \
+-  V(I16x8AddSatU)                \
+-  V(I16x8SubSatU)                \
+-  V(I16x8MinU)                   \
+-  V(I16x8MaxU)                   \
+-  V(I16x8LtU)                    \
+-  V(I16x8LeU)                    \
+-  V(I16x8GtU)                    \
+-  V(I16x8GeU)                    \
+-  V(I16x8RoundingAverageU)       \
+-  V(I16x8Q15MulRSatS)            \
+-  V(I16x8Abs)                    \
+-  V(I16x8BitMask)                \
+-  V(I16x8ExtMulLowI8x16S)        \
+-  V(I16x8ExtMulHighI8x16S)       \
+-  V(I16x8ExtMulLowI8x16U)        \
+-  V(I16x8ExtMulHighI8x16U)       \
+-  V(I16x8ExtAddPairwiseI8x16S)   \
+-  V(I16x8ExtAddPairwiseI8x16U)   \
+-  V(I8x16Splat)                  \
+-  V(I8x16ExtractLaneU)           \
+-  V(I8x16ExtractLaneS)           \
+-  V(I8x16ReplaceLane)            \
+-  V(I8x16SConvertI16x8)          \
+-  V(I8x16Neg)                    \
+-  V(I8x16Shl)                    \
+-  V(I8x16ShrS)                   \
+-  V(I8x16Add)                    \
+-  V(I8x16AddSatS)                \
+-  V(I8x16Sub)                    \
+-  V(I8x16SubSatS)                \
+-  V(I8x16MinS)                   \
+-  V(I8x16MaxS)                   \
+-  V(I8x16Eq)                     \
+-  V(I8x16Ne)                     \
+-  V(I8x16LtS)                    \
+-  V(I8x16LeS)                    \
+-  V(I8x16GtS)                    \
+-  V(I8x16GeS)                    \
+-  V(I8x16UConvertI16x8)          \
+-  V(I8x16AddSatU)                \
+-  V(I8x16SubSatU)                \
+-  V(I8x16ShrU)                   \
+-  V(I8x16MinU)                   \
+-  V(I8x16MaxU)                   \
+-  V(I8x16LtU)                    \
+-  V(I8x16LeU)                    \
+-  V(I8x16GtU)                    \
+-  V(I8x16GeU)                    \
+-  V(I8x16RoundingAverageU)       \
+-  V(I8x16Popcnt)                 \
+-  V(I8x16Abs)                    \
+-  V(I8x16BitMask)                \
+-  V(S128Zero)                    \
+-  V(S128Const)                   \
+-  V(S128Not)                     \
+-  V(S128And)                     \
+-  V(S128Or)                      \
+-  V(S128Xor)                     \
+-  V(S128Select)                  \
+-  V(S128AndNot)                  \
+-  V(I8x16Swizzle)                \
+-  V(I8x16RelaxedLaneSelect)      \
+-  V(I16x8RelaxedLaneSelect)      \
+-  V(I32x4RelaxedLaneSelect)      \
+-  V(I64x2RelaxedLaneSelect)      \
+-  V(F32x4RelaxedMin)             \
+-  V(F32x4RelaxedMax)             \
+-  V(F64x2RelaxedMin)             \
+-  V(F64x2RelaxedMax)             \
+-  V(I32x4RelaxedTruncF32x4S)     \
+-  V(I32x4RelaxedTruncF32x4U)     \
+-  V(I32x4RelaxedTruncF64x2SZero) \
+-  V(I32x4RelaxedTruncF64x2UZero) \
+-  V(I16x8RelaxedQ15MulRS)        \
+-  V(I16x8DotI8x16I7x16S)         \
+-  V(I32x4DotI8x16I7x16AddS)      \
+-  V(I8x16Shuffle)                \
+-  V(V128AnyTrue)                 \
+-  V(I64x2AllTrue)                \
+-  V(I32x4AllTrue)                \
+-  V(I16x8AllTrue)                \
+-  V(I8x16AllTrue)                \
+-  V(LoadTransform)               \
+-  V(LoadLane)                    \
++#define MACHINE_SIMD128_OP_LIST(V) \
++  V(F64x2Splat)                    \
++  V(F64x2ExtractLane)              \
++  V(F64x2ReplaceLane)              \
++  V(F64x2Abs)                      \
++  V(F64x2Neg)                      \
++  V(F64x2Sqrt)                     \
++  V(F64x2Add)                      \
++  V(F64x2Sub)                      \
++  V(F64x2Mul)                      \
++  V(F64x2Div)                      \
++  V(F64x2Min)                      \
++  V(F64x2Max)                      \
++  V(F64x2Eq)                       \
++  V(F64x2Ne)                       \
++  V(F64x2Lt)                       \
++  V(F64x2Le)                       \
++  V(F64x2Qfma)                     \
++  V(F64x2Qfms)                     \
++  V(F64x2Pmin)                     \
++  V(F64x2Pmax)                     \
++  V(F64x2Ceil)                     \
++  V(F64x2Floor)                    \
++  V(F64x2Trunc)                    \
++  V(F64x2NearestInt)               \
++  V(F64x2ConvertLowI32x4S)         \
++  V(F64x2ConvertLowI32x4U)         \
++  V(F64x2PromoteLowF32x4)          \
++  V(F32x4Splat)                    \
++  V(F32x4ExtractLane)              \
++  V(F32x4ReplaceLane)              \
++  V(F32x4SConvertI32x4)            \
++  V(F32x4UConvertI32x4)            \
++  V(F32x4Abs)                      \
++  V(F32x4Neg)                      \
++  V(F32x4Sqrt)                     \
++  V(F32x4Add)                      \
++  V(F32x4Sub)                      \
++  V(F32x4Mul)                      \
++  V(F32x4Div)                      \
++  V(F32x4Min)                      \
++  V(F32x4Max)                      \
++  V(F32x4Eq)                       \
++  V(F32x4Ne)                       \
++  V(F32x4Lt)                       \
++  V(F32x4Le)                       \
++  V(F32x4Gt)                       \
++  V(F32x4Ge)                       \
++  V(F32x4Qfma)                     \
++  V(F32x4Qfms)                     \
++  V(F32x4Pmin)                     \
++  V(F32x4Pmax)                     \
++  V(F32x4Ceil)                     \
++  V(F32x4Floor)                    \
++  V(F32x4Trunc)                    \
++  V(F32x4NearestInt)               \
++  V(F32x4DemoteF64x2Zero)          \
++  V(I64x2Splat)                    \
++  V(I64x2SplatI32Pair)             \
++  V(I64x2ExtractLane)              \
++  V(I64x2ReplaceLane)              \
++  V(I64x2ReplaceLaneI32Pair)       \
++  V(I64x2Abs)                      \
++  V(I64x2Neg)                      \
++  V(I64x2SConvertI32x4Low)         \
++  V(I64x2SConvertI32x4High)        \
++  V(I64x2UConvertI32x4Low)         \
++  V(I64x2UConvertI32x4High)        \
++  V(I64x2BitMask)                  \
++  V(I64x2Shl)                      \
++  V(I64x2ShrS)                     \
++  V(I64x2Add)                      \
++  V(I64x2Sub)                      \
++  V(I64x2Mul)                      \
++  V(I64x2Eq)                       \
++  V(I64x2Ne)                       \
++  V(I64x2GtS)                      \
++  V(I64x2GeS)                      \
++  V(I64x2ShrU)                     \
++  V(I64x2ExtMulLowI32x4S)          \
++  V(I64x2ExtMulHighI32x4S)         \
++  V(I64x2ExtMulLowI32x4U)          \
++  V(I64x2ExtMulHighI32x4U)         \
++  V(I32x4Splat)                    \
++  V(I32x4ExtractLane)              \
++  V(I32x4ReplaceLane)              \
++  V(I32x4SConvertF32x4)            \
++  V(I32x4SConvertI16x8Low)         \
++  V(I32x4SConvertI16x8High)        \
++  V(I32x4Neg)                      \
++  V(I32x4Shl)                      \
++  V(I32x4ShrS)                     \
++  V(I32x4Add)                      \
++  V(I32x4Sub)                      \
++  V(I32x4Mul)                      \
++  V(I32x4MinS)                     \
++  V(I32x4MaxS)                     \
++  V(I32x4Eq)                       \
++  V(I32x4Ne)                       \
++  V(I32x4LtS)                      \
++  V(I32x4LeS)                      \
++  V(I32x4GtS)                      \
++  V(I32x4GeS)                      \
++  V(I32x4UConvertF32x4)            \
++  V(I32x4UConvertI16x8Low)         \
++  V(I32x4UConvertI16x8High)        \
++  V(I32x4ShrU)                     \
++  V(I32x4MinU)                     \
++  V(I32x4MaxU)                     \
++  V(I32x4LtU)                      \
++  V(I32x4LeU)                      \
++  V(I32x4GtU)                      \
++  V(I32x4GeU)                      \
++  V(I32x4Abs)                      \
++  V(I32x4BitMask)                  \
++  V(I32x4DotI16x8S)                \
++  V(I32x4ExtMulLowI16x8S)          \
++  V(I32x4ExtMulHighI16x8S)         \
++  V(I32x4ExtMulLowI16x8U)          \
++  V(I32x4ExtMulHighI16x8U)         \
++  V(I32x4ExtAddPairwiseI16x8S)     \
++  V(I32x4ExtAddPairwiseI16x8U)     \
++  V(I32x4TruncSatF64x2SZero)       \
++  V(I32x4TruncSatF64x2UZero)       \
++  V(I16x8Splat)                    \
++  V(I16x8ExtractLaneU)             \
++  V(I16x8ExtractLaneS)             \
++  V(I16x8ReplaceLane)              \
++  V(I16x8SConvertI8x16Low)         \
++  V(I16x8SConvertI8x16High)        \
++  V(I16x8Neg)                      \
++  V(I16x8Shl)                      \
++  V(I16x8ShrS)                     \
++  V(I16x8SConvertI32x4)            \
++  V(I16x8Add)                      \
++  V(I16x8AddSatS)                  \
++  V(I16x8Sub)                      \
++  V(I16x8SubSatS)                  \
++  V(I16x8Mul)                      \
++  V(I16x8MinS)                     \
++  V(I16x8MaxS)                     \
++  V(I16x8Eq)                       \
++  V(I16x8Ne)                       \
++  V(I16x8LtS)                      \
++  V(I16x8LeS)                      \
++  V(I16x8GtS)                      \
++  V(I16x8GeS)                      \
++  V(I16x8UConvertI8x16Low)         \
++  V(I16x8UConvertI8x16High)        \
++  V(I16x8ShrU)                     \
++  V(I16x8UConvertI32x4)            \
++  V(I16x8AddSatU)                  \
++  V(I16x8SubSatU)                  \
++  V(I16x8MinU)                     \
++  V(I16x8MaxU)                     \
++  V(I16x8LtU)                      \
++  V(I16x8LeU)                      \
++  V(I16x8GtU)                      \
++  V(I16x8GeU)                      \
++  V(I16x8RoundingAverageU)         \
++  V(I16x8Q15MulRSatS)              \
++  V(I16x8Abs)                      \
++  V(I16x8BitMask)                  \
++  V(I16x8ExtMulLowI8x16S)          \
++  V(I16x8ExtMulHighI8x16S)         \
++  V(I16x8ExtMulLowI8x16U)          \
++  V(I16x8ExtMulHighI8x16U)         \
++  V(I16x8ExtAddPairwiseI8x16S)     \
++  V(I16x8ExtAddPairwiseI8x16U)     \
++  V(I8x16Splat)                    \
++  V(I8x16ExtractLaneU)             \
++  V(I8x16ExtractLaneS)             \
++  V(I8x16ReplaceLane)              \
++  V(I8x16SConvertI16x8)            \
++  V(I8x16Neg)                      \
++  V(I8x16Shl)                      \
++  V(I8x16ShrS)                     \
++  V(I8x16Add)                      \
++  V(I8x16AddSatS)                  \
++  V(I8x16Sub)                      \
++  V(I8x16SubSatS)                  \
++  V(I8x16MinS)                     \
++  V(I8x16MaxS)                     \
++  V(I8x16Eq)                       \
++  V(I8x16Ne)                       \
++  V(I8x16LtS)                      \
++  V(I8x16LeS)                      \
++  V(I8x16GtS)                      \
++  V(I8x16GeS)                      \
++  V(I8x16UConvertI16x8)            \
++  V(I8x16AddSatU)                  \
++  V(I8x16SubSatU)                  \
++  V(I8x16ShrU)                     \
++  V(I8x16MinU)                     \
++  V(I8x16MaxU)                     \
++  V(I8x16LtU)                      \
++  V(I8x16LeU)                      \
++  V(I8x16GtU)                      \
++  V(I8x16GeU)                      \
++  V(I8x16RoundingAverageU)         \
++  V(I8x16Popcnt)                   \
++  V(I8x16Abs)                      \
++  V(I8x16BitMask)                  \
++  V(S128Zero)                      \
++  V(S128Const)                     \
++  V(S128Not)                       \
++  V(S128And)                       \
++  V(S128Or)                        \
++  V(S128Xor)                       \
++  V(S128Select)                    \
++  V(S128AndNot)                    \
++  V(I8x16Swizzle)                  \
++  V(I8x16RelaxedLaneSelect)        \
++  V(I16x8RelaxedLaneSelect)        \
++  V(I32x4RelaxedLaneSelect)        \
++  V(I64x2RelaxedLaneSelect)        \
++  V(F32x4RelaxedMin)               \
++  V(F32x4RelaxedMax)               \
++  V(F64x2RelaxedMin)               \
++  V(F64x2RelaxedMax)               \
++  V(I32x4RelaxedTruncF32x4S)       \
++  V(I32x4RelaxedTruncF32x4U)       \
++  V(I32x4RelaxedTruncF64x2SZero)   \
++  V(I32x4RelaxedTruncF64x2UZero)   \
++  V(I16x8RelaxedQ15MulRS)          \
++  V(I16x8DotI8x16I7x16S)           \
++  V(I32x4DotI8x16I7x16AddS)        \
++  V(I8x16Shuffle)                  \
++  V(V128AnyTrue)                   \
++  V(I64x2AllTrue)                  \
++  V(I32x4AllTrue)                  \
++  V(I16x8AllTrue)                  \
++  V(I8x16AllTrue)                  \
++  V(LoadTransform)                 \
++  V(LoadLane)                      \
+   V(StoreLane)
+ 
+-#define VALUE_OP_LIST(V)  \
+-  COMMON_OP_LIST(V)       \
+-  SIMPLIFIED_OP_LIST(V)   \
+-  MACHINE_OP_LIST(V)      \
+-  MACHINE_SIMD_OP_LIST(V) \
++// SIMD256 for AVX
++#define MACHINE_SIMD256_OP_LIST(V) \
++  V(F32x8Add)                      \
++  V(F32x8Sub)                      \
++  V(F32x8Mul)                      \
++  V(F32x8Div)                      \
++  V(F32x8Pmin)                     \
++  V(F32x8Pmax)                     \
++  V(F32x8Eq)                       \
++  V(F32x8Ne)                       \
++  V(F32x8Lt)                       \
++  V(F32x8Le)                       \
++  V(S256Select)                    \
++  V(ExtractF128)
++
++#define VALUE_OP_LIST(V)     \
++  COMMON_OP_LIST(V)          \
++  SIMPLIFIED_OP_LIST(V)      \
++  MACHINE_OP_LIST(V)         \
++  MACHINE_SIMD128_OP_LIST(V) \
++  MACHINE_SIMD256_OP_LIST(V) \
+   JS_OP_LIST(V)
+ 
+ // The combination of all operators at all levels and the common operators.
+@@ -1252,6 +1268,18 @@ class V8_EXPORT_PRIVATE IrOpcode {
+     }
+     UNREACHABLE();
+   }
++
++  static bool IsSimd128Opcode(Value value) {
++#define CASE(Name, ...) case k##Name:
++    switch (value) {
++      MACHINE_SIMD128_OP_LIST(CASE)
++      return true;
++      default:
++        return false;
++    }
++#undef CASE
++    UNREACHABLE();
++  }
+ };
+ 
+ V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&, IrOpcode::Value);
+diff --git a/src/compiler/operator-properties.cc b/src/compiler/operator-properties.cc
+index e0ee3b38d0..59e7c4b795 100644
+--- a/src/compiler/operator-properties.cc
++++ b/src/compiler/operator-properties.cc
+@@ -126,7 +126,8 @@ bool OperatorProperties::NeedsExactContext(const Operator* op) {
+       COMMON_OP_LIST(CASE)
+       CONTROL_OP_LIST(CASE)
+       MACHINE_OP_LIST(CASE)
+-      MACHINE_SIMD_OP_LIST(CASE)
++      MACHINE_SIMD128_OP_LIST(CASE)
++      MACHINE_SIMD256_OP_LIST(CASE)
+       SIMPLIFIED_OP_LIST(CASE)
+       break;
+ #undef CASE
+diff --git a/src/compiler/pipeline.cc b/src/compiler/pipeline.cc
+index 216dfedc8b..306ae7397e 100644
+--- a/src/compiler/pipeline.cc
++++ b/src/compiler/pipeline.cc
+@@ -129,6 +129,10 @@
+ #include "src/wasm/wasm-engine.h"
+ #endif  // V8_ENABLE_WEBASSEMBLY
+ 
++#if V8_ENABLE_WASM_SIMD256_REVEC
++#include "src/compiler/revectorizer.h"
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+ namespace v8 {
+ namespace internal {
+ namespace compiler {
+@@ -728,6 +732,10 @@ class PipelineImpl final {
+   // Substep B.1. Produce a scheduled graph.
+   void ComputeScheduledGraph();
+ 
++#if V8_ENABLE_WASM_SIMD256_REVEC
++  void Revectorize();
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+   // Substep B.2. Select instructions from a scheduled graph.
+   bool SelectInstructions(Linkage* linkage);
+ 
+@@ -2355,6 +2363,17 @@ struct ComputeSchedulePhase {
+   }
+ };
+ 
++#if V8_ENABLE_WASM_SIMD256_REVEC
++struct RevectorizePhase {
++  DECL_PIPELINE_PHASE_CONSTANTS(Revectorizer)
++
++  void Run(PipelineData* data, Zone* temp_zone) {
++    Revectorizer revec(temp_zone, data->graph(), data->mcgraph());
++    revec.TryRevectorize(data->info()->GetDebugName().get());
++  }
++};
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+ struct InstructionRangesAsJSON {
+   const InstructionSequence* sequence;
+   const ZoneVector<std::pair<int, int>>* instr_origins;
+@@ -3458,6 +3477,13 @@ void Pipeline::GenerateCodeForWasmFunction(
+ 
+   pipeline.RunPrintAndVerify("V8.WasmMachineCode", true);
+ 
++#if V8_ENABLE_WASM_SIMD256_REVEC
++  if (v8_flags.experimental_wasm_revectorize) {
++    pipeline.Revectorize();
++    pipeline.RunPrintAndVerify("V8.WasmRevec", true);
++  }
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+   data.BeginPhaseKind("V8.WasmOptimization");
+   if (v8_flags.wasm_inlining) {
+     pipeline.Run<WasmInliningPhase>(env, function_index, wire_bytes_storage,
+@@ -3763,6 +3789,10 @@ void PipelineImpl::ComputeScheduledGraph() {
+   TraceScheduleAndVerify(data->info(), data, data->schedule(), "schedule");
+ }
+ 
++#if V8_ENABLE_WASM_SIMD256_REVEC
++void PipelineImpl::Revectorize() { Run<RevectorizePhase>(); }
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+ bool PipelineImpl::SelectInstructions(Linkage* linkage) {
+   auto call_descriptor = linkage->GetIncomingDescriptor();
+   PipelineData* data = this->data_;
+diff --git a/src/compiler/revectorizer.cc b/src/compiler/revectorizer.cc
+new file mode 100644
+index 0000000000..1f27d047cb
+--- /dev/null
++++ b/src/compiler/revectorizer.cc
+@@ -0,0 +1,647 @@
++// Copyright 2022 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "src/compiler/revectorizer.h"
++
++#include "src/base/cpu.h"
++#include "src/base/logging.h"
++#include "src/compiler/all-nodes.h"
++#include "src/compiler/machine-operator.h"
++#include "src/compiler/verifier.h"
++
++namespace v8 {
++namespace internal {
++namespace compiler {
++
++#define TRACE(...)                         \
++  do {                                     \
++    if (v8_flags.trace_wasm_revectorize) { \
++      PrintF("Revec: ");                   \
++      PrintF(__VA_ARGS__);                 \
++    }                                      \
++  } while (false)
++
++namespace {
++
++#ifdef DEBUG
++// Currently, only Load/ProtectedLoad/LoadTransfrom are supported.
++// TODO(jiepan): add support for UnalignedLoad, LoadLane
++bool IsSupportedLoad(const Node* node) {
++  if (node->opcode() == IrOpcode::kProtectedLoad ||
++      node->opcode() == IrOpcode::kLoad ||
++      node->opcode() == IrOpcode::kLoadTransform) {
++    return true;
++  }
++  return false;
++}
++bool IsSupportedLoad(const ZoneVector<Node*>& node_group) {
++  for (auto node : node_group) {
++    if (!IsSupportedLoad(node)) return false;
++  }
++  return true;
++}
++#endif
++
++int64_t GetConstantValue(const Node* node) {
++  int64_t value = -1;
++  if (node->opcode() == IrOpcode::kInt64Constant) {
++    value = OpParameter<int64_t>(node->op());
++  }
++  return value;
++}
++
++int64_t GetMemoryOffsetValue(const Node* node) {
++  DCHECK(node->opcode() == IrOpcode::kProtectedLoad ||
++         node->opcode() == IrOpcode::kStore ||
++         node->opcode() == IrOpcode::kProtectedStore);
++
++  Node* offset = node->InputAt(0);
++  if (offset->opcode() == IrOpcode::kLoadFromObject ||
++      offset->opcode() == IrOpcode::kLoad) {
++    return 0;
++  }
++
++  int64_t offset_value = -1;
++  if (offset->opcode() == IrOpcode::kInt64Add) {
++    if (NodeProperties::IsConstant(offset->InputAt(0))) {
++      offset_value = GetConstantValue(offset->InputAt(0));
++    } else if (NodeProperties::IsConstant(offset->InputAt(1))) {
++      offset_value = GetConstantValue(offset->InputAt(1));
++    }
++  }
++  return offset_value;
++}
++
++// We want to combine load/store nodes with continuous memory address,
++// for load/store node, input(0) is memory_start + offset,  input(1) is index,
++// we currently use index as the address of the node, nodes with same index and
++// continuous offset can be combined together.
++Node* GetNodeAddress(const Node* node) {
++  Node* address = node->InputAt(1);
++  // The index is changed to Uint64 for memory32
++  if (address->opcode() == IrOpcode::kChangeUint32ToUint64) {
++    address = address->InputAt(0);
++  }
++  return address;
++}
++
++bool IsContinuousAccess(const ZoneVector<Node*>& node_group) {
++  DCHECK_GT(node_group.size(), 0);
++  int64_t previous_offset = GetMemoryOffsetValue(node_group[0]);
++  for (size_t i = 1; i < node_group.size(); ++i) {
++    int64_t current_offset = GetMemoryOffsetValue(node_group[i]);
++    int64_t diff = current_offset - previous_offset;
++    if (diff != kSimd128Size) {
++      TRACE("Non-continuous store!");
++      return false;
++    }
++    previous_offset = current_offset;
++  }
++  return true;
++}
++
++// Returns true if all of the nodes in node_group are constants.
++bool AllConstant(const ZoneVector<Node*>& node_group) {
++  for (Node* node : node_group) {
++    if (!NodeProperties::IsConstant(node)) {
++      return false;
++    }
++  }
++  return true;
++}
++
++// Returns true if all the addresses of the nodes in node_group are identical.
++bool AllSameAddress(const ZoneVector<Node*>& nodes) {
++  Node* address = GetNodeAddress(nodes[0]);
++  for (size_t i = 1; i < nodes.size(); i++) {
++    if (GetNodeAddress(nodes[i]) != address) {
++      TRACE("Diff address #%d,#%d!\n", address->id(),
++            GetNodeAddress(nodes[i])->id());
++      return false;
++    }
++  }
++  return true;
++}
++
++// Returns true if all of the nodes in node_group are identical.
++// Splat opcode in WASM SIMD is used to create vector with identical lanes.
++bool IsSplat(const ZoneVector<Node*>& node_group) {
++  for (ZoneVector<Node*>::size_type i = 1; i < node_group.size(); ++i) {
++    if (node_group[i] != node_group[0]) {
++      return false;
++    }
++  }
++  return true;
++}
++
++// Returns true if all of the nodes in node_group have the same type.
++bool AllSameOperator(const ZoneVector<Node*>& node_group) {
++  auto op = node_group[0]->op();
++  for (ZoneVector<Node*>::size_type i = 1; i < node_group.size(); i++) {
++    if (node_group[i]->op() != op) {
++      return false;
++    }
++  }
++  return true;
++}
++
++}  // anonymous namespace
++
++// Sort load/store node by offset
++bool MemoryOffsetComparer::operator()(const Node* lhs, const Node* rhs) const {
++  return GetMemoryOffsetValue(lhs) < GetMemoryOffsetValue(rhs);
++}
++
++void PackNode::Print() const {
++  if (revectorized_node_ != nullptr) {
++    TRACE("0x%p #%d:%s(%d %d, %s)\n", this, revectorized_node_->id(),
++          revectorized_node_->op()->mnemonic(), nodes_[0]->id(),
++          nodes_[1]->id(), nodes_[0]->op()->mnemonic());
++  } else {
++    TRACE("0x%p null(%d %d, %s)\n", this, nodes_[0]->id(), nodes_[1]->id(),
++          nodes_[0]->op()->mnemonic());
++  }
++}
++
++bool SLPTree::CanBePacked(const ZoneVector<Node*>& node_group) {
++  DCHECK_EQ(node_group.size(), 2);
++  if (!SameBasicBlock(node_group[0], node_group[1])) {
++    TRACE("%s(#%d, #%d) not in same BB!\n", node_group[0]->op()->mnemonic(),
++          node_group[0]->id(), node_group[1]->id());
++    return false;
++  }
++  if (!AllSameOperator(node_group)) {
++    TRACE("%s(#%d, #%d) have different operator!\n",
++          node_group[0]->op()->mnemonic(), node_group[0]->id(),
++          node_group[1]->id());
++    return false;
++  }
++  // TODO(jiepan): add support for Constant
++  if (AllConstant(node_group)) {
++    TRACE("%s(#%d, #%d) are constantant, not supported yet!\n",
++          node_group[0]->op()->mnemonic(), node_group[0]->id(),
++          node_group[1]->id());
++    return false;
++  }
++
++  // Only Support simd128 operators or common operators with simd128
++  // MachineRepresentation. The MachineRepresentation of root had been checked,
++  // and the leaf node will be checked later. here we omit the check of
++  // MachineRepresentation, only check the opcode itself.
++  IrOpcode::Value op = node_group[0]->opcode();
++  if (NodeProperties::IsSimd128Operation(node_group[0]) ||
++      (op == IrOpcode::kStore) || (op == IrOpcode::kProtectedStore) ||
++      (op == IrOpcode::kLoad) || (op == IrOpcode::kProtectedLoad) ||
++      (op == IrOpcode::kPhi) || (op == IrOpcode::kLoopExitValue) ||
++      (op == IrOpcode::kExtractF128)) {
++    return true;
++  }
++  return false;
++}
++
++PackNode* SLPTree::NewPackNode(const ZoneVector<Node*>& node_group) {
++  TRACE("PackNode %s(#%d:, #%d)\n", node_group[0]->op()->mnemonic(),
++        node_group[0]->id(), node_group[1]->id());
++  PackNode* pnode = zone_->New<PackNode>(zone_, node_group);
++  for (Node* node : node_group) {
++    node_to_packnode_[node] = pnode;
++  }
++  return pnode;
++}
++
++PackNode* SLPTree::NewPackNodeAndRecurs(const ZoneVector<Node*>& node_group,
++                                        int start_index, int count,
++                                        unsigned recursion_depth) {
++  PackNode* pnode = NewPackNode(node_group);
++  for (int i = start_index; i < start_index + count; ++i) {
++    ZoneVector<Node*> operands(zone_);
++    // Prepare the operand vector.
++    for (size_t j = 0; j < node_group.size(); j++) {
++      Node* node = node_group[j];
++      operands.push_back(NodeProperties::GetValueInput(node, i));
++    }
++
++    PackNode* child = BuildTreeRec(operands, recursion_depth + 1);
++    if (child) {
++      pnode->SetOperand(i, child);
++    } else {
++      return nullptr;
++    }
++  }
++  return pnode;
++}
++
++PackNode* SLPTree::GetPackNode(Node* node) {
++  auto I = node_to_packnode_.find(node);
++  if (I != node_to_packnode_.end()) {
++    return I->second;
++  }
++  return nullptr;
++}
++
++void SLPTree::PushStack(const ZoneVector<Node*>& node_group) {
++  TRACE("Stack Push (%d %s, %d %s)\n", node_group[0]->id(),
++        node_group[0]->op()->mnemonic(), node_group[1]->id(),
++        node_group[1]->op()->mnemonic());
++  for (auto node : node_group) {
++    on_stack_.insert(node);
++  }
++  stack_.push({node_group});
++}
++
++void SLPTree::PopStack() {
++  const ZoneVector<Node*>& node_group = stack_.top();
++  DCHECK_EQ(node_group.size(), 2);
++  TRACE("Stack Pop (%d %s, %d %s)\n", node_group[0]->id(),
++        node_group[0]->op()->mnemonic(), node_group[1]->id(),
++        node_group[1]->op()->mnemonic());
++  for (auto node : node_group) {
++    on_stack_.erase(node);
++  }
++  stack_.pop();
++}
++
++bool SLPTree::OnStack(Node* node) {
++  return on_stack_.find(node) != on_stack_.end();
++}
++
++bool SLPTree::AllOnStack(const ZoneVector<Node*>& node_group) {
++  for (auto node : node_group) {
++    if (OnStack(node)) return true;
++  }
++  return false;
++}
++
++bool SLPTree::StackTopIsPhi() {
++  const ZoneVector<Node*>& node_group = stack_.top();
++  DCHECK_EQ(node_group.size(), 2);
++  return NodeProperties::IsPhi(node_group[0]);
++}
++
++void SLPTree::ClearStack() {
++  stack_ = ZoneStack<ZoneVector<Node*>>(zone_);
++  on_stack_.clear();
++}
++
++bool SLPTree::IsSideEffectFreeLoad(const ZoneVector<Node*>& node_group) {
++  DCHECK(IsSupportedLoad(node_group));
++  DCHECK_EQ(node_group.size(), 2);
++  TRACE("Enter IsSideEffectFreeLoad (%d %s, %d %s)\n", node_group[0]->id(),
++        node_group[0]->op()->mnemonic(), node_group[1]->id(),
++        node_group[1]->op()->mnemonic());
++
++  std::stack<Node*> to_visit;
++  std::unordered_set<Node*> visited;
++  // Visit all the inputs (except for control inputs) of Loads.
++  for (size_t i = 0, e = node_group.size(); i < e; i++) {
++    Node* load = node_group[i];
++    for (int j = 0; j < NodeProperties::FirstControlIndex(load); ++j) {
++      Node* input = load->InputAt(j);
++      if (std::find(node_group.begin(), node_group.end(), input) ==
++          node_group.end()) {
++        to_visit.push(input);
++      }
++    }
++  }
++
++  // Check the inputs of Loads and find if they are connected to existing nodes
++  // in SLPTree. If there is, then there will be side effect and we can not
++  // merge such Loads.
++  while (!to_visit.empty()) {
++    Node* input = to_visit.top();
++    to_visit.pop();
++    TRACE("IsSideEffectFreeLoad visit (%d %s)\n", input->id(),
++          input->op()->mnemonic());
++    if (visited.find(input) == visited.end()) {
++      visited.insert(input);
++
++      if (OnStack(input)) {
++        TRACE("Has internal dependency because (%d %s) on stack\n", input->id(),
++              input->op()->mnemonic());
++        return false;
++      }
++
++      // If the input is not in same basic block as Loads, it must not be in
++      // SLPTree. Otherwise recursively visit all input's edges and find if they
++      // are connected to SLPTree.
++      if (SameBasicBlock(input, node_group[0])) {
++        for (int i = 0; i < NodeProperties::FirstControlIndex(input); ++i) {
++          to_visit.push(input->InputAt(i));
++        }
++      }
++    }
++  }
++  return true;
++}
++
++PackNode* SLPTree::BuildTree(const ZoneVector<Node*>& roots) {
++  TRACE("Enter %s\n", __func__);
++
++  DeleteTree();
++
++  root_ = BuildTreeRec(roots, 0);
++  return root_;
++}
++
++PackNode* SLPTree::BuildTreeRec(const ZoneVector<Node*>& node_group,
++                                unsigned recursion_depth) {
++  TRACE("Enter %s\n", __func__);
++  DCHECK_EQ(node_group.size(), 2);
++
++  Node* node0 = node_group[0];
++  Node* node1 = node_group[1];
++
++  if (recursion_depth == RecursionMaxDepth) {
++    TRACE("Failed due to max recursion depth!\n");
++    return nullptr;
++  }
++
++  if (AllOnStack(node_group)) {
++    if (!StackTopIsPhi()) {
++      TRACE("Failed due to (%d %s, %d %s) on stack!\n", node0->id(),
++            node0->op()->mnemonic(), node1->id(), node1->op()->mnemonic());
++      return nullptr;
++    }
++  }
++  PushStack(node_group);
++
++  if (!CanBePacked(node_group)) {
++    return nullptr;
++  }
++
++  DCHECK(AllConstant(node_group) || AllSameOperator(node_group));
++
++  // Check if this is a duplicate of another entry.
++  for (Node* node : node_group) {
++    if (PackNode* p = GetPackNode(node)) {
++      if (!p->IsSame(node_group)) {
++        // TODO(jiepan): Gathering due to partial overlap
++        TRACE("Failed due to partial overlap at #%d,%s!\n", node->id(),
++              node->op()->mnemonic());
++        return nullptr;
++      }
++
++      PopStack();
++      TRACE("Perfect diamond merge at #%d,%s\n", node->id(),
++            node->op()->mnemonic());
++      return p;
++    }
++  }
++
++  if (node0->opcode() == IrOpcode::kExtractF128) {
++    Node* source = node0->InputAt(0);
++    TRACE("Extract leaf node from #%d,%s!\n", source->id(),
++          source->op()->mnemonic());
++    // For 256 only, check whether they are from the same source
++    if (node0->InputAt(0) == node1->InputAt(0) &&
++        (node0->InputAt(0)->opcode() == IrOpcode::kLoadTransform
++             ? node0 == node1
++             : OpParameter<int32_t>(node0->op()) + 1 ==
++                   OpParameter<int32_t>(node1->op()))) {
++      TRACE("Added a pair of Extract.\n");
++      PackNode* pnode = NewPackNode(node_group);
++      PopStack();
++      return pnode;
++    }
++    TRACE("Failed due to ExtractF128!\n");
++    return nullptr;
++  }
++
++  if (node0->opcode() == IrOpcode::kProtectedLoad ||
++      node0->opcode() == IrOpcode::kLoadTransform) {
++    TRACE("Load leaf node\n");
++    if (!AllSameAddress(node_group)) {
++      TRACE("Failed due to different load addr!\n");
++      return nullptr;
++    }
++    if (node0->opcode() == IrOpcode::kProtectedLoad) {
++      MachineRepresentation rep =
++          LoadRepresentationOf(node0->op()).representation();
++      if (rep != MachineRepresentation::kSimd128) {
++        return nullptr;
++      }
++      // Sort loads by offset
++      ZoneVector<Node*> sorted_node_group(node_group.size(), zone_);
++      partial_sort_copy(begin(node_group), end(node_group),
++                        begin(sorted_node_group), end(sorted_node_group),
++                        MemoryOffsetComparer());
++      if (!IsContinuousAccess(sorted_node_group)) {
++        TRACE("Failed due to non-continuous load!\n");
++        return nullptr;
++      }
++    }
++
++    if (node0->opcode() == IrOpcode::kLoadTransform) {
++      if (!IsSplat(node_group)) {
++        TRACE("LoadTransform Failed due to IsSplat!\n");
++        return nullptr;
++      }
++      LoadTransformParameters params = LoadTransformParametersOf(node0->op());
++      // TODO(jiepan): Support more LoadTransformation types
++      if (params.transformation != LoadTransformation::kS128Load32Splat &&
++          params.transformation != LoadTransformation::kS128Load64Splat) {
++        TRACE("LoadTransform failed due to unsupported type #%d!\n",
++              node0->id());
++        return nullptr;
++      }
++    }
++
++    if (!IsSideEffectFreeLoad(node_group)) {
++      TRACE("Failed due to dependency check\n");
++      return nullptr;
++    }
++    PackNode* p = NewPackNode(node_group);
++    PopStack();
++    return p;
++  }
++
++  int value_in_count = node0->op()->ValueInputCount();
++  switch (node0->opcode()) {
++    case IrOpcode::kPhi: {
++      TRACE("Added a vector of PHI nodes.\n");
++      MachineRepresentation rep = PhiRepresentationOf(node0->op());
++      if (rep != MachineRepresentation::kSimd128) {
++        return nullptr;
++      }
++      PackNode* pnode =
++          NewPackNodeAndRecurs(node_group, 0, value_in_count, recursion_depth);
++      PopStack();
++      return pnode;
++    }
++    case IrOpcode::kLoopExitValue: {
++      MachineRepresentation rep = LoopExitValueRepresentationOf(node0->op());
++      if (rep != MachineRepresentation::kSimd128) {
++        return nullptr;
++      }
++      PackNode* pnode =
++          NewPackNodeAndRecurs(node_group, 0, value_in_count, recursion_depth);
++      PopStack();
++      return pnode;
++    }
++    case IrOpcode::kF32x4Add:
++    case IrOpcode::kF32x4Mul: {
++      TRACE("Added a vector of un/bin/ter op.\n");
++      PackNode* pnode =
++          NewPackNodeAndRecurs(node_group, 0, value_in_count, recursion_depth);
++      PopStack();
++      return pnode;
++    }
++
++    // TODO(jiepan): UnalignedStore,
++    case IrOpcode::kStore:
++    case IrOpcode::kProtectedStore: {
++      TRACE("Added a vector of stores.\n");
++      if (!AllSameAddress(node_group)) {
++        TRACE("Failed due to different store addr!\n");
++        return nullptr;
++      }
++      PackNode* pnode = NewPackNodeAndRecurs(node_group, 2, 1, recursion_depth);
++      PopStack();
++      return pnode;
++    }
++    default:
++      TRACE("Default branch #%d:%s\n", node0->id(), node0->op()->mnemonic());
++      break;
++  }
++  return nullptr;
++}
++
++void SLPTree::DeleteTree() {
++  ClearStack();
++  node_to_packnode_.clear();
++}
++
++void SLPTree::Print(const char* info) {
++  TRACE("%s, Packed node:\n", info);
++  if (!v8_flags.trace_wasm_revectorize) {
++    return;
++  }
++  std::unordered_set<PackNode const*> visited;
++
++  for (auto& entry : node_to_packnode_) {
++    PackNode const* pnode = entry.second;
++    if (!pnode || visited.find(pnode) != visited.end()) {
++      continue;
++    }
++    pnode->Print();
++    visited.insert(pnode);
++  }
++}
++
++//////////////////////////////////////////////////////
++void Revectorizer::DetectCPUFeatures() {
++  base::CPU cpu;
++  if (cpu.has_avx2()) {
++    support_simd256_ = true;
++  }
++}
++
++bool Revectorizer::TryRevectorize(const char* function) {
++  bool success = false;
++  if (support_simd256_ && graph_->GetSimdStoreNodes().size()) {
++    TRACE("TryRevectorize %s\n", function);
++    CollectSeeds();
++    for (auto entry : group_of_stores_) {
++      ZoneMap<Node*, StoreNodeSet>* store_chains = entry.second;
++      if (store_chains != nullptr) {
++        PrintStores(store_chains);
++        if (ReduceStoreChains(store_chains)) {
++          TRACE("Successful revectorize %s\n", function);
++          success = true;
++        }
++      }
++    }
++    TRACE("Finish revectorize %s\n", function);
++  }
++  return success;
++}
++
++void Revectorizer::CollectSeeds() {
++  for (auto it = graph_->GetSimdStoreNodes().begin();
++       it != graph_->GetSimdStoreNodes().end(); ++it) {
++    Node* node = *it;
++    Node* dominator = slp_tree_->GetEarlySchedulePosition(node);
++
++    if ((GetMemoryOffsetValue(node) % kSimd128Size) != 0) {
++      continue;
++    }
++    Node* address = GetNodeAddress(node);
++    ZoneMap<Node*, StoreNodeSet>* store_nodes;
++    auto first_level_iter = group_of_stores_.find(dominator);
++    if (first_level_iter == group_of_stores_.end()) {
++      store_nodes = zone_->New<ZoneMap<Node*, StoreNodeSet>>(zone_);
++      group_of_stores_[dominator] = store_nodes;
++    } else {
++      store_nodes = first_level_iter->second;
++    }
++    auto second_level_iter = store_nodes->find(address);
++    if (second_level_iter == store_nodes->end()) {
++      second_level_iter =
++          store_nodes->insert({address, StoreNodeSet(zone())}).first;
++    }
++    second_level_iter->second.insert(node);
++  }
++}
++
++bool Revectorizer::ReduceStoreChains(
++    ZoneMap<Node*, StoreNodeSet>* store_chains) {
++  TRACE("Enter %s\n", __func__);
++  bool changed = false;
++  for (auto chain_iter = store_chains->cbegin();
++       chain_iter != store_chains->cend(); ++chain_iter) {
++    if (chain_iter->second.size() >= 2 && chain_iter->second.size() % 2 == 0) {
++      ZoneVector<Node*> store_chain(chain_iter->second.begin(),
++                                    chain_iter->second.end(), zone_);
++      for (auto it = store_chain.begin(); it < store_chain.end(); it = it + 2) {
++        ZoneVector<Node*> stores_unit(it, it + 2, zone_);
++        if (ReduceStoreChain(stores_unit)) {
++          changed = true;
++        }
++      }
++    }
++  }
++
++  return changed;
++}
++
++bool Revectorizer::ReduceStoreChain(const ZoneVector<Node*>& Stores) {
++  TRACE("Enter %s, root@ (#%d,#%d)\n", __func__, Stores[0]->id(),
++        Stores[1]->id());
++  if (!IsContinuousAccess(Stores)) {
++    return false;
++  }
++
++  PackNode* root = slp_tree_->BuildTree(Stores);
++  if (!root) {
++    TRACE("Build tree failed!\n");
++    return false;
++  }
++
++  slp_tree_->Print("After build tree");
++  TRACE("\n");
++  return true;
++}
++
++void Revectorizer::PrintStores(ZoneMap<Node*, StoreNodeSet>* store_chains) {
++  if (!v8_flags.trace_wasm_revectorize) {
++    return;
++  }
++  TRACE("Enter %s\n", __func__);
++  for (auto it = store_chains->cbegin(); it != store_chains->cend(); ++it) {
++    if (it->second.size() > 0) {
++      TRACE("address = #%d:%s \n", it->first->id(),
++            it->first->op()->mnemonic());
++
++      for (auto node : it->second) {
++        TRACE("#%d:%s, ", node->id(), node->op()->mnemonic());
++      }
++
++      TRACE("\n");
++    }
++  }
++}
++
++}  // namespace compiler
++}  // namespace internal
++}  // namespace v8
+diff --git a/src/compiler/revectorizer.h b/src/compiler/revectorizer.h
+new file mode 100644
+index 0000000000..d075ba9530
+--- /dev/null
++++ b/src/compiler/revectorizer.h
+@@ -0,0 +1,197 @@
++// Copyright 2022 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef V8_COMPILER_REVECTORIZER_H_
++#define V8_COMPILER_REVECTORIZER_H_
++
++// Revectorizer is an optimization to promote pairs of simd128 nodes to new
++// simd256 nodes accelerated by wider vector available from hardware e.g. the
++// YMM registers from AVX2 instruction set when possible and beneficial. The
++// main algorithm is based on the Superword Level Parallel (SLP) vectorization
++// technique.
++
++#include <vector>
++
++#include "src/base/small-vector.h"
++#include "src/compiler/graph.h"
++#include "src/compiler/linear-scheduler.h"
++#include "src/compiler/machine-graph.h"
++#include "src/compiler/machine-operator.h"
++#include "src/compiler/node-marker.h"
++#include "src/compiler/node-properties.h"
++#include "src/compiler/node.h"
++#include "src/compiler/schedule.h"
++#include "src/zone/zone-containers.h"
++
++namespace v8 {
++namespace internal {
++namespace compiler {
++
++struct V8_EXPORT_PRIVATE MemoryOffsetComparer {
++  bool operator()(const Node* lhs, const Node* rhs) const;
++};
++
++using StoreNodeSet = ZoneSet<Node*, MemoryOffsetComparer>;
++
++// A PackNode consists of a fixed number of isomorphic simd128 nodes which can
++// execute in parallel and convert to a 256-bit simd node later. The nodes in a
++// PackNode must satisfy that they can be scheduled in the same basic block and
++// are mutually independent.
++class PackNode final : public NON_EXPORTED_BASE(ZoneObject) {
++ public:
++  explicit PackNode(Zone* zone, const ZoneVector<Node*>& node_group)
++      : nodes_(zone), operands_(zone), revectorized_node_(nullptr) {}
++
++  bool IsSame(const ZoneVector<Node*>& node_group) const {
++    return nodes_ == node_group;
++  }
++  const Node* RevectorizedNode() const { return revectorized_node_; }
++  // returns the index operand of this PackNode.
++  PackNode* GetOperand(size_t index) {
++    DCHECK_LT(index, operands_.size());
++    return operands_[index];
++  }
++
++  ZoneVector<PackNode*>::size_type GetOperandsSize() const {
++    return operands_.size();
++  }
++
++  void SetOperand(size_t index, PackNode* pnode) {
++    if (operands_.size() < index + 1) operands_.resize(index + 1);
++    operands_[index] = pnode;
++  }
++
++  void Print() const;
++
++ private:
++  ZoneVector<Node*> nodes_;
++  ZoneVector<PackNode*> operands_;
++  Node* revectorized_node_;
++};
++
++// An auxillary tree structure with a set of PackNodes based on the Superword
++// Level Parallelism (SLP) vectorization technique. The BuildTree method will
++// start from a selected root, e.g. a group of consecutive stores, and extend
++// through value inputs to create new PackNodes if the inputs are valid, or
++// conclude that the current PackNode is a leaf and terminate the tree.
++// Below is an example of SLPTree where loads and stores in each PackNode are
++// all consecutive.
++// [Load0, Load1]  [Load2, Load3]
++//           \       /
++//          [Add0, Add1]
++//                |
++//         [Store0, Store1]
++class SLPTree : public NON_EXPORTED_BASE(ZoneObject) {
++ public:
++  explicit SLPTree(Zone* zone, Graph* graph)
++      : zone_(zone),
++        graph_(graph),
++        root_(nullptr),
++        on_stack_(zone),
++        stack_(zone),
++        node_to_packnode_(zone) {
++    scheduler_ = zone->New<LinearScheduler>(zone, graph);
++  }
++
++  PackNode* BuildTree(const ZoneVector<Node*>& roots);
++  void DeleteTree();
++
++  PackNode* GetPackNode(Node* node);
++
++  void Print(const char* info);
++
++  Node* GetEarlySchedulePosition(Node* node) {
++    return scheduler_->GetEarlySchedulePosition(node);
++  }
++
++ private:
++  friend class LinearScheduler;
++
++  // This is the recursive part of BuildTree.
++  PackNode* BuildTreeRec(const ZoneVector<Node*>& node_group, unsigned depth);
++
++  // Baseline: create a new PackNode, and return.
++  PackNode* NewPackNode(const ZoneVector<Node*>& node_group);
++
++  // Recursion: create a new PackNode and call BuildTreeRec recursively
++  PackNode* NewPackNodeAndRecurs(const ZoneVector<Node*>& node_group,
++                                 int start_index, int count, unsigned depth);
++
++  bool CanBePacked(const ZoneVector<Node*>& node_group);
++
++  Graph* graph() const { return graph_; }
++
++  // Node stack operations.
++  void PopStack();
++  void PushStack(const ZoneVector<Node*>& node_group);
++  void ClearStack();
++  bool OnStack(Node* node);
++  bool AllOnStack(const ZoneVector<Node*>& node_group);
++  bool StackTopIsPhi();
++
++  bool IsSideEffectFreeLoad(const ZoneVector<Node*>& node_group);
++  bool SameBasicBlock(Node* node0, Node* node1) {
++    return scheduler_->SameBasicBlock(node0, node1);
++  }
++
++  Zone* const zone_;
++  Graph* const graph_;
++  PackNode* root_;
++  LinearScheduler* scheduler_;
++  ZoneSet<Node*> on_stack_;
++  ZoneStack<ZoneVector<Node*>> stack_;
++  // Maps a specific node to PackNode.
++  ZoneUnorderedMap<Node*, PackNode*> node_to_packnode_;
++  static constexpr size_t RecursionMaxDepth = 1000;
++};
++
++// The Revectorizer pass will firstly collect seeds with valid group of
++// consecutive stores as the root to build the SLPTree. If the SLPTree is built
++// successfully, it will estimate the cost of the 256-bit transformation for
++// each PackNode and conduct the final revectorization if benefitial.
++class V8_EXPORT_PRIVATE Revectorizer final
++    : public NON_EXPORTED_BASE(ZoneObject) {
++ public:
++  Revectorizer(Zone* zone, Graph* graph, MachineGraph* mcgraph)
++      : zone_(zone),
++        graph_(graph),
++        mcgraph_(mcgraph),
++        group_of_stores_(zone),
++        support_simd256_(false) {
++    DetectCPUFeatures();
++    slp_tree_ = zone_->New<SLPTree>(zone, graph);
++  }
++
++  void DetectCPUFeatures();
++  bool TryRevectorize(const char* name);
++
++ private:
++  void CollectSeeds();
++
++  bool ReduceStoreChains(ZoneMap<Node*, StoreNodeSet>* store_chains);
++  bool ReduceStoreChain(const ZoneVector<Node*>& Stores);
++
++  void PrintStores(ZoneMap<Node*, StoreNodeSet>* store_chains);
++  Zone* zone() const { return zone_; }
++  Graph* graph() const { return graph_; }
++  MachineGraph* mcgraph() const { return mcgraph_; }
++
++  PackNode* GetPackNode(Node* node) const {
++    return slp_tree_->GetPackNode(node);
++  }
++
++  Zone* const zone_;
++  Graph* const graph_;
++  MachineGraph* const mcgraph_;
++  ZoneMap<Node*, ZoneMap<Node*, StoreNodeSet>*> group_of_stores_;
++  SLPTree* slp_tree_;
++
++  bool support_simd256_;
++};
++
++}  // namespace compiler
++}  // namespace internal
++}  // namespace v8
++
++#endif  // V8_COMPILER_REVECTORIZER_H_
+diff --git a/src/compiler/simplified-lowering-verifier.cc b/src/compiler/simplified-lowering-verifier.cc
+index 9548edc43d..4abf88de3d 100644
+--- a/src/compiler/simplified-lowering-verifier.cc
++++ b/src/compiler/simplified-lowering-verifier.cc
+@@ -720,7 +720,8 @@ void SimplifiedLoweringVerifier::VisitNode(Node* node,
+         // TODO(nicohartmann@): These operators might need to be supported.
+         break;
+       }
+-      MACHINE_SIMD_OP_LIST(CASE)
++      MACHINE_SIMD128_OP_LIST(CASE)
++      MACHINE_SIMD256_OP_LIST(CASE)
+       IF_WASM(SIMPLIFIED_WASM_OP_LIST, CASE) {
+         // SIMD operators should not be in the graph, yet.
+         UNREACHABLE();
+diff --git a/src/compiler/typer.cc b/src/compiler/typer.cc
+index aac03ac920..6ab2648684 100644
+--- a/src/compiler/typer.cc
++++ b/src/compiler/typer.cc
+@@ -125,7 +125,8 @@ class Typer::Visitor : public Reducer {
+       SIMPLIFIED_CHANGE_OP_LIST(DECLARE_IMPOSSIBLE_CASE)
+       SIMPLIFIED_CHECKED_OP_LIST(DECLARE_IMPOSSIBLE_CASE)
+       IF_WASM(SIMPLIFIED_WASM_OP_LIST, DECLARE_IMPOSSIBLE_CASE)
+-      MACHINE_SIMD_OP_LIST(DECLARE_IMPOSSIBLE_CASE)
++      MACHINE_SIMD128_OP_LIST(DECLARE_IMPOSSIBLE_CASE)
++      MACHINE_SIMD256_OP_LIST(DECLARE_IMPOSSIBLE_CASE)
+       MACHINE_UNOP_32_LIST(DECLARE_IMPOSSIBLE_CASE)
+       DECLARE_IMPOSSIBLE_CASE(Word32Xor)
+       DECLARE_IMPOSSIBLE_CASE(Word32Sar)
+diff --git a/src/compiler/verifier.cc b/src/compiler/verifier.cc
+index b81b3b773b..ec4b670142 100644
+--- a/src/compiler/verifier.cc
++++ b/src/compiler/verifier.cc
+@@ -1947,7 +1947,8 @@ void Verifier::Visitor::Check(Node* node, const AllNodes& all) {
+     case IrOpcode::kTraceInstruction:
+ 
+ #define SIMD_MACHINE_OP_CASE(Name) case IrOpcode::k##Name:
+-      MACHINE_SIMD_OP_LIST(SIMD_MACHINE_OP_CASE)
++      MACHINE_SIMD128_OP_LIST(SIMD_MACHINE_OP_CASE)
++      MACHINE_SIMD256_OP_LIST(SIMD_MACHINE_OP_CASE)
+ #undef SIMD_MACHINE_OP_CASE
+ 
+       // TODO(rossberg): Check.
+diff --git a/src/compiler/wasm-compiler.cc b/src/compiler/wasm-compiler.cc
+index 441b8590b6..3b47949040 100644
+--- a/src/compiler/wasm-compiler.cc
++++ b/src/compiler/wasm-compiler.cc
+@@ -3804,15 +3804,23 @@ void WasmGraphBuilder::StoreMem(MachineRepresentation mem_rep, Node* index,
+       gasm_->StoreUnaligned(UnalignedStoreRepresentation{mem_rep},
+                             MemBuffer(capped_offset), index, val);
+       break;
+-    case MemoryAccessKind::kProtected:
+-      SetSourcePosition(
+-          gasm_->ProtectedStore(mem_rep, MemBuffer(capped_offset), index, val),
+-          position);
++    case MemoryAccessKind::kProtected: {
++      Node* store =
++          gasm_->ProtectedStore(mem_rep, MemBuffer(capped_offset), index, val);
++      SetSourcePosition(store, position);
++      if (mem_rep == MachineRepresentation::kSimd128) {
++        graph()->RecordSimdStore(store);
++      }
+       break;
+-    case MemoryAccessKind::kNormal:
+-      gasm_->Store(StoreRepresentation{mem_rep, kNoWriteBarrier},
+-                   MemBuffer(capped_offset), index, val);
++    }
++    case MemoryAccessKind::kNormal: {
++      Node* store = gasm_->Store(StoreRepresentation{mem_rep, kNoWriteBarrier},
++                                 MemBuffer(capped_offset), index, val);
++      if (mem_rep == MachineRepresentation::kSimd128) {
++        graph()->RecordSimdStore(store);
++      }
+       break;
++    }
+   }
+ 
+   if (v8_flags.trace_wasm_memory) {
+@@ -8498,6 +8506,12 @@ bool BuildGraphForWasmFunction(wasm::CompilationEnv* env,
+                                     WasmGraphBuilder::kCalledFromWasm);
+   builder.LowerInt64(sig);
+ 
++#ifdef V8_ENABLE_WASM_SIMD256_REVEC
++  if (v8_flags.experimental_wasm_revectorize && builder.has_simd()) {
++    mcgraph->graph()->SetSimd(true);
++  }
++#endif
++
+   return true;
+ }
+ 
+diff --git a/src/flags/flag-definitions.h b/src/flags/flag-definitions.h
+index 121b86c0f7..edd7c20ee1 100644
+--- a/src/flags/flag-definitions.h
++++ b/src/flags/flag-definitions.h
+@@ -1232,6 +1232,13 @@ DEFINE_BOOL(trace_wasm_gdb_remote, false, "trace Webassembly GDB-remote server")
+ DEFINE_DEBUG_BOOL(trace_wasm_instances, false,
+                   "trace creation and collection of wasm instances")
+ 
++// Flags for WASM SIMD256 revectorize
++#ifdef V8_ENABLE_WASM_SIMD256_REVEC
++DEFINE_BOOL(experimental_wasm_revectorize, false,
++            "enable 128 to 256 bit revectorization for Webassembly SIMD")
++DEFINE_BOOL(trace_wasm_revectorize, false, "trace wasm revectorize")
++#endif  // V8_ENABLE_WASM_SIMD256_REVEC
++
+ #endif  // V8_ENABLE_WEBASSEMBLY
+ 
+ DEFINE_INT(stress_sampling_allocation_profiler, 0,
+diff --git a/src/logging/runtime-call-stats.h b/src/logging/runtime-call-stats.h
+index f313a9f818..061432406f 100644
+--- a/src/logging/runtime-call-stats.h
++++ b/src/logging/runtime-call-stats.h
+@@ -475,6 +475,7 @@ class RuntimeCallTimer final {
+   V(OptimizeFinalizePipelineJob)               \
+   V(OptimizeHeapBrokerInitialization)          \
+   V(OptimizeNonConcurrent)                     \
++  V(OptimizeRevectorizer)                      \
+   V(OptimizeSerialization)                     \
+   V(OptimizeSerializeMetadata)                 \
+   V(ParseEval)                                 \
+diff --git a/test/unittests/BUILD.gn b/test/unittests/BUILD.gn
+index 4bc5bdeeb4..73fbc18fad 100644
+--- a/test/unittests/BUILD.gn
++++ b/test/unittests/BUILD.gn
+@@ -4,6 +4,17 @@
+ 
+ import("../../gni/v8.gni")
+ 
++if (v8_enable_webassembly) {
++  # Specifies if the target build is a simulator build. Comparing target cpu
++  # with v8 target cpu to not affect simulator builds for making cross-compile
++  # snapshots.
++  target_is_simulator = (target_cpu != v8_target_cpu && !v8_multi_arch_build) ||
++                        (current_cpu != v8_current_cpu && v8_multi_arch_build)
++  if (!target_is_simulator && v8_current_cpu == "x64") {
++    v8_enable_wasm_simd256_revec = true
++  }
++}
++
+ if (is_fuchsia) {
+   import("//build/config/fuchsia/generate_runner_scripts.gni")
+   import("//third_party/fuchsia-sdk/sdk/build/component.gni")
+@@ -586,7 +597,10 @@ v8_source_set("unittests_sources") {
+   }
+ 
+   if (v8_enable_wasm_simd256_revec) {
+-    sources += [ "compiler/linear-scheduler-unittest.cc" ]
++    sources += [
++      "compiler/linear-scheduler-unittest.cc",
++      "compiler/revec-unittest.cc",
++    ]
+   }
+ 
+   if (v8_enable_wasm_gdb_remote_debugging) {
+diff --git a/test/unittests/compiler/revec-unittest.cc b/test/unittests/compiler/revec-unittest.cc
+new file mode 100644
+index 0000000000..c3d81ea60f
+--- /dev/null
++++ b/test/unittests/compiler/revec-unittest.cc
+@@ -0,0 +1,106 @@
++// Copyright 2022 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "src/codegen/machine-type.h"
++#include "src/compiler/common-operator.h"
++#include "src/compiler/machine-graph.h"
++#include "src/compiler/machine-operator.h"
++#include "src/compiler/node-properties.h"
++#include "src/compiler/node.h"
++#include "src/compiler/revectorizer.h"
++#include "src/compiler/wasm-compiler.h"
++#include "src/wasm/wasm-module.h"
++#include "test/unittests/compiler/graph-unittest.h"
++#include "test/unittests/compiler/node-test-utils.h"
++#include "testing/gmock-support.h"
++
++using testing::AllOf;
++using testing::Capture;
++using testing::CaptureEq;
++
++namespace v8 {
++namespace internal {
++namespace compiler {
++
++class RevecTest : public TestWithIsolateAndZone {
++ public:
++  RevecTest()
++      : TestWithIsolateAndZone(kCompressGraphZone),
++        graph_(zone()),
++        common_(zone()),
++        machine_(zone(), MachineRepresentation::kWord64,
++                 MachineOperatorBuilder::Flag::kAllOptionalOps),
++        mcgraph_(&graph_, &common_, &machine_) {}
++
++  Graph* graph() { return &graph_; }
++  CommonOperatorBuilder* common() { return &common_; }
++  MachineOperatorBuilder* machine() { return &machine_; }
++  MachineGraph* mcgraph() { return &mcgraph_; }
++
++ private:
++  Graph graph_;
++  CommonOperatorBuilder common_;
++  MachineOperatorBuilder machine_;
++  MachineGraph mcgraph_;
++};
++
++// Create a graph which add two 256 bit vectors(a, b), store the result in c:
++// simd128 *a,*b,*c;
++// *c = *a + *b;
++// *(c+1) = *(a+1) + *(b+1);
++// In Revectorization, two simd 128 nodes can be combined into one 256 node:
++// simd256 *d, *e, *f;
++// *f = *d + *e;
++TEST_F(RevecTest, F32x8Add) {
++  Node* start = graph()->NewNode(common()->Start(5));
++  graph()->SetStart(start);
++
++  Node* zero = graph()->NewNode(common()->Int32Constant(0));
++  Node* sixteen = graph()->NewNode(common()->Int64Constant(16));
++  // offset of memory start field in WASM instance object.
++  Node* offset = graph()->NewNode(common()->Int64Constant(23));
++
++  Node* p0 = graph()->NewNode(common()->Parameter(0), start);
++  Node* p1 = graph()->NewNode(common()->Parameter(1), start);
++  Node* p2 = graph()->NewNode(common()->Parameter(2), start);
++  Node* p3 = graph()->NewNode(common()->Parameter(3), start);
++
++  StoreRepresentation store_rep(MachineRepresentation::kSimd128,
++                                WriteBarrierKind::kNoWriteBarrier);
++  LoadRepresentation load_rep(MachineType::Simd128());
++  Node* load0 = graph()->NewNode(machine()->Load(MachineType::Int64()), p0,
++                                 offset, start, start);
++  Node* mem_buffer1 = graph()->NewNode(machine()->Int64Add(), load0, sixteen);
++  Node* mem_buffer2 = graph()->NewNode(machine()->Int64Add(), load0, sixteen);
++  Node* mem_store = graph()->NewNode(machine()->Int64Add(), load0, sixteen);
++  Node* load1 = graph()->NewNode(machine()->ProtectedLoad(load_rep), load0, p1,
++                                 load0, start);
++  Node* load2 = graph()->NewNode(machine()->ProtectedLoad(load_rep),
++                                 mem_buffer1, p1, load1, start);
++  Node* load3 = graph()->NewNode(machine()->ProtectedLoad(load_rep), load0, p2,
++                                 load2, start);
++  Node* load4 = graph()->NewNode(machine()->ProtectedLoad(load_rep),
++                                 mem_buffer2, p2, load3, start);
++  Node* add1 = graph()->NewNode(machine()->F32x4Add(), load1, load3);
++  Node* add2 = graph()->NewNode(machine()->F32x4Add(), load2, load4);
++  Node* store1 = graph()->NewNode(machine()->Store(store_rep), load0, p3, add1,
++                                  load4, start);
++  Node* store2 = graph()->NewNode(machine()->Store(store_rep), mem_store, p3,
++                                  add2, store1, start);
++  Node* ret = graph()->NewNode(common()->Return(0), zero, store2, start);
++  Node* end = graph()->NewNode(common()->End(1), ret);
++  graph()->SetEnd(end);
++
++  graph()->RecordSimdStore(store1);
++  graph()->RecordSimdStore(store2);
++  graph()->SetSimd(true);
++
++  // Test whether the graph can be revectorized
++  Revectorizer revec(zone(), graph(), mcgraph());
++  EXPECT_TRUE(revec.TryRevectorize(nullptr));
++}
++
++}  // namespace compiler
++}  // namespace internal
++}  // namespace v8
+-- 
+2.25.1
+
