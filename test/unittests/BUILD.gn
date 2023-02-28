@@ -13,6 +13,9 @@ if (v8_enable_webassembly) {
   if (!target_is_simulator && v8_current_cpu == "x64") {
     v8_enable_wasm_simd256_revec = true
   }
+  if (v8_current_cpu == "riscv64") {
+    v8_enable_wasm_simd256_revec = true
+  }
 }
 
 if (is_fuchsia) {
