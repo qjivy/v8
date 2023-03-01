@@ -1085,8 +1085,8 @@ class Simulator : public SimulatorBase {
 
 #ifdef CAN_USE_RVV_INSTRUCTIONS
   // RVV registers
-  __int128_t Vregister_[kNumVRegisters];
-  static_assert(sizeof(__int128_t) == kRvvVLEN / 8, "unmatch vlen");
+  __int128_t Vregister_[kNumVRegisters * kRvvVLEN / 128];
+  // static_assert(sizeof(__int128_t) == kRvvVLEN / 8, "unmatch vlen");
   uint64_t vstart_, vxsat_, vxrm_, vcsr_, vtype_, vl_, vlenb_;
 #endif
   // Simulator support.

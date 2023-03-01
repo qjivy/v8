@@ -313,8 +313,10 @@ const uint32_t kRvcBImm8Mask = (((1 << 5) - 1) << 2) | (((1 << 3) - 1) << 10);
 
 // for RVV extension
 constexpr int kRvvELEN = 64;
-constexpr int kRvvVLEN = 128;
+constexpr int kRvvVLEN = 256;
 constexpr int kRvvSLEN = kRvvVLEN;
+static_assert(kRvvVLEN >= 128 && (kRvvVLEN & (kRvvVLEN - 1)) == 0 &&
+              kRvvVLEN < 1024);
 const int kRvvFunct6Shift = 26;
 const int kRvvFunct6Bits = 6;
 const uint32_t kRvvFunct6Mask =

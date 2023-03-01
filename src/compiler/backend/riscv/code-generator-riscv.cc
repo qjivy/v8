@@ -1718,7 +1718,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Lb(i.OutputRegister(), i.MemoryOperand());
       break;
     case kRiscvSb:
-      __ Sb(i.InputOrZeroRegister(2), i.MemoryOperand());
+      __ Sb(i.InputOrZeroRegister(0), i.MemoryOperand(1));
       break;
     case kRiscvLhu:
       __ Lhu(i.OutputRegister(), i.MemoryOperand());
@@ -1733,7 +1733,7 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Ulh(i.OutputRegister(), i.MemoryOperand());
       break;
     case kRiscvSh:
-      __ Sh(i.InputOrZeroRegister(2), i.MemoryOperand());
+      __ Sh(i.InputOrZeroRegister(0), i.MemoryOperand(1));
       break;
     case kRiscvUsh:
       __ Ush(i.InputOrZeroRegister(2), i.MemoryOperand());
@@ -1758,14 +1758,14 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ Uld(i.OutputRegister(), i.MemoryOperand());
       break;
     case kRiscvSd:
-      __ Sd(i.InputOrZeroRegister(2), i.MemoryOperand());
+      __ Sd(i.InputOrZeroRegister(0), i.MemoryOperand(1));
       break;
     case kRiscvUsd:
       __ Usd(i.InputOrZeroRegister(2), i.MemoryOperand());
       break;
 #endif
     case kRiscvSw:
-      __ Sw(i.InputOrZeroRegister(2), i.MemoryOperand());
+      __ Sw(i.InputOrZeroRegister(0), i.MemoryOperand(1));
       break;
     case kRiscvUsw:
       __ Usw(i.InputOrZeroRegister(2), i.MemoryOperand());
@@ -1779,9 +1779,8 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     case kRiscvStoreFloat: {
-      size_t index = 0;
-      MemOperand operand = i.MemoryOperand(&index);
-      FPURegister ft = i.InputOrZeroSingleRegister(index);
+      MemOperand operand = i.MemoryOperand(1);
+      FPURegister ft = i.InputOrZeroSingleRegister(0);
       if (ft == kSingleRegZero && !__ IsSingleZeroRegSet()) {
         __ LoadFPRImmediate(kSingleRegZero, 0.0f);
       }
@@ -1805,11 +1804,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ ULoadDouble(i.OutputDoubleRegister(), i.MemoryOperand(), kScratchReg);
       break;
     case kRiscvStoreDouble: {
-      FPURegister ft = i.InputOrZeroDoubleRegister(2);
+      FPURegister ft = i.InputOrZeroDoubleRegister(0);
       if (ft == kDoubleRegZero && !__ IsDoubleZeroRegSet()) {
         __ LoadFPRImmediate(kDoubleRegZero, 0.0);
       }
-      __ StoreDouble(ft, i.MemoryOperand());
+      __ StoreDouble(ft, i.MemoryOperand(1));
       break;
     }
     case kRiscvUStoreDouble: {
@@ -2180,9 +2179,8 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
 #if V8_TARGET_ARCH_RISCV64
     case kRiscvStoreCompressTagged: {
-      size_t index = 0;
-      MemOperand operand = i.MemoryOperand(&index);
-      __ StoreTaggedField(i.InputOrZeroRegister(index), operand);
+      MemOperand operand = i.MemoryOperand(1);
+      __ StoreTaggedField(i.InputOrZeroRegister(0), operand);
       break;
     }
     case kRiscvLoadDecompressTaggedSigned: {
@@ -2202,12 +2200,12 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
 #endif
     case kRiscvRvvSt: {
       (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
-      Register dst = i.MemoryOperand().offset() == 0 ? i.MemoryOperand().rm()
-                                                     : kScratchReg;
-      if (i.MemoryOperand().offset() != 0) {
-        __ AddWord(dst, i.MemoryOperand().rm(), i.MemoryOperand().offset());
+      auto memOperand = i.MemoryOperand(1);
+      Register dst = memOperand.offset() == 0 ? memOperand.rm() : kScratchReg;
+      if (memOperand.offset() != 0) {
+        __ AddWord(dst, memOperand.rm(), memOperand.offset());
       }
-      __ vs(i.InputSimd128Register(2), dst, 0, VSew::E8);
+      __ vs(i.InputSimd128Register(0), dst, 0, VSew::E8);
       break;
     }
     case kRiscvRvvLd: {
@@ -3672,13 +3670,40 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     // SIMD256
-    case kRiscvF32x8Add:
-    case kRiscvF32x8Sub:
-    case kRiscvS256Load32Splat:
-    case kRiscvS256Load64Splat:
-    case kRiscvMovdqu256:
-      UNIMPLEMENTED();
-
+    case kRiscvF32x8Add:{
+      __ VU.set(kScratchReg, E32, m1);
+      __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
+    case kRiscvF32x8Sub:{
+      __ VU.set(kScratchReg, E32, m1);
+      __ vsub_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
+    case kRiscvS256Load32Splat:{
+      __ Lw(kScratchReg, i.MemoryOperand());
+      __ VU.set(kScratchReg, E32, m1);
+      __ vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      break;
+    }
+    case kRiscvS256Load64Splat:{
+      __ LoadWord(kScratchReg, i.MemoryOperand());
+      __ VU.set(kScratchReg, E64, m1);
+      __ vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      break;
+    }
+    case kRiscvRvvLd256:{
+      (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
+      Register src = i.MemoryOperand().offset() == 0 ? i.MemoryOperand().rm()
+                                                     : kScratchReg;
+      if (i.MemoryOperand().offset() != 0) {
+        __ AddWord(src, i.MemoryOperand().rm(), i.MemoryOperand().offset());
+      }
+      __ vl(i.OutputSimd128Register(), src, 0, VSew::E8);
+      break;
+    }
     default:
 #ifdef DEBUG
       switch (arch_opcode) {
