@@ -53,8 +53,9 @@ class RevecTest : public TestWithIsolateAndZone {
 // simd256 *d, *e, *f;
 // *f = *d + *e;
 TEST_F(RevecTest, F32x8Add) {
+#ifdef V8_TARGET_ARCH_X64
   if (!CpuFeatures::IsSupported(AVX2)) return;
-
+#endif
   Node* start = graph()->NewNode(common()->Start(5));
   graph()->SetStart(start);
 
@@ -118,8 +119,9 @@ TEST_F(RevecTest, F32x8Add) {
 // can be coalesced using 256-bit vectors:
 //   c[01234567] = a[01234567] * b[00000000];
 TEST_F(RevecTest, F32x8Mul) {
+#ifdef V8_TARGET_ARCH_X64
   if (!CpuFeatures::IsSupported(AVX2)) return;
-
+#endif
   Node* start = graph()->NewNode(common()->Start(4));
   graph()->SetStart(start);
 
@@ -182,8 +184,9 @@ TEST_F(RevecTest, F32x8Mul) {
 // revectorized:
 //   [Load4] -> [Load3] -> [Load2] -> [Load1] -> [Irrelevant Load]
 TEST_F(RevecTest, ReorderLoadChain) {
+#ifdef V8_TARGET_ARCH_X64
   if (!CpuFeatures::IsSupported(AVX2)) return;
-
+#endif
   Node* start = graph()->NewNode(common()->Start(5));
   graph()->SetStart(start);
 

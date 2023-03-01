@@ -402,7 +402,7 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS128Load64ExtendU:
     case kRiscvS128Load64ExtendS:
     case kRiscvS128LoadLane:
-    case kRiscvMovdqu256:
+    case kRiscvRvvLd256:
     case kRiscvS256Load32Splat:
     case kRiscvS256Load64Splat:
       return kIsLoadOperation;
