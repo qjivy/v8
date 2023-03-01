@@ -333,7 +333,7 @@ void InstructionSelector::VisitLoad(Node* node) {
                                                  // Fall through.
 #endif
     case MachineRepresentation::kSimd256:           // Fall through.
-      opcode = kRiscvMovdqu256;
+      opcode = kRiscvRvvLd256;
       break;
     case MachineRepresentation::kSandboxedPointer:  // Fall through.
     case MachineRepresentation::kMapWord:           // Fall through.
@@ -411,7 +411,7 @@ void InstructionSelector::VisitStore(Node* node) {
         UNREACHABLE();
 #endif
       case MachineRepresentation::kSimd256:           // Fall through.
-        opcode =  kRiscvMovdqu256;
+        opcode =  kRiscvRvvLd256;
 	break;
 
       case MachineRepresentation::kSandboxedPointer:  // Fall through.
