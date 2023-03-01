@@ -431,7 +431,7 @@ namespace compiler {
   V(RiscvVwaddu)                          \
   V(RiscvVrgather)                        \
   V(RiscvVslidedown)			  \
-  V(RiscvMovdqu256)                        \
+  V(RiscvRvvLd256)                        \
   V(RiscvS256Load32Splat)                 \
   V(RiscvS256Load64Splat)                      \
   V(RiscvF32x8Add)                                      \

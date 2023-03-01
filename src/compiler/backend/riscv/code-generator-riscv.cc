@@ -3684,13 +3684,13 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kRiscvS256Load32Splat:{
       __ Lw(kScratchReg, i.MemoryOperand());
       __ VU.set(kScratchReg, E32, m1);
-      vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      __ vmv_vx(i.OutputSimd128Register(), kScratchReg);
       break;
     }
     case kRiscvS256Load64Splat:{
       __ LoadWord(kScratchReg, i.MemoryOperand());
       __ VU.set(kScratchReg, E64, m1);
-      vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      __ vmv_vx(i.OutputSimd128Register(), kScratchReg);
       break;
     }
     case kRiscvRvvLd256:{
@@ -3702,8 +3702,6 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       }
       __ vl(i.OutputSimd128Register(), src, 0, VSew::E8);
       break;
-    }
-     break;
     }
     default:
 #ifdef DEBUG
