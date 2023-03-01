@@ -3670,13 +3670,42 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       break;
     }
     // SIMD256
-    case kRiscvF32x8Add:
-    case kRiscvF32x8Sub:
-    case kRiscvS256Load32Splat:
-    case kRiscvS256Load64Splat:
-    case kRiscvMovdqu256:
-      UNIMPLEMENTED();
-
+    case kRiscvF32x8Add:{
+      __ VU.set(kScratchReg, E32, m1);
+      __ vadd_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
+    case kRiscvF32x8Sub:{
+      __ VU.set(kScratchReg, E32, m1);
+      __ vsub_vv(i.OutputSimd128Register(), i.InputSimd128Register(0),
+                 i.InputSimd128Register(1));
+      break;
+    }
+    case kRiscvS256Load32Splat:{
+      __ Lw(kScratchReg, i.MemoryOperand());
+      __ VU.set(kScratchReg, E32, m1);
+      vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      break;
+    }
+    case kRiscvS256Load64Splat:{
+      __ LoadWord(kScratchReg, i.MemoryOperand());
+      __ VU.set(kScratchReg, E64, m1);
+      vmv_vx(i.OutputSimd128Register(), kScratchReg);
+      break;
+    }
+    case kRiscvRvvLd256:{
+      (__ VU).set(kScratchReg, VSew::E8, Vlmul::m1);
+      Register src = i.MemoryOperand().offset() == 0 ? i.MemoryOperand().rm()
+                                                     : kScratchReg;
+      if (i.MemoryOperand().offset() != 0) {
+        __ AddWord(src, i.MemoryOperand().rm(), i.MemoryOperand().offset());
+      }
+      __ vl(i.OutputSimd128Register(), src, 0, VSew::E8);
+      break;
+    }
+     break;
+    }
     default:
 #ifdef DEBUG
       switch (arch_opcode) {
