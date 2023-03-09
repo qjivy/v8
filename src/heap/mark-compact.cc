@@ -1679,6 +1679,8 @@ class EvacuateVisitorBase : public HeapObjectVisitor {
       DCHECK_CODEOBJECT_SIZE(size, base->heap_->code_space());
       base->heap_->CopyBlock(dst_addr, src_addr, size);
       InstructionStream code = InstructionStream::cast(dst);
+      intptr_t delta = dst_addr - src_addr;
+      printf("dst_addr:%x, src_addr:%x delta:%d\n", dst_addr, src_addr, delta);
       code.Relocate(dst_addr - src_addr);
       if (mode != MigrationMode::kFast)
         base->ExecuteMigrationObservers(dest, src, dst, size);

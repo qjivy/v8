@@ -133,8 +133,8 @@ Register ToRegister(int num) {
 
 const int RelocInfo::kApplyMask =
     RelocInfo::ModeMask(RelocInfo::INTERNAL_REFERENCE) |
-    RelocInfo::ModeMask(RelocInfo::NEAR_BUILTIN_ENTRY) |
     RelocInfo::ModeMask(RelocInfo::INTERNAL_REFERENCE_ENCODED) |
+    RelocInfo::ModeMask(RelocInfo::NEAR_BUILTIN_ENTRY) |
     RelocInfo::ModeMask(RelocInfo::RELATIVE_CODE_TARGET) |
     RelocInfo::ModeMask(RelocInfo::CODE_TARGET) |
     RelocInfo::ModeMask(RelocInfo::WASM_STUB_CALL);
@@ -1240,7 +1240,29 @@ int Assembler::RelocateInternalReference(RelocInfo::Mode rmode, Address pc,
   if (IsLui(instr)) {
     uintptr_t target_address = target_address_at(pc) + pc_delta;
     DEBUG_PRINTF("\ttarget_address 0x%" PRIxPTR "\n", target_address);
+    if(RelocInfo::IsWasmStubCall(rmode)){
+      auto addr = target_address_at(pc);
+      printf("\tbefore 0x%" PRIxPTR " pc_delta:%d " "target_address 0x%" PRIxPTR "\n", addr, pc_delta, target_address);
+      printf("before target:\n");
+      disasm::NameConverter converter;
+      disasm::Disassembler disasm(converter);
+      base::EmbeddedVector<char, 128> disasm_buffer;
+      disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(pc));
+      printf("%s\n", disasm_buffer.begin());
+      disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(pc + 1 * kInstrSize));
+      printf("%s\n", disasm_buffer.begin());
+    }
     set_target_value_at(pc, target_address);
+    if(RelocInfo::IsWasmStubCall(rmode)){
+      printf("after target:\n");
+      disasm::NameConverter converter;
+      disasm::Disassembler disasm(converter);
+      base::EmbeddedVector<char, 128> disasm_buffer;
+      disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(pc));
+      printf("%s\n", disasm_buffer.begin());
+      disasm.InstructionDecode(disasm_buffer, reinterpret_cast<byte*>(pc + 1 * kInstrSize));
+      printf("%s\n", disasm_buffer.begin());
+    }
 #if V8_TARGET_ARCH_RISCV64
     return 8;  // Number of instructions patched.
 #elif V8_TARGET_ARCH_RISCV32
@@ -1603,6 +1625,7 @@ void Assembler::set_target_value_at(Address pc, uint32_t target,
   Instruction* instr1 = Instruction::At((unsigned char*)(pc + 1 * kInstrSize));
   DCHECK(IsLui(*reinterpret_cast<Instr*>(instr0)) &&
          IsAddi(*reinterpret_cast<Instr*>(instr1)));
+  
 #endif
   int32_t high_20 = ((target + 0x800) >> 12);  // 20 bits
   int32_t low_12 = target & 0xfff;             // 12 bits

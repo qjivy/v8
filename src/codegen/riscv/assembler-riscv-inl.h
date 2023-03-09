@@ -58,6 +58,9 @@ void RelocInfo::apply(intptr_t delta) {
   if (IsInternalReference(rmode_) || IsInternalReferenceEncoded(rmode_) ||
       IsWasmStubCall(rmode_)) {
     // Absolute code pointer inside code object moves with the code object.
+    if(IsWasmStubCall(rmode_)) {
+      printf("RelocInfo::apply: IsWasmStubCall delta:%d\n", delta);
+    }
     Assembler::RelocateInternalReference(rmode_, pc_, delta);
   } else {
     DCHECK(IsRelativeCodeTarget(rmode_));
