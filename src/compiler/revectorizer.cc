@@ -93,6 +93,7 @@ bool IsContinuousAccess(const ZoneVector<Node*>& node_group) {
   for (size_t i = 1; i < node_group.size(); ++i) {
     int64_t current_offset = GetMemoryOffsetValue(node_group[i]);
     int64_t diff = current_offset - previous_offset;
+    std::cout<<"QQ IsContinuousAccess previous_offset: "<<previous_offset<<" current_offset: "<<current_offset<<" diff: "<<diff<<" kSimd128Size: "<<kSimd128Size<<std::endl;
     if (diff != kSimd128Size) {
       TRACE("Non-continuous store!");
       return false;
@@ -140,8 +141,12 @@ bool IsSplat(const T& node_group) {
 // Returns true if all of the nodes in node_group have the same type.
 bool AllSameOperator(const ZoneVector<Node*>& node_group) {
   auto op = node_group[0]->op();
+    std::cout<<"in AllSameOperator node0 opcode: "<<node_group[0]->op()->opcode()<<" node1 opcode:"<<node_group[0]->op()->opcode()<<std::endl;
   for (ZoneVector<Node*>::size_type i = 1; i < node_group.size(); i++) {
+    //if (node_group[i]->op()->Equals(op)) {// != op) {
     if (node_group[i]->op() != op) {
+    //std::cout<<"node0 opcode: "<<node_group[0]->op()->opcode()<<" node1 opcode:"<<node_group[0]->op()->opcode()<<std::endl;
+      //return false;
       return false;
     }
   }
@@ -229,6 +234,7 @@ bool SLPTree::CanBePacked(const ZoneVector<Node*>& node_group) {
     TRACE("%s(#%d, #%d) have different operator!\n",
           node_group[0]->op()->mnemonic(), node_group[0]->id(),
           node_group[1]->id());
+	  std::cout<<"node_group[0]->op(): "<<*(node_group[0]->op())<<" node_group[1]->op(): "<<*(node_group[1]->op())<<std::endl;
     return false;
   }
   // TODO(jiepan): add support for Constant
@@ -396,13 +402,11 @@ bool SLPTree::IsSideEffectFreeLoad(const ZoneVector<Node*>& node_group) {
           input->op()->mnemonic());
     if (visited.find(input) == visited.end()) {
       visited.insert(input);
-
       if (OnStack(input)) {
         TRACE("Has internal dependency because (%d %s) on stack\n", input->id(),
               input->op()->mnemonic());
         return false;
       }
-
       // If the input is not in same basic block as Loads, it must not be in
       // SLPTree. Otherwise recursively visit all input's edges and find if they
       // are connected to SLPTree.
@@ -843,13 +847,17 @@ Node* Revectorizer::VectorizeTree(PackNode* pnode) {
 
 void Revectorizer::DetectCPUFeatures() {
   base::CPU cpu;
+  /*
   if (cpu.has_avx2()) {
     support_simd256_ = true;
   }
+  */
+  support_simd256_ = true;
 }
 
 bool Revectorizer::TryRevectorize(const char* function) {
   bool success = false;
+  TRACE("\nQQS INTO TryRevectorize %s support_simd256_: %d StoreNodesCount: %zu\n", function,support_simd256_,graph_->GetSimdStoreNodes().size());
   if (support_simd256_ && graph_->GetSimdStoreNodes().size()) {
     TRACE("TryRevectorize %s\n", function);
     CollectSeeds();
@@ -863,7 +871,7 @@ bool Revectorizer::TryRevectorize(const char* function) {
         }
       }
     }
-    TRACE("Finish revectorize %s\n", function);
+    TRACE("\nQQE Finish revectorize %s sucess: %d\n", function,success);
   }
   return success;
 }
@@ -873,7 +881,7 @@ void Revectorizer::CollectSeeds() {
        it != graph_->GetSimdStoreNodes().end(); ++it) {
     Node* node = *it;
     Node* dominator = slp_tree_->GetEarlySchedulePosition(node);
-
+    std::cout<<"in CollectSeeds, dominator: "<<dominator<<" node: "<<node<<std::endl;
     if ((GetMemoryOffsetValue(node) % kSimd128Size) != 0) {
       continue;
     }
@@ -912,7 +920,7 @@ bool Revectorizer::ReduceStoreChains(
       }
     }
   }
-
+  std::cout<<std::endl<<"QQ ReduceStoreChains, changed: "<<changed<<std::endl;
   return changed;
 }
 
