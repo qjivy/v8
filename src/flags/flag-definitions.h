@@ -1283,9 +1283,9 @@ DEFINE_DEBUG_BOOL(trace_wasm_instances, false,
 
 // Flags for WASM SIMD256 revectorize
 #ifdef V8_ENABLE_WASM_SIMD256_REVEC
-DEFINE_BOOL(experimental_wasm_revectorize, false,
+DEFINE_BOOL(experimental_wasm_revectorize, true,
             "enable 128 to 256 bit revectorization for Webassembly SIMD")
-DEFINE_BOOL(trace_wasm_revectorize, false, "trace wasm revectorize")
+DEFINE_BOOL(trace_wasm_revectorize, true, "trace wasm revectorize")
 #endif  // V8_ENABLE_WASM_SIMD256_REVEC
 
 #endif  // V8_ENABLE_WEBASSEMBLY
