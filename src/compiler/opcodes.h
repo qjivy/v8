@@ -1092,7 +1092,8 @@
   V(F32x8Lt)                       \
   V(F32x8Le)                       \
   V(S256Select)                    \
-  V(ExtractF128)
+  V(S256Zero) \
+  V(ExtractF128) 
 
 #define VALUE_OP_LIST(V)     \
   COMMON_OP_LIST(V)          \

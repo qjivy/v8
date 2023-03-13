@@ -980,6 +980,7 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* F32x8Lt();
   const Operator* F32x8Le();
   const Operator* S256Select();
+  const Operator* S256Zero();
   const Operator* ExtractF128(int32_t lane_index);
 
   // load [base + index]

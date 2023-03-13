@@ -656,6 +656,7 @@ std::ostream& operator<<(std::ostream& os, TruncateKind kind) {
   V(F32x8Ne, Operator::kCommutative, 2, 0, 1)                              \
   V(F32x8Lt, Operator::kNoProperties, 2, 0, 1)                             \
   V(F32x8Le, Operator::kNoProperties, 2, 0, 1)                             \
+  V(S256Zero, Operator::kNoProperties, 0, 0, 1)                            \
   V(S256Select, Operator::kNoProperties, 3, 0, 1)
 
 // The format is:

@@ -5242,6 +5242,11 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       ASSEMBLE_SIMD256_BINOP(subps);
       break;
     }
+    case kX64S256Zero: {
+      CpuFeatureScope avx_scope(masm(), AVX);
+      __ vxorps(i.OutputSimd256Register(), i.OutputSimd256Register(), i.OutputSimd256Register());
+      break;
+    }
     case kX64S256Load32Splat: {
       EmitOOLTrapIfNeeded(zone(), this, opcode, instr, __ pc_offset());
       CpuFeatureScope avx_scope(masm(), AVX);

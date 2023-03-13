@@ -3503,6 +3503,11 @@ void InstructionSelector::VisitS128Zero(Node* node) {
   Emit(kX64S128Zero, g.DefineAsRegister(node));
 }
 
+void InstructionSelector::VisitS256Zero(Node* node) {
+  X64OperandGenerator g(this);
+  Emit(kX64S256Zero, g.DefineAsRegister(node));
+}
+
 // Name, LaneSize, VectorLength
 #define SIMD_INT_TYPES_FOR_SPLAT(V) \
   V(I64x2, kL64, kV128)             \
@@ -3723,6 +3728,8 @@ SIMD256_BINOP_SSE_AVX_LIST(VISIT_SIMD256_BINOP)
 #undef VISIT_SIMD256_BINOP
 #undef SIMD_BINOP_SSE_AVX_LIST
 #undef SIMD256_BINOP_SSE_AVX_LIST
+
+
 
 #define VISIT_SIMD_BINOP_LANE_SIZE_VECTOR_LENGTH(Name, Opcode, LaneSize, \
                                                  VectorLength)           \

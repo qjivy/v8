@@ -267,6 +267,7 @@ PackNode* SLPTree::NewPackNode(const ZoneVector<Node*>& node_group) {
 PackNode* SLPTree::NewPackNodeAndRecurs(const ZoneVector<Node*>& node_group,
                                         int start_index, int count,
                                         unsigned recursion_depth) {
+  TRACE("NewPackNodeAndRecurs recursion_depth:%d\n", recursion_depth);
   PackNode* pnode = NewPackNode(node_group);
   for (int i = start_index; i < start_index + count; ++i) {
     ZoneVector<Node*> operands(zone_);
@@ -275,11 +276,11 @@ PackNode* SLPTree::NewPackNodeAndRecurs(const ZoneVector<Node*>& node_group,
       Node* node = node_group[j];
       operands.push_back(NodeProperties::GetValueInput(node, i));
     }
-
     PackNode* child = BuildTreeRec(operands, recursion_depth + 1);
     if (child) {
       pnode->SetOperand(i, child);
     } else {
+      TRACE("null recursion_depth %d", recursion_depth);
       return nullptr;
     }
   }
@@ -474,16 +475,32 @@ PackNode* SLPTree::BuildTreeRec(const ZoneVector<Node*>& node_group,
     Node* source = node0->InputAt(0);
     TRACE("Extract leaf node from #%d,%s!\n", source->id(),
           source->op()->mnemonic());
-    // For 256 only, check whether they are from the same source
-    if (node0->InputAt(0) == node1->InputAt(0) &&
-        (node0->InputAt(0)->opcode() == IrOpcode::kLoadTransform
-             ? node0 == node1
-             : OpParameter<int32_t>(node0->op()) + 1 ==
-                   OpParameter<int32_t>(node1->op()))) {
-      TRACE("Added a pair of Extract.\n");
-      PackNode* pnode = NewPackNode(node_group);
-      PopStack();
-      return pnode;
+    //For 256 only, check whether they are from the same source
+    // if (node0->InputAt(0) == node1->InputAt(0) &&
+    //     (node0->InputAt(0)->opcode() == IrOpcode::kLoadTransform
+    //          ? node0 == node1
+    //          : OpParameter<int32_t>(node0->op()) + 1 ==
+    //                OpParameter<int32_t>(node1->op()))) {
+    //   TRACE("Added a pair of Extract.\n");
+    //   PackNode* pnode = NewPackNode(node_group);
+    //   PopStack();
+    //   return pnode;
+    // }
+    if (node0->InputAt(0) == node1->InputAt(0)) {
+      if(node0->InputAt(0)->opcode() == IrOpcode::kLoadTransform ||
+         node0->InputAt(0)->opcode() == IrOpcode::kS256Zero){
+        if(node0 == node1){
+          TRACE("Added a pair of Extract.\n");
+          PackNode* pnode = NewPackNode(node_group);
+          PopStack();
+          return pnode;
+        }
+      } else if(OpParameter<int32_t>(node0->op()) + 1 == OpParameter<int32_t>(node1->op())){
+        TRACE("Added a pair of Extract.\n");
+        PackNode* pnode = NewPackNode(node_group);
+        PopStack();
+        return pnode;
+      }
     }
     TRACE("Failed due to ExtractF128!\n");
     return nullptr;
@@ -561,14 +578,21 @@ PackNode* SLPTree::BuildTreeRec(const ZoneVector<Node*>& node_group,
       return pnode;
     }
     case IrOpcode::kF32x4Add:
-    case IrOpcode::kF32x4Mul: {
+    case IrOpcode::kF32x4Mul:
+    case IrOpcode::kF32x4Pmin:
+    case IrOpcode::kF32x4Pmax: {
       TRACE("Added a vector of un/bin/ter op.\n");
       PackNode* pnode =
           NewPackNodeAndRecurs(node_group, 0, value_in_count, recursion_depth);
       PopStack();
       return pnode;
     }
-
+    case IrOpcode::kS128Const: {
+      TRACE("Added a vector of S128Const value_in_count:%d.\n", value_in_count);
+      PackNode* pnode = NewPackNode(node_group);
+      PopStack();
+      return pnode;
+    }
     // TODO(jiepan): UnalignedStore, StoreTrapOnNull.
     case IrOpcode::kStore:
     case IrOpcode::kProtectedStore: {
@@ -599,7 +623,10 @@ void SLPTree::Print(const char* info) {
     return;
   }
 
-  ForEach([](PackNode const* pnode) { pnode->Print(); });
+  ForEach([](PackNode const* pnode) {
+
+    pnode->Print(); 
+  });
 }
 
 template <typename FunctionType>
@@ -658,7 +685,7 @@ bool Revectorizer::DecideVectorize() {
   });
 
   TRACE("Save: %d, cost: %d\n", save, cost);
-  return save > cost;
+  return save >= cost;
 }
 
 void Revectorizer::SetEffectInput(PackNode* pnode, int index, Node*& input) {
@@ -735,6 +762,12 @@ Node* Revectorizer::VectorizeTree(PackNode* pnode) {
       break;
     case IrOpcode::kF32x4Mul:
       new_op = mcgraph_->machine()->F32x8Mul();
+      break;
+    case IrOpcode::kF32x4Pmin:
+      new_op = mcgraph_->machine()->F32x8Pmin();
+      break;
+    case IrOpcode::kS128Const:
+      new_op = mcgraph_->machine()->S256Zero();
       break;
     case IrOpcode::kProtectedLoad: {
       DCHECK_EQ(LoadRepresentationOf(node0->op()).representation(),
@@ -871,10 +904,12 @@ bool Revectorizer::TryRevectorize(const char* function) {
 void Revectorizer::CollectSeeds() {
   for (auto it = graph_->GetSimdStoreNodes().begin();
        it != graph_->GetSimdStoreNodes().end(); ++it) {
+    TRACE("CollectSeeds #%d:%s\n", (*it)->id(), (*it)->op()->mnemonic());
     Node* node = *it;
     Node* dominator = slp_tree_->GetEarlySchedulePosition(node);
 
     if ((GetMemoryOffsetValue(node) % kSimd128Size) != 0) {
+      TRACE(" (offset %ld) is not aligned to 16 bytes\n", GetMemoryOffsetValue(node));
       continue;
     }
     Node* address = GetNodeAddress(node);
@@ -908,8 +943,12 @@ bool Revectorizer::ReduceStoreChains(
         ZoneVector<Node*> stores_unit(it, it + 2, zone_);
         if (ReduceStoreChain(stores_unit)) {
           changed = true;
+        } else {
+          TRACE("Reduce store chain failed!\n");
         }
       }
+    } else {
+      TRACE("Skip store chain with size %lu\n", chain_iter->second.size());
     }
   }
 
