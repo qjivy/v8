@@ -3503,6 +3503,31 @@ void InstructionSelector::VisitS128Zero(Node* node) {
   Emit(kX64S128Zero, g.DefineAsRegister(node));
 }
 
+
+void InstructionSelector::VisitS256Const(Node* node) {
+  X64OperandGenerator g(this);
+  static const int kUint32Immediates = kSimd256Size / sizeof(uint32_t);
+  uint32_t val[kUint32Immediates];
+  memcpy(val, S128ImmediateParameterOf(node->op()).data(), kSimd128Size);
+  // If all bytes are zeros or ones, avoid emitting code for generic constants
+  bool all_zeros = !(val[0] || val[1] || val[2] || val[3] || val[4] || val[5] || val[6] || val[7]);
+  bool all_ones = val[0] == UINT32_MAX && val[1] == UINT32_MAX &&
+                  val[2] == UINT32_MAX && val[3] == UINT32_MAX &&
+                  val[4] == UINT32_MAX && val[5] == UINT32_MAX &&
+                  val[6] == UINT32_MAX && val[7] == UINT32_MAX;
+  InstructionOperand dst = g.DefineAsRegister(node);
+  if (all_zeros) {
+    Emit(kX64S256Zero, dst);
+  } else if (all_ones) {
+    Emit(kX64S128AllOnes, dst);
+  } else {
+    Emit(kX64S256Const, dst, g.UseImmediate(val[0]), g.UseImmediate(val[1]),
+         g.UseImmediate(val[2]), g.UseImmediate(val[3]), g.UseImmediate(val[4]),
+         g.UseImmediate(val[5]), g.UseImmediate(val[6]),
+         g.UseImmediate(val[7]));
+  }
+}
+
 void InstructionSelector::VisitS256Zero(Node* node) {
   X64OperandGenerator g(this);
   Emit(kX64S256Zero, g.DefineAsRegister(node));

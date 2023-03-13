@@ -488,7 +488,8 @@ PackNode* SLPTree::BuildTreeRec(const ZoneVector<Node*>& node_group,
     // }
     if (node0->InputAt(0) == node1->InputAt(0)) {
       if(node0->InputAt(0)->opcode() == IrOpcode::kLoadTransform ||
-         node0->InputAt(0)->opcode() == IrOpcode::kS256Zero){
+         node0->InputAt(0)->opcode() == IrOpcode::kS256Zero||
+         node0->InputAt(0)->opcode() == IrOpcode::kS256Const){
         if(node0 == node1){
           TRACE("Added a pair of Extract.\n");
           PackNode* pnode = NewPackNode(node_group);
@@ -767,7 +768,10 @@ Node* Revectorizer::VectorizeTree(PackNode* pnode) {
       new_op = mcgraph_->machine()->F32x8Pmin();
       break;
     case IrOpcode::kS128Const:
-      new_op = mcgraph_->machine()->S256Zero();
+      uint8_t val[kSimd256Size / sizeof(uint8_t)];
+      memcpy(val, S128ImmediateParameterOf(node0->op()).data(), kSimd128Size);
+      memcpy(val + 16, S128ImmediateParameterOf(node0->op()).data(), kSimd128Size);
+      new_op = mcgraph_->machine()->S256Const(val);
       break;
     case IrOpcode::kProtectedLoad: {
       DCHECK_EQ(LoadRepresentationOf(node0->op()).representation(),

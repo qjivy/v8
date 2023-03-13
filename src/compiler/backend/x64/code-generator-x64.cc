@@ -1190,6 +1190,11 @@ void SetupSimdImmediateInRegister(MacroAssembler* assembler, uint32_t* imms,
                   make_uint64(imms[1], imms[0]));
 }
 
+void SetupSimdImmediateInRegister(MacroAssembler* assembler, uint32_t* imms,
+                                  YMMRegister reg) {
+  assembler->Move(reg, make_uint64(imms[3], imms[2]),
+                  make_uint64(imms[1], imms[0]));
+}
 }  // namespace
 
 void CodeGenerator::AssembleTailCallBeforeGap(Instruction* instr,
@@ -5245,6 +5250,17 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
     case kX64S256Zero: {
       CpuFeatureScope avx_scope(masm(), AVX);
       __ vxorps(i.OutputSimd256Register(), i.OutputSimd256Register(), i.OutputSimd256Register());
+      break;
+    }
+    case kX64S256Const: {
+      // Emit code for generic constants as all zeros, or ones cases will be
+      // handled separately by the selector.
+      YMMRegister dst = i.OutputSimd256Register();
+      uint32_t imm[8] = {};
+      for (int j = 0; j < 8; j++) {
+        imm[j] = i.InputUint32(j);
+      }
+      SetupSimdImmediateInRegister(masm(), imm, dst);
       break;
     }
     case kX64S256Load32Splat: {

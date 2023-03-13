@@ -292,13 +292,39 @@ V8_EXPORT_PRIVATE bool operator==(S128ImmediateParameter const& lhs,
                                   S128ImmediateParameter const& rhs);
 bool operator!=(S128ImmediateParameter const& lhs,
                 S128ImmediateParameter const& rhs);
-
 size_t hash_value(S128ImmediateParameter const& p);
 
 V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&,
                                            S128ImmediateParameter const&);
 
 V8_EXPORT_PRIVATE S128ImmediateParameter const& S128ImmediateParameterOf(
+    Operator const* op) V8_WARN_UNUSED_RESULT;
+
+class S256ImmediateParameter {
+ public:
+  explicit S256ImmediateParameter(const uint8_t immediate[16]) {
+    std::copy(immediate, immediate + 32, immediate_.begin());
+  }
+  S256ImmediateParameter() = default;
+  const std::array<uint8_t, 32>& immediate() const { return immediate_; }
+  const uint8_t* data() const { return immediate_.data(); }
+  uint8_t operator[](int x) const { return immediate_[x]; }
+
+ private:
+  std::array<uint8_t, 32> immediate_;
+};
+
+V8_EXPORT_PRIVATE bool operator==(S256ImmediateParameter const& lhs,
+                                  S256ImmediateParameter const& rhs);
+bool operator!=(S256ImmediateParameter const& lhs,
+                S256ImmediateParameter const& rhs);
+
+size_t hash_value(S256ImmediateParameter const& p);
+
+V8_EXPORT_PRIVATE std::ostream& operator<<(std::ostream&,
+                                           S256ImmediateParameter const&);
+
+V8_EXPORT_PRIVATE S256ImmediateParameter const& S256ImmediateParameterOf(
     Operator const* op) V8_WARN_UNUSED_RESULT;
 
 StackCheckKind StackCheckKindOf(Operator const* op) V8_WARN_UNUSED_RESULT;
@@ -929,6 +955,7 @@ class V8_EXPORT_PRIVATE MachineOperatorBuilder final
   const Operator* I8x16BitMask();
 
   const Operator* S128Const(const uint8_t value[16]);
+  const Operator* S256Const(const uint8_t value[32]);
 
   const Operator* S128Zero();
   const Operator* S128And();
