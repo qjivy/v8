@@ -2223,6 +2223,22 @@ CodeGenerator::CodeGenResult CodeGenerator::AssembleArchInstruction(
       __ vmv_vx(dst, zero_reg);
       break;
     }
+    case kRiscvS256Zero: {
+      Simd128Register dst = i.OutputSimd128Register();
+      __ VU.set(kScratchReg, E8, m1);
+      __ vmv_vx(dst, zero_reg);
+      break;
+    }
+    case kRiscvS256Const: {
+      Simd128Register dst = i.OutputSimd128Register();
+      uint8_t imm[16];
+      *reinterpret_cast<uint64_t*>(imm) =
+          make_uint64(i.InputUint32(1), i.InputUint32(0));
+      *(reinterpret_cast<uint64_t*>(imm) + 1) =
+          make_uint64(i.InputUint32(3), i.InputUint32(2));
+      __ WasmRvvS128const(dst, imm);
+      break;
+    }
     case kRiscvS128Load32Zero: {
       Simd128Register dst = i.OutputSimd128Register();
       __ VU.set(kScratchReg, E32, m1);

@@ -1221,6 +1221,37 @@ void InstructionSelector::VisitI8x16Swizzle(Node* node) {
        g.UseImmediate(m1), arraysize(temps), temps);
 }
 
+void InstructionSelector::VisitS256Zero(Node* node) {
+  RiscvOperandGenerator g(this);
+  Emit(kRiscvS256Zero, g.DefineAsRegister(node));
+}
+
+void InstructionSelector::VisitS256Const(Node* node) {
+  RiscvOperandGenerator g(this);
+  static const int kUint32Immediates = kSimd256Size / sizeof(uint32_t);
+  uint32_t val[kUint32Immediates];
+  memcpy(val, S256ImmediateParameterOf(node->op()).data(), kSimd256Size);
+  // If all bytes are zeros or ones, avoid emitting code for generic constants
+  bool all_zeros = !(val[0] || val[1] || val[2] || val[3] || val[4] || val[5] ||
+                     val[6] || val[7]);
+  bool all_ones = val[0] == UINT32_MAX && val[1] == UINT32_MAX &&
+                  val[2] == UINT32_MAX && val[3] == UINT32_MAX &&
+                  val[4] == UINT32_MAX && val[5] == UINT32_MAX &&
+                  val[6] == UINT32_MAX && val[7] == UINT32_MAX;
+  InstructionOperand dst = g.DefineAsRegister(node);
+  if (all_zeros) {
+    Emit(kRiscvS256Zero, dst);
+  } else if (all_ones) {
+    Emit(kRiscvS128AllOnes, dst);
+  } else {
+    InstructionOperand input[] = {g.UseImmediate(val[0]), g.UseImmediate(val[1]),
+         g.UseImmediate(val[2]), g.UseImmediate(val[3]), g.UseImmediate(val[4]),
+         g.UseImmediate(val[5]), g.UseImmediate(val[6]),
+         g.UseImmediate(val[7])};
+    Emit(kRiscvS256Const, dst, 8, input);
+  }
+}
+
 void InstructionSelector::VisitSignExtendWord8ToInt32(Node* node) {
   RiscvOperandGenerator g(this);
   Emit(kRiscvSignExtendByte, g.DefineAsRegister(node),

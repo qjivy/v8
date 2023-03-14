@@ -2311,7 +2311,7 @@ S128ImmediateParameter const& S128ImmediateParameterOf(Operator const* op) {
 
 S256ImmediateParameter const& S256ImmediateParameterOf(Operator const* op) {
   DCHECK(IrOpcode::kI8x16Shuffle == op->opcode() ||
-         IrOpcode::kS128Const == op->opcode());
+         IrOpcode::kS256Const == op->opcode());
   return OpParameter<S256ImmediateParameter>(op);
 }
 

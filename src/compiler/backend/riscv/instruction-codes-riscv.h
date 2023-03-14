@@ -430,13 +430,14 @@ namespace compiler {
   V(RiscvVwadd)                           \
   V(RiscvVwaddu)                          \
   V(RiscvVrgather)                        \
-  V(RiscvVslidedown)			  \
-  V(RiscvMovdqu256)                        \
+  V(RiscvVslidedown)                      \
+  V(RiscvMovdqu256)                       \
   V(RiscvS256Load32Splat)                 \
-  V(RiscvS256Load64Splat)                      \
-  V(RiscvF32x8Add)                                      \
-  V(RiscvF32x8Sub)
-
+  V(RiscvS256Load64Splat)                 \
+  V(RiscvF32x8Add)                        \
+  V(RiscvF32x8Sub)                        \
+  V(RiscvS256Zero)                           \
+  V(RiscvS256Const)
 
 #define TARGET_ARCH_OPCODE_LIST(V)  \
   TARGET_ARCH_OPCODE_LIST_COMMON(V) \

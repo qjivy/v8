@@ -310,7 +310,9 @@ int InstructionScheduler::GetTargetInstructionFlags(
     case kRiscvS128AndNot:
     case kRiscvS128Xor:
     case kRiscvS128Const:
+    case kRiscvS256Const:
     case kRiscvS128Zero:
+    case kRiscvS256Zero:
     case kRiscvS128Load32Zero:
     case kRiscvS128Load64Zero:
     case kRiscvS128AllOnes:
