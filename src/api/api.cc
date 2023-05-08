@@ -6438,7 +6438,9 @@ bool v8::V8::Initialize(const int build_config) {
         kEmbedderSandbox ? "ENABLED" : "DISABLED",
         V8_ENABLE_SANDBOX_BOOL ? "ENABLED" : "DISABLED");
   }
-
+  std::cout << "kEmbedderPointerCompression:" << kEmbedderPointerCompression
+            << " kEmbedderSmiValueSize: " << kEmbedderSmiValueSize
+            << " kEmbedderSandbox: " << kEmbedderSandbox << std::endl;
   i::V8::Initialize();
   return true;
 }

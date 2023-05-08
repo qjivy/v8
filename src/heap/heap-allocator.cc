@@ -75,8 +75,10 @@ constexpr AllocationSpace AllocationTypeToGCSpace(AllocationType type) {
 AllocationResult HeapAllocator::AllocateRawWithLightRetrySlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
   AllocationResult result = AllocateRaw(size, allocation, origin, alignment);
   if (!result.IsFailure()) {
+  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" without failure type: "<<allocation<<std::endl;
     return result;
   }
 
@@ -101,9 +103,13 @@ AllocationResult HeapAllocator::AllocateRawWithLightRetrySlowPath(
 AllocationResult HeapAllocator::AllocateRawWithRetryOrFailSlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" First try to AllocateRawWithLightRetrySlowPath"<<std::endl;
   AllocationResult result =
       AllocateRawWithLightRetrySlowPath(size, allocation, origin, alignment);
-  if (!result.IsFailure()) return result;
+  if (!result.IsFailure()) {
+  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" without failure type: "<<allocation<<std::endl;
+  return result;
+  }
 
   if (IsSharedAllocationType(allocation)) {
     heap_->CollectGarbageShared(heap_->main_thread_local_heap(),
@@ -123,9 +129,11 @@ AllocationResult HeapAllocator::AllocateRawWithRetryOrFailSlowPath(
   }
 
   if (!result.IsFailure()) {
+  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" with retry "<<allocation<<std::endl;
     return result;
   }
 
+  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" with FATALOOM!!!"<<allocation<<std::endl;
   V8::FatalProcessOutOfMemory(heap_->isolate(), "CALL_AND_RETRY_LAST",
                               V8::kHeapOOM);
 }

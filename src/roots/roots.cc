@@ -24,6 +24,7 @@ MapWord ReadOnlyRoots::one_pointer_filler_map_word() {
 }
 
 void ReadOnlyRoots::Iterate(RootVisitor* visitor) {
+  printf("ReadOnlyRoots::Iterate\n");
   visitor->VisitRootPointers(Root::kReadOnlyRootList, nullptr,
                              FullObjectSlot(read_only_roots_),
                              FullObjectSlot(&read_only_roots_[kEntriesCount]));

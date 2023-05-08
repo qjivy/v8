@@ -4,6 +4,7 @@
 
 #include "src/heap/heap.h"
 
+#include <iostream>
 #include <atomic>
 #include <cinttypes>
 #include <iomanip>
@@ -5445,6 +5446,7 @@ void Heap::DisableInlineAllocation() {
 }
 
 void Heap::SetUp(LocalHeap* main_thread_local_heap) {
+  std::cout<<"***BEGIN Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
   DCHECK_NULL(main_thread_local_heap_);
   main_thread_local_heap_ = main_thread_local_heap;
 
@@ -5537,6 +5539,8 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
     AddGCEpilogueCallback(HeapLayoutTracer::GCEpiloguePrintHeapLayout, gc_type,
                           nullptr);
   }
+  //std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
 }
 
 void Heap::SetUpFromReadOnlyHeap(ReadOnlyHeap* ro_heap) {
@@ -5581,6 +5585,7 @@ class StressConcurrentAllocationObserver : public AllocationObserver {
 
 void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
                        LinearAllocationArea& old_allocation_info) {
+  std::cout << "Isolate::init Heap::SetUpSpaces" << std::endl;
   // Ensure SetUpFromReadOnlySpace has been ran.
   DCHECK_NOT_NULL(read_only_space_);
   if (!v8_flags.single_generation) {

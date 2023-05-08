@@ -57,6 +57,7 @@ bool HeapAllocator::CanAllocateInReadOnlySpace() const {
 template <AllocationType type>
 V8_WARN_UNUSED_RESULT V8_INLINE AllocationResult HeapAllocator::AllocateRaw(
     int size_in_bytes, AllocationOrigin origin, AllocationAlignment alignment) {
+    std::cout<<"***BEGIN Template-typed  AllocateRaw"<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
   DCHECK_EQ(heap_->gc_state(), Heap::NOT_IN_GC);
   DCHECK(AllowHandleAllocation::IsAllowed());
   DCHECK(AllowHeapAllocation::IsAllowed());
@@ -92,32 +93,46 @@ V8_WARN_UNUSED_RESULT V8_INLINE AllocationResult HeapAllocator::AllocateRaw(
     allocation = heap_->tp_heap_->Allocate(size_in_bytes, type, alignment);
   } else {
     if (V8_UNLIKELY(large_object)) {
+    std::cout<<"-----AllocateRaw-Templated for large object "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" large_object_threshold: "<<large_object_threshold<<std::endl;
       allocation =
           AllocateRawLargeInternal(size_in_bytes, type, origin, alignment);
     } else {
       switch (type) {
         case AllocationType::kYoung:
+    std::cout<<"-----AllocateRaw-Templated for kYoung "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
           allocation =
               new_space()->AllocateRaw(size_in_bytes, alignment, origin);
           break;
         case AllocationType::kMap:
+    std::cout<<"-----AllocateRaw-Templated for kMap "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+          allocation =
+              old_space()->AllocateRaw(size_in_bytes, alignment, origin);
+          break;
         case AllocationType::kOld:
+    std::cout<<"-----AllocateRaw-Templated for kOld "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
           allocation =
               old_space()->AllocateRaw(size_in_bytes, alignment, origin);
           break;
         case AllocationType::kCode:
+    std::cout<<"-----AllocateRaw-Templated for kCode "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
           DCHECK_EQ(alignment, AllocationAlignment::kTaggedAligned);
           DCHECK(AllowCodeAllocation::IsAllowed());
           allocation = code_space()->AllocateRaw(
               size_in_bytes, AllocationAlignment::kTaggedAligned);
           break;
         case AllocationType::kReadOnly:
+    std::cout<<"-----AllocateRaw-Templated for kReadOnly "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
           DCHECK(read_only_space()->writable());
           DCHECK_EQ(AllocationOrigin::kRuntime, origin);
           allocation = read_only_space()->AllocateRaw(size_in_bytes, alignment);
           break;
         case AllocationType::kSharedMap:
+    std::cout<<"-----AllocateRaw-Templated for kSharedMap "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+          allocation = shared_old_allocator_->AllocateRaw(size_in_bytes,
+                                                          alignment, origin);
+          break;
         case AllocationType::kSharedOld:
+    std::cout<<"-----AllocateRaw-Templated for kSharedOld "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
           allocation = shared_old_allocator_->AllocateRaw(size_in_bytes,
                                                           alignment, origin);
           break;
@@ -151,26 +166,34 @@ AllocationResult HeapAllocator::AllocateRaw(int size_in_bytes,
                                             AllocationType type,
                                             AllocationOrigin origin,
                                             AllocationAlignment alignment) {
-  switch (type) {
+    std::cout<<"***BEGIN Common AllocateRaw"<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+switch (type) {
     case AllocationType::kYoung:
+    std::cout<<"-----AllocateRaw for kYoung "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kYoung>(size_in_bytes, origin,
                                                  alignment);
     case AllocationType::kOld:
+    std::cout<<"-----AllocateRaw for kOld "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kOld>(size_in_bytes, origin,
                                                alignment);
     case AllocationType::kCode:
+    std::cout<<"-----AllocateRaw for kCode "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kCode>(size_in_bytes, origin,
                                                 alignment);
     case AllocationType::kMap:
+    std::cout<<"-----AllocateRaw for kMap "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kMap>(size_in_bytes, origin,
                                                alignment);
     case AllocationType::kReadOnly:
+    std::cout<<"-----AllocateRaw for kReadOnly "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kReadOnly>(size_in_bytes, origin,
                                                     alignment);
     case AllocationType::kSharedMap:
+    std::cout<<"-----AllocateRaw for kSharedMap "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kSharedMap>(size_in_bytes, origin,
                                                      alignment);
     case AllocationType::kSharedOld:
+    std::cout<<"-----AllocateRaw for kSharedOld "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       return AllocateRaw<AllocationType::kSharedOld>(size_in_bytes, origin,
                                                      alignment);
   }
@@ -202,15 +225,18 @@ template <HeapAllocator::AllocationRetryMode mode>
 V8_WARN_UNUSED_RESULT V8_INLINE HeapObject HeapAllocator::AllocateRawWith(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
+  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
   AllocationResult result;
   HeapObject object;
   size = ALIGN_TO_ALLOCATION_ALIGNMENT(size);
   if (allocation == AllocationType::kYoung) {
+  std::cout<<"-----AllocateRawWith for kYoung "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
     result = AllocateRaw<AllocationType::kYoung>(size, origin, alignment);
     if (result.To(&object)) {
       return object;
     }
   } else if (allocation == AllocationType::kOld) {
+  std::cout<<"-----AllocateRawWith for kOld "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
     result = AllocateRaw<AllocationType::kOld>(size, origin, alignment);
     if (result.To(&object)) {
       return object;
@@ -218,15 +244,20 @@ V8_WARN_UNUSED_RESULT V8_INLINE HeapObject HeapAllocator::AllocateRawWith(
   }
   switch (mode) {
     case kLightRetry:
+  std::cout<<"-----AllocateRawWith with kLightRetry mode "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       result = AllocateRawWithLightRetrySlowPath(size, allocation, origin,
                                                  alignment);
       break;
     case kRetryOrFail:
+  std::cout<<"-----AllocateRawWith with kRetryOrFail mode "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
       result = AllocateRawWithRetryOrFailSlowPath(size, allocation, origin,
                                                   alignment);
       break;
   }
   if (result.To(&object)) {
+   //std::cout<<"-----AllocateRawWith result: "<<result<<" object: "<<object<<std::endl;
+   std::cout<<"-----AllocateRawWith object address: "<<object.address()<<" allo result address: "<<result.ToAddress()<<std::endl;
+   //object.Print();
     return object;
   }
   return HeapObject();

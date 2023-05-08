@@ -495,6 +495,7 @@ MaybeHandle<AsmWasmData> WasmEngine::SyncCompileTranslatedAsmJs(
   // the context id in here.
   v8::metrics::Recorder::ContextId context_id =
       v8::metrics::Recorder::ContextId::Empty();
+  // qj: is here decode the wasm bytecode?
   ModuleResult result =
       DecodeWasmModule(WasmFeatures::ForAsmjs(), bytes.module_bytes(), false,
                        origin, isolate->counters(), isolate->metrics_recorder(),

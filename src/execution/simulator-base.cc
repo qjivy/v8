@@ -26,6 +26,7 @@ base::CustomMatcherHashMap* SimulatorBase::i_cache_ = nullptr;
 
 // static
 void SimulatorBase::InitializeOncePerProcess() {
+  std::cout << "Simulator Init" << std::endl;
   DCHECK_NULL(redirection_mutex_);
   redirection_mutex_ = new base::Mutex();
 

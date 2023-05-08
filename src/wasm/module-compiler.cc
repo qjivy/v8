@@ -2026,11 +2026,15 @@ std::shared_ptr<NativeModule> CompileToNativeModule(
       wasm::WasmCodeManager::EstimateNativeModuleCodeSize(
           module.get(), include_liftoff,
           DynamicTiering{v8_flags.wasm_dynamic_tiering.value()});
+  // qj: here allocate mem for new module
+  std::cout << "CompileToNativeModule allocate mem for NewNativeModule, "
+               "code_size_estimate: "
+            << code_size_estimate << std::endl;
   native_module = engine->NewNativeModule(isolate, enabled_features, module,
                                           code_size_estimate);
   native_module->SetWireBytes(std::move(wire_bytes_copy));
   native_module->compilation_state()->set_compilation_id(compilation_id);
-
+  std::cout << "Start CompileNativeModule" << std::endl;
   CompileNativeModule(isolate, context_id, thrower, native_module, pgo_info);
 
   if (thrower->error()) {

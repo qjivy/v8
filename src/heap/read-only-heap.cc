@@ -61,9 +61,11 @@ bool ReadOnlyHeap::IsSharedMemoryAvailable() {
 SoleReadOnlyHeap* SoleReadOnlyHeap::shared_ro_heap_ = nullptr;
 
 // static
+// qj: RO heap setup
 void ReadOnlyHeap::SetUp(Isolate* isolate,
                          SnapshotData* read_only_snapshot_data,
                          bool can_rehash) {
+  std::cout<<"***BEGIN ReadOnlyHeap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
   DCHECK_NOT_NULL(isolate);
 
   if (IsReadOnlySpaceShared()) {
@@ -77,7 +79,7 @@ void ReadOnlyHeap::SetUp(Isolate* isolate,
         artifacts = InitializeSharedReadOnlyArtifacts();
         artifacts->InitializeChecksum(read_only_snapshot_data);
         ro_heap = CreateInitalHeapForBootstrapping(isolate, artifacts);
-        ro_heap->DeserializeIntoIsolate(isolate, read_only_snapshot_data,
+        ro_heap->DeserializeIntoIsolate(isolate, read_only_snapshot_data, //qj
                                         can_rehash);
         read_only_heap_created = true;
       } else {
@@ -112,16 +114,20 @@ void ReadOnlyHeap::SetUp(Isolate* isolate,
                                       can_rehash);
     }
   }
+  std::cout<<"***END ReadOnlyHeap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
 }
 
 void ReadOnlyHeap::DeserializeIntoIsolate(Isolate* isolate,
                                           SnapshotData* read_only_snapshot_data,
                                           bool can_rehash) {
+
+  std::cout<<"***BEGIN ReadOnlyHeap::DeserializeIntoIsolate"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
   DCHECK_NOT_NULL(read_only_snapshot_data);
   ReadOnlyDeserializer des(isolate, read_only_snapshot_data, can_rehash);
   des.DeserializeIntoIsolate();
   OnCreateRootsComplete(isolate);
   InitFromIsolate(isolate);
+  std::cout<<"***BEGIN ReadOnlyHeap::DeserializeIntoIsolate"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
 }
 
 void ReadOnlyHeap::OnCreateRootsComplete(Isolate* isolate) {

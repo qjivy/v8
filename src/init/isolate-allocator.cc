@@ -17,7 +17,9 @@ namespace internal {
 
 #ifdef V8_COMPRESS_POINTERS
 struct PtrComprCageReservationParams
-    : public VirtualMemoryCage::ReservationParams {
+    : public VirtualMemoryCage::
+          ReservationParams {  // qj not VirtualMemoryCage is the main data
+                               // structure for V8's memory alloc
   PtrComprCageReservationParams() {
     page_allocator = GetPlatformPageAllocator();
 
@@ -52,6 +54,7 @@ void IsolateAllocator::FreeProcessWidePtrComprCageForTesting() {
 
 // static
 void IsolateAllocator::InitializeOncePerProcess() {
+  std::cout << "IsolateAllocator init" << std::endl;
 #ifdef V8_COMPRESS_POINTERS_IN_SHARED_CAGE
   PtrComprCageReservationParams params;
   base::AddressRegion existing_reservation;
@@ -66,6 +69,7 @@ void IsolateAllocator::InitializeOncePerProcess() {
   existing_reservation = base::AddressRegion(base, params.reservation_size);
   params.page_allocator = sandbox->page_allocator();
 #endif
+  // qj
   if (!GetProcessWidePtrComprCage()->InitReservation(params,
                                                      existing_reservation)) {
     V8::FatalProcessOutOfMemory(

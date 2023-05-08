@@ -118,6 +118,7 @@ const char* ExternalReferenceTable::ResolveSymbol(void* address) {
 }
 
 void ExternalReferenceTable::InitializeOncePerProcess() {
+  std::cout << "ExternalReferenceTable init" << std::endl;
   int index = 0;
 
   // kNullAddress is preserved through serialization/deserialization.

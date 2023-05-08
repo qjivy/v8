@@ -253,6 +253,7 @@ void V8::Initialize() {
 #if defined(V8_USE_PERFETTO)
   if (perfetto::Tracing::IsInitialized()) TrackEvent::Register();
 #endif
+  // qj: memory allocation related
   IsolateAllocator::InitializeOncePerProcess();
   Isolate::InitializeOncePerProcess();
 

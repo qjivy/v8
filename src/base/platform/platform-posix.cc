@@ -21,6 +21,8 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+
+#include <iostream>
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || \
     defined(__NetBSD__) || defined(__OpenBSD__)
 #include <sys/sysctl.h>  // for sysctl
@@ -158,7 +160,10 @@ void* Allocate(void* hint, size_t size, OS::MemoryPermission access,
   int flags = GetFlagsForMemoryPermission(access, page_type);
   void* result = mmap(hint, size, prot, flags, kMmapFd, kMmapFdOffset);
   if (result == MAP_FAILED) return nullptr;
+  std::cout << "HERE final mmap, hint: " << hint << " size: " << size
+            << " result: " << result << std::endl;
 #if ENABLE_HUGEPAGE
+  std::cout << "ENABLE hugepage" << std::endl;
   if (result != nullptr && size >= kHugePageSize) {
     const uintptr_t huge_start =
         RoundUp(reinterpret_cast<uintptr_t>(result), kHugePageSize);
@@ -304,6 +309,8 @@ void* OS::GetRandomMmapAddr() {
     MutexGuard guard(rng_mutex.Pointer());
     GetPlatformRandomNumberGenerator()->NextBytes(&raw_addr, sizeof(raw_addr));
   }
+  //  std::cout<<"OS::GetRandomMmapAddr raw_addr: "<<raw_addr<<std::endl;
+  printf("OS::GetRandomMmapAddr raw_addr: 0x%lx\n", raw_addr);
 #if V8_HOST_ARCH_ARM64
 #if defined(V8_TARGET_OS_MACOS)
   DCHECK_EQ(1 << 14, AllocatePageSize());
@@ -399,6 +406,8 @@ void* OS::GetRandomMmapAddr() {
 // static
 void* OS::Allocate(void* hint, size_t size, size_t alignment,
                    MemoryPermission access) {
+  //		   std::cout<<"OS::Allocate hint:"<<hint<<" size: "<<size<<"
+  //alignment: "<<alignment<<std::endl;
   size_t page_size = AllocatePageSize();
   DCHECK_EQ(0, size % page_size);
   DCHECK_EQ(0, alignment % page_size);
@@ -428,6 +437,8 @@ void* OS::Allocate(void* hint, size_t size, size_t alignment,
   }
 
   DCHECK_EQ(size, request_size);
+  printf("after mmap OS::Allocate size:%zx hint:%p alignment:%zx aligned_base:%p\n", size,
+         hint, alignment, aligned_base);
   return static_cast<void*>(aligned_base);
 }
 

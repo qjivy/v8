@@ -210,6 +210,7 @@ VirtualMemory::VirtualMemory(v8::PageAllocator* page_allocator, size_t size,
     : page_allocator_(page_allocator) {
   DCHECK_NOT_NULL(page_allocator);
   DCHECK(IsAligned(size, page_allocator_->CommitPageSize()));
+  std::cout << "VirtualMemory::VirtualMemory constructor" <<std::endl;
   size_t page_size = page_allocator_->AllocatePageSize();
   alignment = RoundUp(alignment, page_size);
   PageAllocator::Permission permissions =
@@ -218,6 +219,8 @@ VirtualMemory::VirtualMemory(v8::PageAllocator* page_allocator, size_t size,
           : PageAllocator::kNoAccess;
   Address address = reinterpret_cast<Address>(AllocatePages(
       page_allocator_, hint, RoundUp(size, page_size), alignment, permissions));
+  std::cout << "VirtualMemory::VirtualMemory constructor address:" << std::hex << address
+            << std::endl;
   if (address != kNullAddress) {
     DCHECK(IsAligned(address, alignment));
     region_ = base::AddressRegion(address, size);
@@ -321,6 +324,7 @@ VirtualMemoryCage& VirtualMemoryCage::operator=(VirtualMemoryCage&& other)
 
 bool VirtualMemoryCage::InitReservation(
     const ReservationParams& params, base::AddressRegion existing_reservation) {
+  std::cout << "VirtualMemoryCage::InitReservation memory" <<__FILE__<< std::endl;
   DCHECK(!reservation_.IsReserved());
 
   const size_t allocate_page_size = params.page_allocator->AllocatePageSize();
@@ -329,6 +333,7 @@ bool VirtualMemoryCage::InitReservation(
         IsAligned(params.base_alignment, allocate_page_size));
 
   if (!existing_reservation.is_empty()) {
+    std::cout << "VirtualMemoryCage::InitReservation existing_reservation.is_empty false" << std::endl;
     CHECK_EQ(existing_reservation.size(), params.reservation_size);
     CHECK(params.base_alignment == ReservationParams::kAnyBaseAlignment ||
           IsAligned(existing_reservation.begin(), params.base_alignment));
@@ -337,10 +342,17 @@ bool VirtualMemoryCage::InitReservation(
                       existing_reservation.size());
     base_ = reservation_.address();
   } else {
+    std::cout << "VirtualMemoryCage::InitReservation existing_reservation.is_empty true" << std::hex << std::endl;
     Address hint = params.requested_start_hint;
     // Require the hint to be properly aligned because here it's not clear
     // anymore whether it should be rounded up or down.
     CHECK(IsAligned(hint, params.base_alignment));
+    std::cout << "VirtualMemoryCage::InitReservation params.reservation_size: " << params.reservation_size
+              << " hint: " << hint
+              << " params.base_alignment: " << params.base_alignment<<std::endl
+	      << "Now start to construction a VirtualMemory object"
+              << std::endl;
+    //	     <<" params.jit: "<<reinterpret_cast<int>(params.jit)<<std::endl;
     VirtualMemory reservation(params.page_allocator, params.reservation_size,
                               reinterpret_cast<void*>(hint),
                               params.base_alignment, params.jit);
@@ -373,6 +385,7 @@ bool VirtualMemoryCage::InitReservation(
       params.page_size,
       base::PageInitializationMode::kAllocatedPagesCanBeUninitialized,
       page_freeing_mode);
+      std::cout<<"Finish a VirtualMemoryCage::InitReservation"<<std::endl<<std::endl;
   return true;
 }
 

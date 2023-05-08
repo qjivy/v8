@@ -6,6 +6,7 @@
 
 #include "src/base/platform/platform.h"
 
+#include <iostream>
 #if V8_OS_DARWIN
 #include <sys/mman.h>  // For MAP_JIT.
 #endif
@@ -44,6 +45,7 @@ void* PageAllocator::GetRandomMmapAddr() {
 
 void* PageAllocator::AllocatePages(void* hint, size_t size, size_t alignment,
                                    PageAllocator::Permission access) {
+  std::cout<<"PageAllocator::AllocatePages"<<__FILE__<<std::endl;
 #if !V8_HAS_PTHREAD_JIT_WRITE_PROTECT
   // kNoAccessWillJitLater is only used on Apple Silicon. Map it to regular
   // kNoAccess on other platforms, so code doesn't have to handle both enum

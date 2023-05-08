@@ -2153,6 +2153,7 @@ std::shared_ptr<NativeModule> WasmCodeManager::NewNativeModule(
   static constexpr int kAllocationRetries = 2;
   VirtualMemory code_space;
   for (int retries = 0;; ++retries) {
+    std::cout << "WasmCodeManager::NewNativeModule TryAllocate" << std::endl;
     code_space = TryAllocate(code_vmem_size);
     if (code_space.IsReserved()) break;
     if (retries == kAllocationRetries) {

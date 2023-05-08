@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <iostream>
+
 #include "include/libplatform/libplatform.h"
 #include "include/v8-context.h"
 #include "include/v8-initialization.h"
@@ -77,18 +79,21 @@ int main(int argc, char* argv[]) {
         let instance = new WebAssembly.Instance(module);
         instance.exports.add(3, 4);
       )";
-
+      std::cout << "QQHW1" << std::endl;
       // Create a string containing the JavaScript source code.
       v8::Local<v8::String> source =
           v8::String::NewFromUtf8Literal(isolate, csource);
 
+      std::cout << "QQHW2" << std::endl;
       // Compile the source code.
       v8::Local<v8::Script> script =
           v8::Script::Compile(context, source).ToLocalChecked();
 
+      std::cout << "QQHW3" << std::endl;
       // Run the script to get the result.
       v8::Local<v8::Value> result = script->Run(context).ToLocalChecked();
 
+      std::cout << "QQHW4" << std::endl;
       // Convert the result to a uint32 and print it.
       uint32_t number = result->Uint32Value(context).ToChecked();
       printf("3 + 4 = %u\n", number);
