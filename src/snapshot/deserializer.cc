@@ -1,8 +1,9 @@
 // Copyright 2016 the V8 project authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include <iostream>
 #include "src/snapshot/deserializer.h"
+
+#include <iostream>
 
 #include "src/base/logging.h"
 #include "src/codegen/assembler-inl.h"
@@ -245,7 +246,7 @@ void Deserializer<IsolateT>::VisitRootPointers(Root root,
                                                const char* description,
                                                FullObjectSlot start,
                                                FullObjectSlot end) {
-  printf("VisitRootPointers");					       
+  printf("VisitRootPointers");
   ReadData(FullMaybeObjectSlot(start), FullMaybeObjectSlot(end));
 }
 
@@ -695,7 +696,8 @@ Handle<HeapObject> Deserializer<IsolateT>::ReadObject(SnapshotSpace space) {
 
 template <typename IsolateT>
 Handle<HeapObject> Deserializer<IsolateT>::ReadMetaMap() {
-  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   const SnapshotSpace space = SnapshotSpace::kReadOnlyHeap;
   const int size_in_bytes = Map::kSize;
   const int size_in_tagged = size_in_bytes / kTaggedSize;
@@ -711,12 +713,15 @@ Handle<HeapObject> Deserializer<IsolateT>::ReadMetaMap() {
   back_refs_.push_back(obj);
 
   // Set the instance-type manually, to allow backrefs to read it.
-  Map::unchecked_cast(*obj).set_instance_type(MAP_TYPE); //qj: set byte[12] to be 0xff
+  Map::unchecked_cast(*obj).set_instance_type(
+      MAP_TYPE);  // qj: set byte[12] to be 0xff
 
-  ReadData(obj, 1, size_in_tagged); //qj: recursively read more data
-  PostProcessNewObject(Handle<Map>::cast(obj), obj, space); //set new obj content?
+  ReadData(obj, 1, size_in_tagged);  // qj: recursively read more data
+  PostProcessNewObject(Handle<Map>::cast(obj), obj,
+                       space);  // set new obj content?
 
-  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   return obj;
 }
 
@@ -884,14 +889,21 @@ void Deserializer<IsolateT>::ReadData(Handle<HeapObject> object,
 template <typename IsolateT>
 void Deserializer<IsolateT>::ReadData(FullMaybeObjectSlot start,
                                       FullMaybeObjectSlot end) {
-  std::cout<<"***BEGIN Deserializer<IsolateT>::ReadData"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN Deserializer<IsolateT>::ReadData"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   FullMaybeObjectSlot current = start;
   while (current < end) {
     byte data = source_.Get();
     current += ReadSingleBytecodeData(data, SlotAccessorForRootSlots(current));
   }
   CHECK_EQ(current, end);
-  std::cout<<"***END Deserializer<IsolateT>::ReadData"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout << "***END Deserializer<IsolateT>::ReadData"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
 }
 
 template <typename IsolateT>
@@ -900,7 +912,8 @@ int Deserializer<IsolateT>::ReadSingleBytecodeData(byte data,
                                                    SlotAccessor slot_accessor) {
   switch (data) {
     case CASE_RANGE_ALL_SPACES(kNewObject):
-      std::cout<<"-----in "<<__FUNCTION__<<" "<<__LINE__<<": ReadNewObject" <<std::endl;
+      std::cout << "-----in " << __FUNCTION__ << " " << __LINE__
+                << ": ReadNewObject" << std::endl;
       return ReadNewObject(data, slot_accessor);
     case kBackref:
       return ReadBackref(data, slot_accessor);
@@ -915,7 +928,8 @@ int Deserializer<IsolateT>::ReadSingleBytecodeData(byte data,
     case kSharedHeapObjectCache:
       return ReadSharedHeapObjectCache(data, slot_accessor);
     case kNewMetaMap:
-      std::cout<<"-----in "<<__FUNCTION__<<" "<<__LINE__<<": ReadNewMetaMap" <<std::endl;
+      std::cout << "-----in " << __FUNCTION__ << " " << __LINE__
+                << ": ReadNewMetaMap" << std::endl;
       return ReadNewMetaMap(data, slot_accessor);
     case kSandboxedExternalReference:
     case kExternalReference:
@@ -1409,7 +1423,8 @@ ExternalPointerTag Deserializer<IsolateT>::ReadExternalPointerTag() {
 template <typename IsolateT>
 HeapObject Deserializer<IsolateT>::Allocate(AllocationType allocation, int size,
                                             AllocationAlignment alignment) {
-  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 #ifdef DEBUG
   if (!previous_allocation_obj_.is_null()) {
     // Make sure that the previous object is initialized sufficiently to
@@ -1427,7 +1442,8 @@ HeapObject Deserializer<IsolateT>::Allocate(AllocationType allocation, int size,
   previous_allocation_size_ = size;
 #endif
 
-  std::cout<<"***END "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   return obj;
 }
 

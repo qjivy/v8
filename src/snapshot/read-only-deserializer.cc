@@ -65,7 +65,10 @@ ReadOnlyDeserializer::ReadOnlyDeserializer(Isolate* isolate,
                    can_rehash) {}
 
 void ReadOnlyDeserializer::DeserializeIntoIsolate() {
-  std::cout<<"***BEGIN ReadOnlyDeserializer::DeserializeIntoIsolate"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN ReadOnlyDeserializer::DeserializeIntoIsolate"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   NestedTimedHistogramScope histogram_timer(
       isolate()->counters()->snapshot_deserialize_rospace());
   HandleScope scope(isolate());
@@ -90,7 +93,7 @@ void ReadOnlyDeserializer::DeserializeIntoIsolate() {
       roots.InitFromStaticRootsTable(isolate()->cage_base());
       ro_heap->read_only_space()->RepairFreeSpacesAfterDeserialization();
     } else {
-      roots.Iterate(this); //qj: here go
+      roots.Iterate(this);  // qj: here go
 
       // Deserialize the Read-only Object Cache.
       for (;;) {
@@ -116,7 +119,10 @@ void ReadOnlyDeserializer::DeserializeIntoIsolate() {
     isolate()->heap()->InitializeHashSeed();
     Rehash();
   }
-  std::cout<<"***END ReadOnlyDeserializer::DeserializeIntoIsolate"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***END ReadOnlyDeserializer::DeserializeIntoIsolate"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
 }
 
 #ifdef V8_STATIC_ROOTS

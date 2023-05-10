@@ -102,10 +102,14 @@ bool SemiSpace::EnsureCurrentCapacity() {
 // SemiSpace implementation
 
 void SemiSpace::SetUp(size_t initial_capacity, size_t maximum_capacity) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   DCHECK_GE(maximum_capacity, static_cast<size_t>(Page::kPageSize));
   minimum_capacity_ = RoundDown(initial_capacity, Page::kPageSize);
   target_capacity_ = minimum_capacity_;
   maximum_capacity_ = RoundDown(maximum_capacity, Page::kPageSize);
+  std::cout << "***END" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 void SemiSpace::TearDown() {
@@ -117,11 +121,16 @@ void SemiSpace::TearDown() {
 }
 
 bool SemiSpace::Commit() {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " target_capacity_: " << target_capacity_
+            << " Page::kPageSize: " << Page::kPageSize << std::endl;
   DCHECK(!IsCommitted());
   DCHECK_EQ(CommittedMemory(), size_t(0));
   const int num_pages = static_cast<int>(target_capacity_ / Page::kPageSize);
   DCHECK(num_pages);
   for (int pages_added = 0; pages_added < num_pages; pages_added++) {
+    std::cout << "---- SemiSpace " << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " add page: " << pages_added << std::endl;
     // Pages in the new spaces can be moved to the old space by the full
     // collector. Therefore, they must be initialized with the same FreeList as
     // old pages.
@@ -136,6 +145,9 @@ bool SemiSpace::Commit() {
     IncrementCommittedPhysicalMemory(new_page->CommittedPhysicalMemory());
     heap()->CreateFillerObjectAt(new_page->area_start(),
                                  static_cast<int>(new_page->area_size()));
+    std::cout << "---- Iter for pages" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " area_start: " << new_page->area_start()
+              << " area_size: " << new_page->area_size() << std::endl;
   }
   Reset();
   AccountCommitted(target_capacity_);
@@ -482,15 +494,30 @@ SemiSpaceNewSpace::SemiSpaceNewSpace(Heap* heap,
     : NewSpace(heap, allocation_info),
       to_space_(heap, kToSpace),
       from_space_(heap, kFromSpace) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__
+            << " initial_semispace_capacity: " << initial_semispace_capacity
+            << " max_semispace_capacity: " << max_semispace_capacity
+            << std::endl;
   DCHECK(initial_semispace_capacity <= max_semispace_capacity);
 
+  std::cout << "---- to_space setup " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   to_space_.SetUp(initial_semispace_capacity, max_semispace_capacity);
+
+  std::cout << "---- from_space setup " << __FUNCTION__ << " " << __FILE__
+            << " "
+            << " " << __LINE__ << " " << std::endl;
   from_space_.SetUp(initial_semispace_capacity, max_semispace_capacity);
+  std::cout << "---- to_space commit " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   if (!to_space_.Commit()) {
     V8::FatalProcessOutOfMemory(heap->isolate(), "New space setup");
   }
   DCHECK(!from_space_.IsCommitted());  // No need to use memory yet.
   ResetLinearAllocationArea();
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 SemiSpaceNewSpace::~SemiSpaceNewSpace() {

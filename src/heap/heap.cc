@@ -4,10 +4,10 @@
 
 #include "src/heap/heap.h"
 
-#include <iostream>
 #include <atomic>
 #include <cinttypes>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -501,9 +501,17 @@ size_t Heap::Available() {
   size_t total = 0;
 
   for (SpaceIterator it(this); it.HasNext();) {
-    total += it.Next()->Available();
+    Space* space = it.Next();
+    std::cout << std::endl
+              << "Heap::Available space: "
+              << i::BaseSpace::GetSpaceName(space->identity())
+              << " Available size: " << space->Available() << std::endl;
+    // total += it.Next()->Available();
+    total += space->Available();
   }
 
+  std::cout << "Heap::Available space from memory_allocator: "
+            << memory_allocator()->Available() << std::endl;
   total += memory_allocator()->Available();
   return total;
 }
@@ -5446,7 +5454,10 @@ void Heap::DisableInlineAllocation() {
 }
 
 void Heap::SetUp(LocalHeap* main_thread_local_heap) {
-  std::cout<<"***BEGIN Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN Heap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   DCHECK_NULL(main_thread_local_heap_);
   main_thread_local_heap_ = main_thread_local_heap;
 
@@ -5539,8 +5550,13 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
     AddGCEpilogueCallback(HeapLayoutTracer::GCEpiloguePrintHeapLayout, gc_type,
                           nullptr);
   }
-  //std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
-  std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  // std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<"
+  // "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout << "***END Heap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
 }
 
 void Heap::SetUpFromReadOnlyHeap(ReadOnlyHeap* ro_heap) {
@@ -5585,19 +5601,36 @@ class StressConcurrentAllocationObserver : public AllocationObserver {
 
 void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
                        LinearAllocationArea& old_allocation_info) {
-  std::cout << "Isolate::init Heap::SetUpSpaces" << std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__
+            << " max_old_generation_size: " << max_old_generation_size()
+            << std::endl;
   // Ensure SetUpFromReadOnlySpace has been ran.
   DCHECK_NOT_NULL(read_only_space_);
   if (!v8_flags.single_generation) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<0>" << std::endl;
     if (v8_flags.minor_mc) {
+      std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+                << " " << __LINE__ << " "
+                << "<1>" << std::endl;
       space_[NEW_SPACE] = std::make_unique<PagedNewSpace>(
           this, initial_semispace_size_, max_semi_space_size_,
           new_allocation_info);
     } else {
+      std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+                << " " << __LINE__ << " "
+                << "<2>" << std::endl;
       space_[NEW_SPACE] = std::make_unique<SemiSpaceNewSpace>(
           this, initial_semispace_size_, max_semi_space_size_,
           new_allocation_info);
     }
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<3>"
+              << " NEW_SPACE ptr: " << space_[NEW_SPACE] << std::endl;
+
     new_space_ = static_cast<NewSpace*>(space_[NEW_SPACE].get());
 
     space_[NEW_LO_SPACE] =
@@ -5606,25 +5639,73 @@ void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
         static_cast<NewLargeObjectSpace*>(space_[NEW_LO_SPACE].get());
   }
 
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<4>"
+            << " NEW_SPACE ptr: " << space_[NEW_SPACE]
+            << " capacity: " << NewSpaceCapacity()
+            << " NEW_LO_SPACE ptr: " << space_[NEW_LO_SPACE] << std::endl;
   space_[OLD_SPACE] = std::make_unique<OldSpace>(this, old_allocation_info);
   old_space_ = static_cast<OldSpace*>(space_[OLD_SPACE].get());
 
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<5>"
+            << " NEW_SPACE ptr: " << space_[NEW_SPACE]
+            << " capacity: " << NewSpaceCapacity()
+            << " NEW_LO_SPACE ptr: " << space_[NEW_LO_SPACE]
+            << " OLD_SPACE ptr: " << space_[OLD_SPACE] << std::endl;
+
   space_[CODE_SPACE] = std::make_unique<CodeSpace>(this);
   code_space_ = static_cast<CodeSpace*>(space_[CODE_SPACE].get());
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<6>"
+            << " NEW_SPACE ptr: " << space_[NEW_SPACE]
+            << " capacity: " << NewSpaceCapacity()
+            << " NEW_LO_SPACE ptr: " << space_[NEW_LO_SPACE]
+            << " OLD_SPACE ptr: " << space_[OLD_SPACE]
+            << " CODE_SPACE ptr: " << space_[CODE_SPACE] << std::endl;
 
   if (isolate()->is_shared_space_isolate()) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<7>" << std::endl;
     space_[SHARED_SPACE] = std::make_unique<SharedSpace>(this);
     shared_space_ = static_cast<SharedSpace*>(space_[SHARED_SPACE].get());
   }
 
   space_[LO_SPACE] = std::make_unique<OldLargeObjectSpace>(this);
   lo_space_ = static_cast<OldLargeObjectSpace*>(space_[LO_SPACE].get());
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<8>"
+            << " NEW_SPACE ptr: " << space_[NEW_SPACE]
+            << " capacity: " << NewSpaceCapacity()
+            << " NEW_LO_SPACE ptr: " << space_[NEW_LO_SPACE]
+            << " OLD_SPACE ptr: " << space_[OLD_SPACE]
+            << " CODE_SPACE ptr: " << space_[CODE_SPACE]
+            << " OldLargeObjectSpace ptr: " << space_[LO_SPACE] << std::endl;
 
   space_[CODE_LO_SPACE] = std::make_unique<CodeLargeObjectSpace>(this);
   code_lo_space_ =
       static_cast<CodeLargeObjectSpace*>(space_[CODE_LO_SPACE].get());
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<9>"
+            << " NEW_SPACE ptr: " << space_[NEW_SPACE]
+            << " capacity: " << NewSpaceCapacity()
+            << " NEW_LO_SPACE ptr: " << space_[NEW_LO_SPACE]
+            << " OLD_SPACE ptr: " << space_[OLD_SPACE]
+            << " CODE_SPACE ptr: " << space_[CODE_SPACE]
+            << " OldLargeObjectSpace ptr: " << space_[LO_SPACE]
+            << " CodeLargeObjectSpace ptr: " << space_[CODE_LO_SPACE]
+            << std::endl;
 
   if (isolate()->is_shared_space_isolate()) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<10>" << std::endl;
     space_[SHARED_LO_SPACE] = std::make_unique<SharedLargeObjectSpace>(this);
     shared_lo_space_ =
         static_cast<SharedLargeObjectSpace*>(space_[SHARED_LO_SPACE].get());
@@ -5632,6 +5713,9 @@ void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
 
   for (int i = 0; i < static_cast<int>(v8::Isolate::kUseCounterFeatureCount);
        i++) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<11>deferred_counters_: " << i << std::endl;
     deferred_counters_[i] = 0;
   }
 
@@ -5639,18 +5723,35 @@ void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
   array_buffer_sweeper_.reset(new ArrayBufferSweeper(this));
   gc_idle_time_handler_.reset(new GCIdleTimeHandler());
   memory_measurement_.reset(new MemoryMeasurement(isolate()));
-  if (v8_flags.memory_reducer) memory_reducer_.reset(new MemoryReducer(this));
+  if (v8_flags.memory_reducer) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<12> mem_reducer" << std::endl;
+    memory_reducer_.reset(new MemoryReducer(this));
+  }
   if (V8_UNLIKELY(TracingFlags::is_gc_stats_enabled())) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<13>" << std::endl;
     live_object_stats_.reset(new ObjectStats(this));
     dead_object_stats_.reset(new ObjectStats(this));
   }
   if (Heap::AllocationTrackerForDebugging::IsNeeded()) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<14>" << std::endl;
     allocation_tracker_for_debugging_ =
         std::make_unique<Heap::AllocationTrackerForDebugging>(this);
   }
 
   LOG(isolate_, IntPtrTEvent("heap-capacity", Capacity()));
   LOG(isolate_, IntPtrTEvent("heap-available", Available()));
+
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<15> heap Capacity(): " << Capacity()
+            << " Available(): " << Available() << " start GC setup"
+            << std::endl;
 
   mark_compact_collector()->SetUp();
   if (minor_mark_compact_collector_) {
@@ -5694,6 +5795,9 @@ void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
 #endif  // V8_HEAP_USE_PKU_JIT_WRITE_PROTECT
 
   if (isolate()->has_shared_space()) {
+    std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+              << " " << __LINE__ << " "
+              << "<16>" << std::endl;
     Heap* heap = isolate()->shared_space_isolate()->heap();
 
     shared_space_allocator_ = std::make_unique<ConcurrentAllocator>(
@@ -5704,8 +5808,13 @@ void Heap::SetUpSpaces(LinearAllocationArea& new_allocation_info,
     shared_lo_allocation_space_ = heap->shared_lo_space_;
   }
 
+  std::cout << "----" << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " "
+            << "<17>SetUpMainThread" << std::endl;
   main_thread_local_heap()->SetUpMainThread();
   heap_allocator_.Setup();
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 void Heap::InitializeHashSeed() {

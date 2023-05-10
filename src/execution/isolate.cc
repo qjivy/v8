@@ -4041,13 +4041,20 @@ bool Isolate::InitWithSnapshot(SnapshotData* startup_snapshot_data,
                                SnapshotData* read_only_snapshot_data,
                                SnapshotData* shared_heap_snapshot_data,
                                bool can_rehash) {
-  std::cout<<"***BEGIN  Isolate::InitWithSnapshot"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;			       
+  std::cout << "***BEGIN  Isolate::InitWithSnapshot"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   DCHECK_NOT_NULL(startup_snapshot_data);
   DCHECK_NOT_NULL(read_only_snapshot_data);
   DCHECK_NOT_NULL(shared_heap_snapshot_data);
-  bool ret= Init(startup_snapshot_data, read_only_snapshot_data,
-              shared_heap_snapshot_data, can_rehash);
-  std::cout<<"***END  Isolate::InitWithSnapshot"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;			       
+  bool ret = Init(startup_snapshot_data, read_only_snapshot_data,
+                  shared_heap_snapshot_data, can_rehash);
+  std::cout << "***END  Isolate::InitWithSnapshot"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
   return ret;
 }
 
@@ -4237,7 +4244,10 @@ void Isolate::VerifyStaticRoots() {
 bool Isolate::Init(SnapshotData* startup_snapshot_data,
                    SnapshotData* read_only_snapshot_data,
                    SnapshotData* shared_heap_snapshot_data, bool can_rehash) {
-  std::cout<<"***BEGIN Isolate::Init"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN Isolate::Init"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   TRACE_ISOLATE(init);
 
 #ifdef V8_COMPRESS_POINTERS_IN_SHARED_CAGE
@@ -4371,9 +4381,16 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   // Set up the object heap.
   DCHECK(!heap_.HasBeenSetUp());
 
-  std::cout<<"***BEGIN Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN Heap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   heap_.SetUp(main_thread_local_heap());
-  std::cout<<"***END Heap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout << "***END Heap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
   InitializeIsShortBuiltinCallsEnabled();
   if (!create_heap_objects) {
     // Must be done before deserializing RO space, since RO space may contain
@@ -4381,15 +4398,29 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     // embedded blob.
     MaybeRemapEmbeddedBuiltinsIntoCodeRange();
   }
-  std::cout<<"***BEGIN ReadOnlyHeap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***BEGIN ReadOnlyHeap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   ReadOnlyHeap::SetUp(this, read_only_snapshot_data,
                       can_rehash);  // qj, ro space allocate here
 
-  std::cout<<"***END ReadOnlyHeap::SetUp"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
-  std::cout<<"***BEGIN heap_.SetUpSpaces"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl;
+  std::cout << "***END ReadOnlyHeap::SetUp"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
+  std::cout << "***BEGIN heap_.SetUpSpaces"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl;
   heap_.SetUpSpaces(isolate_data_.new_allocation_info_,  // qj: heap setup
                     isolate_data_.old_allocation_info_);
-  std::cout<<"***END heap_.SetUpSpaces"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout << "***END heap_.SetUpSpaces"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
   DCHECK_EQ(this, Isolate::Current());
   PerIsolateThreadData* const current_data = CurrentPerIsolateThreadData();
   DCHECK_EQ(current_data->isolate(), this);
@@ -4407,6 +4438,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   }
 #ifdef V8_EXTERNAL_CODE_SPACE
   {
+    std::cout << "isolate init V8_EXTERNAL_CODE_SPACE true" << std::endl;
     VirtualMemoryCage* code_cage;
     if (heap_.code_range()) {
       code_cage = heap_.code_range();
@@ -4438,6 +4470,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   isolate_data_.external_reference_table()->Init(this);
 
 #ifdef V8_COMPRESS_POINTERS
+  std::cout << "isolate init V8_COMPRESS_POINTERS true" << std::endl;
   external_pointer_table().Init(this);
   if (owns_shareable_data()) {
     isolate_data_.shared_external_pointer_table_ = new ExternalPointerTable();
@@ -4641,7 +4674,11 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
   initialized_ = true;
 
-  std::cout<<"***END Isolate::Init"<<" "<<__FILE__<<" "<<" "<<" "<<__FUNCTION__<<" "<<std::endl<<std::endl;
+  std::cout << "***END Isolate::Init"
+            << " " << __FILE__ << " "
+            << " "
+            << " " << __FUNCTION__ << " " << std::endl
+            << std::endl;
   return true;
 }
 

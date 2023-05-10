@@ -237,7 +237,8 @@ AllocationResult Heap::AllocateRaw(int size_in_bytes, AllocationType type,
 Address Heap::AllocateRawOrFail(int size, AllocationType allocation,
                                 AllocationOrigin origin,
                                 AllocationAlignment alignment) {
-  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   return heap_allocator_
       .AllocateRawWith<HeapAllocator::kRetryOrFail>(size, allocation, origin,
                                                     alignment)

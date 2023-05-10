@@ -558,12 +558,20 @@ void ReadOnlySpace::EnsurePage() {
 }
 
 void ReadOnlySpace::EnsureSpaceForAllocation(int size_in_bytes) {
-    std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
-  if (top_ + size_in_bytes <= limit_) { //qj: here means the enough mem available current
-    std::cout<<"---- Current alloc OK "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" top_: "<<top_<<" limit_: "<<limit_<<" size_in_bytes: "<<size_in_bytes<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
+  if (top_ + size_in_bytes <=
+      limit_) {  // qj: here means the enough mem available current
+    std::cout << "---- Current alloc OK " << __FUNCTION__ << " " << __FILE__
+              << " "
+              << " " << __LINE__ << " top_: " << top_ << " limit_: " << limit_
+              << " size_in_bytes: " << size_in_bytes << std::endl;
     return;
   }
-    std::cout<<"---- Current exceed, need real allocate "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" top_: "<<top_<<" limit_: "<<limit_<<" size_in_bytes: "<<size_in_bytes<<std::endl;
+  std::cout << "---- Current exceed, need real allocate " << __FUNCTION__ << " "
+            << __FILE__ << " "
+            << " " << __LINE__ << " top_: " << top_ << " limit_: " << limit_
+            << " size_in_bytes: " << size_in_bytes << std::endl;
   DCHECK_GE(size_in_bytes, 0);
 
   FreeLinearAllocationArea();
@@ -582,7 +590,10 @@ void ReadOnlySpace::EnsureSpaceForAllocation(int size_in_bytes) {
 
   top_ = chunk->area_start();
   limit_ = chunk->area_end();
-  std::cout<<"---- after real alloc: "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" top_: "<<top_<<" limit_: "<<limit_<<" capacity_: "<<capacity_<<std::endl;
+  std::cout << "---- after real alloc: " << __FUNCTION__ << " " << __FILE__
+            << " "
+            << " " << __LINE__ << " top_: " << top_ << " limit_: " << limit_
+            << " capacity_: " << capacity_ << std::endl;
   return;
 }
 
@@ -612,13 +623,16 @@ HeapObject ReadOnlySpace::TryAllocateLinearlyAligned(
 
 AllocationResult ReadOnlySpace::AllocateRawAligned(
     int size_in_bytes, AllocationAlignment alignment) {
-  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   DCHECK(!v8_flags.enable_third_party_heap);
   DCHECK(!IsDetached());
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
   int allocation_size = size_in_bytes;
 
-  HeapObject object = TryAllocateLinearlyAligned(allocation_size, alignment); //qj: here try to see whether current has enough
+  HeapObject object = TryAllocateLinearlyAligned(
+      allocation_size,
+      alignment);  // qj: here try to see whether current has enough
   if (object.is_null()) {
     // We don't know exactly how much filler we need to align until space is
     // allocated, so assume the worst case.
@@ -634,7 +648,8 @@ AllocationResult ReadOnlySpace::AllocateRawAligned(
 }
 
 AllocationResult ReadOnlySpace::AllocateRawUnaligned(int size_in_bytes) {
-  std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   DCHECK(!IsDetached());
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
   EnsureSpaceForAllocation(size_in_bytes);
@@ -643,7 +658,8 @@ AllocationResult ReadOnlySpace::AllocateRawUnaligned(int size_in_bytes) {
   DCHECK_LE(new_top, limit_);
   top_ = new_top;
   HeapObject object = HeapObject::FromAddress(current_top);
-  std::cout<<"now Heapobject address: "<<object.address()<<" current_top: "<<current_top<<std::endl;
+  std::cout << "now Heapobject address: " << object.address()
+            << " current_top: " << current_top << std::endl;
 
   DCHECK(!object.is_null());
   MSAN_ALLOCATED_UNINITIALIZED_MEMORY(object.address(), size_in_bytes);

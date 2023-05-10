@@ -407,7 +407,7 @@ void* OS::GetRandomMmapAddr() {
 void* OS::Allocate(void* hint, size_t size, size_t alignment,
                    MemoryPermission access) {
   //		   std::cout<<"OS::Allocate hint:"<<hint<<" size: "<<size<<"
-  //alignment: "<<alignment<<std::endl;
+  // alignment: "<<alignment<<std::endl;
   size_t page_size = AllocatePageSize();
   DCHECK_EQ(0, size % page_size);
   DCHECK_EQ(0, alignment % page_size);
@@ -437,8 +437,10 @@ void* OS::Allocate(void* hint, size_t size, size_t alignment,
   }
 
   DCHECK_EQ(size, request_size);
-  printf("after mmap OS::Allocate size:%zx hint:%p alignment:%zx aligned_base:%p\n", size,
-         hint, alignment, aligned_base);
+  printf(
+      "after mmap OS::Allocate size:%zx hint:%p alignment:%zx "
+      "aligned_base:%p\n",
+      size, hint, alignment, aligned_base);
   return static_cast<void*>(aligned_base);
 }
 

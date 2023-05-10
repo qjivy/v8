@@ -351,15 +351,16 @@ MemoryAllocator::AllocateUninitializedChunkAt(BaseSpace* space,
                                               Executability executable,
                                               Address hint,
                                               PageSize page_size) {
-
-    std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" "<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 #ifndef V8_COMPRESS_POINTERS
   // When pointer compression is enabled, spaces are expected to be at a
   // predictable address (see mkgrokdump) so we don't supply a hint and rely on
   // the deterministic behaviour of the BoundedPageAllocator.
   if (hint == kNullAddress) {
-    hint = reinterpret_cast<Address>(AlignedAddress(
-        isolate_->heap()->GetRandomMmapAddr(), MemoryChunk::kAlignment)); //qj: get random addr
+    hint = reinterpret_cast<Address>(
+        AlignedAddress(isolate_->heap()->GetRandomMmapAddr(),
+                       MemoryChunk::kAlignment));  // qj: get random addr
   }
 #endif
 
@@ -372,11 +373,9 @@ MemoryAllocator::AllocateUninitializedChunkAt(BaseSpace* space,
       chunk_size, area_size, MemoryChunk::kAlignment, space->identity(),
       executable, reinterpret_cast<void*>(hint), &reservation);
 
-  std::cout<<__FUNCTION__<<" chunk_size: "<<chunk_size
-           <<" area_size: "<<area_size
-	   <<" hint: "<<hint
-	   <<" base: "<<base
-	   <<std::endl;
+  std::cout << __FUNCTION__ << " chunk_size: " << chunk_size
+            << " area_size: " << area_size << " hint: " << hint
+            << " base: " << base << std::endl;
   if (base == kNullAddress) return {};
 
   size_ += reservation.size();
@@ -411,11 +410,10 @@ MemoryAllocator::AllocateUninitializedChunkAt(BaseSpace* space,
   Address area_start = base + MemoryChunkLayout::ObjectStartOffsetInMemoryChunk(
                                   space->identity());
   Address area_end = area_start + area_size;
-  std::cout<<__FUNCTION__<<" area_size: "<<area_size
-           <<" area_start: "<<area_start
-	   <<" area_end: "<<area_end
-	   <<std::endl;
-        
+  std::cout << __FUNCTION__ << " area_size: " << area_size
+            << " area_start: " << area_start << " area_end: " << area_end
+            << std::endl;
+
   return MemoryChunkAllocationResult{
       reinterpret_cast<void*>(base), chunk_size, area_start, area_end,
       std::move(reservation),
@@ -577,13 +575,19 @@ Page* MemoryAllocator::AllocatePage(MemoryAllocator::AllocationMode alloc_mode,
                                     Space* space, Executability executable) {
   size_t size =
       MemoryChunkLayout::AllocatableMemoryInMemoryChunk(space->identity());
+
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " allocatable mem size for "
+            << i::BaseSpace::GetSpaceName(space->identity()) << " : " << size
+            << std::endl;
   base::Optional<MemoryChunkAllocationResult> chunk_info;
   if (alloc_mode == AllocationMode::kUsePool) {
     DCHECK_EQ(size, static_cast<size_t>(
                         MemoryChunkLayout::AllocatableMemoryInMemoryChunk(
                             space->identity())));
     DCHECK_EQ(executable, NOT_EXECUTABLE);
-    chunk_info = AllocateUninitializedPageFromPool(space);
+    chunk_info = AllocateUninitializedPageFromPool(
+        space);  // qj: first time from pool is not ok
   }
 
   if (!chunk_info) {
@@ -608,16 +612,18 @@ Page* MemoryAllocator::AllocatePage(MemoryAllocator::AllocationMode alloc_mode,
 
 ReadOnlyPage* MemoryAllocator::AllocateReadOnlyPage(ReadOnlySpace* space,
                                                     Address hint) {
-
   DCHECK_EQ(space->identity(), RO_SPACE);
   size_t size = MemoryChunkLayout::AllocatableMemoryInMemoryChunk(RO_SPACE);
-    std::cout<<"***BEGIN "<<__FUNCTION__<<" "<<__FILE__<<" "<<" "<<__LINE__<<" hint: "<<hint<<" c-size: "<<size<<std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " hint: " << hint
+            << " allocatable mem size for RO_SPACE " << size << std::endl;
   base::Optional<MemoryChunkAllocationResult> chunk_info =
       AllocateUninitializedChunkAt(space, size, NOT_EXECUTABLE, hint,
                                    PageSize::kRegular);
-  std::cout<<__FUNCTION__<<" chunk_info->area_start:  "<<chunk_info->area_start
-           <<" chunk_info->area_end: "<<chunk_info->area_end
-	   <<" chunk_info->size: "<<chunk_info->size<<std::endl;
+  std::cout << __FUNCTION__
+            << " chunk_info->area_start:  " << chunk_info->area_start
+            << " chunk_info->area_end: " << chunk_info->area_end
+            << " chunk_info->size: " << chunk_info->size << std::endl;
   if (!chunk_info) return nullptr;
   return new (chunk_info->start) ReadOnlyPage(
       isolate_->heap(), space, chunk_info->size, chunk_info->area_start,
