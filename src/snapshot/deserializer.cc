@@ -999,7 +999,8 @@ template <typename IsolateT>
 template <typename SlotAccessor>
 int Deserializer<IsolateT>::ReadNewObject(byte data,
                                           SlotAccessor slot_accessor) {
-  SnapshotSpace space = NewObject::Decode(data);
+  SnapshotSpace space = NewObject::Decode(
+      data);  // qj: when deserilize shared heap, the kOld is from here
   DCHECK_IMPLIES(V8_STATIC_ROOTS_BOOL, space != SnapshotSpace::kReadOnlyHeap);
   // Save the reference type before recursing down into reading the object.
   HeapObjectReferenceType ref_type = GetAndResetNextReferenceType();
@@ -1443,7 +1444,7 @@ HeapObject Deserializer<IsolateT>::Allocate(AllocationType allocation, int size,
 #endif
 
   std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
-            << " " << __LINE__ << " " << std::endl;
+            << " " << __LINE__ << " obj.ptr: " << obj.ptr() << std::endl;
   return obj;
 }
 

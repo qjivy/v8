@@ -4556,14 +4556,23 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     if (create_heap_objects) {
       read_only_heap_->OnCreateHeapObjectsComplete(this);
     } else {
+      std::cout << "-----" << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                << " create_heap_objects false, create shared_heap_deserializer"
+                << std::endl;
       SharedHeapDeserializer shared_heap_deserializer(
           this, shared_heap_snapshot_data, can_rehash);
+      std::cout << "-----" << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                << " shared_heap_deserializer DeserializeIntoIsolate begin"
+                << std::endl;
       shared_heap_deserializer
           .DeserializeIntoIsolate();  // qj: here also alloc mem
+      std::cout << "-----" << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                << " shared_heap_deserializer DeserializeIntoIsolate end"
+                << std::endl;
 
       StartupDeserializer startup_deserializer(this, startup_snapshot_data,
                                                can_rehash);
-      startup_deserializer.DeserializeIntoIsolate();
+      startup_deserializer.DeserializeIntoIsolate();  // qj: hre also alloc mem
     }
     if (DEBUG_BOOL) VerifyStaticRoots();
     load_stub_cache_->Initialize();

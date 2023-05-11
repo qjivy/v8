@@ -3324,7 +3324,8 @@ Handle<JSProxy> Factory::NewJSProxy(Handle<JSReceiver> target,
 }
 
 Handle<JSGlobalProxy> Factory::NewUninitializedJSGlobalProxy(int size) {
-  std::cout << "Factory::NewUninitializedJSGlobalProxy" << std::endl;
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " size: " << size << std::endl;
   // Create an empty shell of a JSGlobalProxy that needs to be reinitialized
   // via ReinitializeJSGlobalProxy later.
   Handle<Map> map = NewMap(JS_GLOBAL_PROXY_TYPE, size);
@@ -3341,6 +3342,8 @@ Handle<JSGlobalProxy> Factory::NewUninitializedJSGlobalProxy(int size) {
   // Create identity hash early in case there is any JS collection containing
   // a global proxy key and needs to be rehashed after deserialization.
   proxy->GetOrCreateIdentityHash(isolate());
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " size: " << size << std::endl;
   return proxy;
 }
 

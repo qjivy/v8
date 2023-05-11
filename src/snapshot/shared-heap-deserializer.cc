@@ -10,6 +10,9 @@ namespace v8 {
 namespace internal {
 
 void SharedHeapDeserializer::DeserializeIntoIsolate() {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
+
   // Don't deserialize into client Isolates. If there are client Isolates, the
   // shared heap object cache should already be populated.
   if (isolate()->has_shared_space() && !isolate()->is_shared_space_isolate()) {
@@ -27,6 +30,8 @@ void SharedHeapDeserializer::DeserializeIntoIsolate() {
     // Hash seed was initialized in ReadOnlyDeserializer.
     Rehash();
   }
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 void SharedHeapDeserializer::DeserializeStringTable() {

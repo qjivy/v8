@@ -18,6 +18,8 @@ namespace v8 {
 namespace internal {
 
 void StartupDeserializer::DeserializeIntoIsolate() {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   NestedTimedHistogramScope histogram_timer(
       isolate()->counters()->snapshot_deserialize_isolate());
   HandleScope scope(isolate());
@@ -76,6 +78,8 @@ void StartupDeserializer::DeserializeIntoIsolate() {
     // Hash seed was initialized in ReadOnlyDeserializer.
     Rehash();
   }
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 void StartupDeserializer::LogNewMapEvents() {
