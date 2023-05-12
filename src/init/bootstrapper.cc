@@ -333,6 +333,9 @@ Handle<Context> Bootstrapper::CreateEnvironment(
     v8::ExtensionConfiguration* extensions, size_t context_snapshot_index,
     v8::DeserializeEmbedderFieldsCallback embedder_fields_deserializer,
     v8::MicrotaskQueue* microtask_queue) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
+
   HandleScope scope(isolate_);
   Handle<Context> env;
   {
@@ -346,6 +349,11 @@ Handle<Context> Bootstrapper::CreateEnvironment(
   }
   LogAllMaps();
   isolate_->heap()->NotifyBootstrapComplete();
+  std::cout
+      << __FUNCTION__ << " " << __FILE__ << " "
+      << " " << __LINE__
+      << " about call scope.CloseAndEscape nearly end of CreateEnvironment"
+      << std::endl;
   return scope.CloseAndEscape(env);
 }
 
@@ -1421,6 +1429,8 @@ Handle<JSGlobalObject> Genesis::CreateNewGlobals(
 }
 
 void Genesis::HookUpGlobalProxy(Handle<JSGlobalProxy> global_proxy) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   // Re-initialize the global proxy with the global proxy function from the
   // snapshot, and then set up the link to the native context.
   Handle<JSFunction> global_proxy_function(
@@ -1431,6 +1441,8 @@ void Genesis::HookUpGlobalProxy(Handle<JSGlobalProxy> global_proxy) {
   JSObject::ForceSetPrototype(isolate(), global_proxy, global_object);
   global_proxy->set_native_context(*native_context());
   DCHECK(native_context()->global_proxy() == *global_proxy);
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 void Genesis::HookUpGlobalObject(Handle<JSGlobalObject> global_object) {
@@ -6279,6 +6291,8 @@ void Genesis::InitializeMapCaches() {
 
 bool Bootstrapper::InstallExtensions(Handle<Context> native_context,
                                      v8::ExtensionConfiguration* extensions) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   // Don't install extensions into the snapshot.
   if (isolate_->serializer_enabled()) return true;
   BootstrapperActive active(this);
@@ -6289,6 +6303,8 @@ bool Bootstrapper::InstallExtensions(Handle<Context> native_context,
 
 bool Genesis::InstallSpecialObjects(Isolate* isolate,
                                     Handle<Context> native_context) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   HandleScope scope(isolate);
 
   Handle<JSObject> Error = isolate->error_function();
@@ -6314,6 +6330,8 @@ bool Genesis::InstallSpecialObjects(Isolate* isolate,
     SandboxTesting::InstallMemoryCorruptionApi(isolate);
   }
 #endif  // V8_EXPOSE_MEMORY_CORRUPTION_API
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 
   return true;
 }
@@ -6343,6 +6361,8 @@ void Genesis::ExtensionStates::set_state(RegisteredExtension* extension,
 bool Genesis::InstallExtensions(Isolate* isolate,
                                 Handle<Context> native_context,
                                 v8::ExtensionConfiguration* extensions) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   ExtensionStates extension_states;  // All extensions have state UNVISITED.
   return InstallAutoExtensions(isolate, &extension_states) &&
          (!v8_flags.expose_gc ||
@@ -6692,6 +6712,8 @@ Genesis::Genesis(
     v8::DeserializeEmbedderFieldsCallback embedder_fields_deserializer,
     v8::MicrotaskQueue* microtask_queue)
     : isolate_(isolate), active_(isolate->bootstrapper()) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   RCS_SCOPE(isolate, RuntimeCallCounterId::kGenesis);
   result_ = Handle<Context>::null();
   global_proxy_ = Handle<JSGlobalProxy>::null();
@@ -6822,6 +6844,8 @@ Genesis::Genesis(
 
   native_context()->ResetErrorsThrown();
   result_ = native_context();
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
 }
 
 Genesis::Genesis(Isolate* isolate,

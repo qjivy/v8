@@ -16,6 +16,8 @@ MaybeHandle<Context> ContextDeserializer::DeserializeContext(
     Isolate* isolate, const SnapshotData* data, bool can_rehash,
     Handle<JSGlobalProxy> global_proxy,
     v8::DeserializeEmbedderFieldsCallback embedder_fields_deserializer) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   NestedTimedHistogramScope histogram_timer(
       isolate->counters()->snapshot_deserialize_context());
   ContextDeserializer d(isolate, data, can_rehash);
@@ -23,6 +25,8 @@ MaybeHandle<Context> ContextDeserializer::DeserializeContext(
       d.Deserialize(isolate, global_proxy, embedder_fields_deserializer);
 
   Handle<Object> result;
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   return maybe_result.ToHandle(&result) ? Handle<Context>::cast(result)
                                         : MaybeHandle<Context>();
 }

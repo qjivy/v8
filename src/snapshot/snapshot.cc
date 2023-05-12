@@ -193,6 +193,8 @@ bool Snapshot::Initialize(Isolate* isolate) {
 MaybeHandle<Context> Snapshot::NewContextFromSnapshot(
     Isolate* isolate, Handle<JSGlobalProxy> global_proxy, size_t context_index,
     v8::DeserializeEmbedderFieldsCallback embedder_fields_deserializer) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   if (!isolate->snapshot_available()) return Handle<Context>();
   TRACE_EVENT0("v8", "V8.DeserializeContext");
   RCS_SCOPE(isolate, RuntimeCallCounterId::kDeserializeContext);
@@ -218,6 +220,8 @@ MaybeHandle<Context> Snapshot::NewContextFromSnapshot(
     PrintF("[Deserializing context #%zu (%d bytes) took %0.3f ms]\n",
            context_index, bytes, ms);
   }
+  std::cout << "***END " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " " << std::endl;
   return result;
 }
 

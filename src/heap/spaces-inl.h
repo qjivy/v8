@@ -140,6 +140,7 @@ MemoryChunk* OldGenerationMemoryChunkIterator::next() {
 
 AllocationResult LocalAllocationBuffer::AllocateRawAligned(
     int size_in_bytes, AllocationAlignment alignment) {
+  std::cout << " DEADBEEF " << __FUNCTION__ << std::endl;
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
   Address current_top = allocation_info_.top();
   int filler_size = Heap::GetFillToAlign(current_top, alignment);
@@ -156,6 +157,8 @@ AllocationResult LocalAllocationBuffer::AllocateRawAligned(
 
 AllocationResult LocalAllocationBuffer::AllocateRawUnaligned(
     int size_in_bytes) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << std::endl;
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
   return allocation_info_.CanIncrementTop(size_in_bytes)
              ? AllocationResult::FromObject(HeapObject::FromAddress(
@@ -209,6 +212,8 @@ AllocationResult SpaceWithLinearArea::AllocateFastUnaligned(
     int size_in_bytes, AllocationOrigin origin) {
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
   if (!allocation_info_.CanIncrementTop(size_in_bytes)) {
+    std::cout << __FUNCTION__ << " " << __FILE__
+              << " !allocation_info_.CanIncrementTop" << std::endl;
     return AllocationResult::Failure();
   }
   HeapObject obj =
@@ -246,19 +251,36 @@ AllocationResult SpaceWithLinearArea::AllocateFastAligned(
 AllocationResult SpaceWithLinearArea::AllocateRaw(int size_in_bytes,
                                                   AllocationAlignment alignment,
                                                   AllocationOrigin origin) {
+  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+            << " " << __LINE__ << " size_in_bytes: " << size_in_bytes
+            << " id: " << i::BaseSpace::GetSpaceName(this->identity())
+            << std::endl;
   DCHECK(!v8_flags.enable_third_party_heap);
   size_in_bytes = ALIGN_TO_ALLOCATION_ALIGNMENT(size_in_bytes);
 
   AllocationResult result;
 
   if (USE_ALLOCATION_ALIGNMENT_BOOL && alignment != kTaggedAligned) {
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << " call AllocateFastAligned " << std::endl;
     result = AllocateFastAligned(size_in_bytes, nullptr, alignment, origin);
   } else {
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << " call AllocateFastUnaligned " << std::endl;
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
-
-  return result.IsFailure() ? AllocateRawSlow(size_in_bytes, alignment, origin)
-                            : result;
+  if (result.IsFailure()) {
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << " AllocateFastUnaligned fail then call AllocateRawSlow "
+              << std::endl;
+    result = AllocateRawSlow(size_in_bytes, alignment, origin);
+  }
+  std::cout << "----END " << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " result.addr: " << result.ToAddress() << std::endl;
+  // return result.IsFailure() ? AllocateRawSlow(size_in_bytes, alignment,
+  // origin)
+  //                           : result;
+  return result;
 }
 
 AllocationResult SpaceWithLinearArea::AllocateRawUnaligned(
