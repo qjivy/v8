@@ -251,7 +251,7 @@ AllocationResult SpaceWithLinearArea::AllocateFastAligned(
 AllocationResult SpaceWithLinearArea::AllocateRaw(int size_in_bytes,
                                                   AllocationAlignment alignment,
                                                   AllocationOrigin origin) {
-  std::cout << "***BEGIN " << __FUNCTION__ << " " << __FILE__ << " "
+  std::cout << "***BEGIN SpaceWithLinearArea " << __FUNCTION__ << " " << __FILE__ << " "
             << " " << __LINE__ << " size_in_bytes: " << size_in_bytes
             << " id: " << i::BaseSpace::GetSpaceName(this->identity())
             << std::endl;
@@ -269,18 +269,21 @@ AllocationResult SpaceWithLinearArea::AllocateRaw(int size_in_bytes,
               << " call AllocateFastUnaligned " << std::endl;
     result = AllocateFastUnaligned(size_in_bytes, origin);
   }
-  if (result.IsFailure()) {
-    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
-              << " AllocateFastUnaligned fail then call AllocateRawSlow "
-              << std::endl;
-    result = AllocateRawSlow(size_in_bytes, alignment, origin);
+  if (!result.IsFailure()) {
+    std::cout << "----END SpaceWithLinearArea AllocateFastUnaligned OK "
+            << " result.addr: " << result.ToAddress()
+            << " id: " << i::BaseSpace::GetSpaceName(this->identity())
+	    << std::endl;
+	    return result;
   }
-  std::cout << "----END " << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
-            << " result.addr: " << result.ToAddress() << std::endl;
-  // return result.IsFailure() ? AllocateRawSlow(size_in_bytes, alignment,
-  // origin)
-  //                           : result;
+  else {
+    result = AllocateRawSlow(size_in_bytes, alignment, origin);
+    std::cout << "----END SpaceWithLinearArea AllocateFastUnaligned fail call AllocateRawSlow "
+            << " result.addr: " << result.ToAddress()
+            << " id: " << i::BaseSpace::GetSpaceName(this->identity())
+	    << std::endl;
   return result;
+  }
 }
 
 AllocationResult SpaceWithLinearArea::AllocateRawUnaligned(
