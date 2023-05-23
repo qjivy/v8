@@ -5483,12 +5483,16 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
 
   v8::PageAllocator* code_page_allocator;
   if (isolate_->RequiresCodeRange() || code_range_size_ != 0) {
+    std::cout << __FUNCTION__
+              << " init CodeRange code_range_size_: " << code_range_size_;
     const size_t requested_size =
         code_range_size_ == 0 ? kMaximalCodeRangeSize : code_range_size_;
+    std::cout << " kMaximalCodeRangeSize: " << kMaximalCodeRangeSize
+              << " requested_size: " << requested_size << std::endl;
     // When a target requires the code range feature, we put all code objects in
     // a contiguous range of virtual address space, so that they can call each
     // other with near calls.
-#ifdef V8_COMPRESS_POINTERS_IN_SHARED_CAGE
+#ifdef V8_COMPRESS_POINTERS_IN_SHARED_CAGE  // qj: yes here about code range
     // When sharing a pointer cage among Isolates, also share the
     // CodeRange. isolate_->page_allocator() is the process-wide pointer
     // compression cage's PageAllocator.
@@ -5510,6 +5514,13 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
 
     isolate_->AddCodeRange(code_range_->reservation()->region().begin(),
                            code_range_->reservation()->region().size());
+    std::cout << "CodeRange  address: "
+              << reinterpret_cast<void*>(code_range_->reservation()->address())
+              << std::endl;
+    std::cout << "CodeRange  begin: "
+              << code_range_->reservation()->region().begin() << std::endl;
+    std::cout << "CodeRange  size: "
+              << code_range_->reservation()->region().size() << std::endl;
     code_page_allocator = code_range_->page_allocator();
   } else {
     code_page_allocator = isolate_->page_allocator();

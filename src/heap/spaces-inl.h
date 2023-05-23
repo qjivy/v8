@@ -251,7 +251,8 @@ AllocationResult SpaceWithLinearArea::AllocateFastAligned(
 AllocationResult SpaceWithLinearArea::AllocateRaw(int size_in_bytes,
                                                   AllocationAlignment alignment,
                                                   AllocationOrigin origin) {
-  std::cout << "***BEGIN SpaceWithLinearArea " << __FUNCTION__ << " " << __FILE__ << " "
+  std::cout << "***BEGIN SpaceWithLinearArea " << __FUNCTION__ << " "
+            << __FILE__ << " "
             << " " << __LINE__ << " size_in_bytes: " << size_in_bytes
             << " id: " << i::BaseSpace::GetSpaceName(this->identity())
             << std::endl;
@@ -271,18 +272,18 @@ AllocationResult SpaceWithLinearArea::AllocateRaw(int size_in_bytes,
   }
   if (!result.IsFailure()) {
     std::cout << "----END SpaceWithLinearArea AllocateFastUnaligned OK "
-            << " result.addr: " << result.ToAddress()
-            << " id: " << i::BaseSpace::GetSpaceName(this->identity())
-	    << std::endl;
-	    return result;
-  }
-  else {
+              << " result.addr: " << result.ToAddress()
+              << " id: " << i::BaseSpace::GetSpaceName(this->identity())
+              << std::endl;
+    return result;
+  } else {
     result = AllocateRawSlow(size_in_bytes, alignment, origin);
-    std::cout << "----END SpaceWithLinearArea AllocateFastUnaligned fail call AllocateRawSlow "
-            << " result.addr: " << result.ToAddress()
-            << " id: " << i::BaseSpace::GetSpaceName(this->identity())
-	    << std::endl;
-  return result;
+    std::cout << "----END SpaceWithLinearArea AllocateFastUnaligned fail call "
+                 "AllocateRawSlow "
+              << " result.addr: " << result.ToAddress()
+              << " id: " << i::BaseSpace::GetSpaceName(this->identity())
+              << std::endl;
+    return result;
   }
 }
 

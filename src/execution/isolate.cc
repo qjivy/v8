@@ -401,6 +401,11 @@ base::AddressRegion Isolate::GetShortBuiltinsCallRegion() {
   DCHECK_LT(CurrentEmbeddedBlobCodeSize(), radius);
   Address embedded_blob_code_start =
       reinterpret_cast<Address>(CurrentEmbeddedBlobCode());
+  std::cout << "CurrentEmbeddedBlobCode embedded_blob_code_start: "
+            << embedded_blob_code_start << " radius: " << radius
+            << " size: " << CurrentEmbeddedBlobCodeSize() << " end: "
+            << embedded_blob_code_start + CurrentEmbeddedBlobCodeSize()
+            << std::endl;
   if (embedded_blob_code_start == kNullAddress) {
     // Return empty region if there's no embedded blob.
     return base::AddressRegion(kNullAddress, 0);
@@ -413,6 +418,8 @@ base::AddressRegion Isolate::GetShortBuiltinsCallRegion() {
   if (region_end < embedded_blob_code_start) {
     region_end = static_cast<Address>(-1);
   }
+  std::cout << " region_start: " << region_start
+            << " region_end: " << region_end << std::endl;
   return base::AddressRegion(region_start, region_end - region_start);
 }
 
@@ -3325,6 +3332,8 @@ Isolate* Isolate::Allocate() {
       std::make_unique<IsolateAllocator>();
   // Construct Isolate object in the allocated memory.
   void* isolate_ptr = isolate_allocator->isolate_memory();
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " isolate_ptr: " << isolate_ptr << std::endl;
   Isolate* isolate = new (isolate_ptr) Isolate(std::move(isolate_allocator));
 
 #ifdef DEBUG
@@ -3903,6 +3912,11 @@ void Isolate::InitializeDefaultEmbeddedBlob() {
   uint32_t code_size = DefaultEmbeddedBlobCodeSize();
   const uint8_t* data = DefaultEmbeddedBlobData();
   uint32_t data_size = DefaultEmbeddedBlobDataSize();
+  std::cout << std::hex << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " code: " << reinterpret_cast<Address>(code)
+            << " code_size: " << code_size
+            << " data: " << reinterpret_cast<Address>(data)
+            << " data_size: " << data_size << std::endl;
 
   if (StickyEmbeddedBlobCode() != nullptr) {
     base::MutexGuard guard(current_embedded_blob_refcount_mutex_.Pointer());

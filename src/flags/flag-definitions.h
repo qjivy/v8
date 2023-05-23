@@ -1380,7 +1380,7 @@ DEFINE_INT(gc_interval, -1, "garbage collect after <n> allocations")
 
 DEFINE_INT(retain_maps_for_n_gc, 2,
            "keeps maps alive for <n> old space garbage collections")
-DEFINE_BOOL(trace_gc, false,
+DEFINE_BOOL(trace_gc, true,
             "print one trace line following each garbage collection")
 DEFINE_BOOL(trace_gc_nvp, false,
             "print one detailed trace line in name=value format "
@@ -1391,13 +1391,13 @@ DEFINE_BOOL(trace_idle_notification, false,
             "print one trace line following each idle notification")
 DEFINE_BOOL(trace_idle_notification_verbose, false,
             "prints the heap state used by the idle notification")
-DEFINE_BOOL(trace_gc_verbose, false,
+DEFINE_BOOL(trace_gc_verbose, true,
             "print more details following each garbage collection")
 DEFINE_IMPLICATION(trace_gc_verbose, trace_gc)
 DEFINE_BOOL(trace_gc_freelists, false,
             "prints details of each freelist before and after "
             "each major garbage collection")
-DEFINE_BOOL(trace_gc_freelists_verbose, false,
+DEFINE_BOOL(trace_gc_freelists_verbose, true,
             "prints details of freelists of each page before and after "
             "each major garbage collection")
 DEFINE_IMPLICATION(trace_gc_freelists_verbose, trace_gc_freelists)

@@ -39,6 +39,14 @@ Address CodeRangeAddressHint::GetAddressHint(size_t code_range_size,
   auto it = recently_freed_.find(code_range_size);
   // No recently freed region has been found, try to provide a hint for placing
   // a code region.
+  std::cout << __FUNCTION__ << " V8_ENABLE_NEAR_CODE_RANGE_BOOL: "
+            << V8_ENABLE_NEAR_CODE_RANGE_BOOL
+#if !V8_TARGET_ARCH_RISCV32 && !V8_TARGET_ARCH_RISCV64
+            << " V8_SHORT_BUILTIN_CALLS: " << V8_SHORT_BUILTIN_CALLS
+            << " V8_COMPRESS_POINTERS: " << V8_COMPRESS_POINTERS
+            << " V8_EXTERNAL_CODE_SPACE: " << V8_EXTERNAL_CODE_SPACE
+#endif
+            << std::endl;
   if (it == recently_freed_.end() || it->second.empty()) {
     if (V8_ENABLE_NEAR_CODE_RANGE_BOOL && !preferred_region.is_empty()) {
       auto memory_ranges = base::OS::GetFreeMemoryRangesWithin(
@@ -47,16 +55,28 @@ Address CodeRangeAddressHint::GetAddressHint(size_t code_range_size,
       if (!memory_ranges.empty()) {
         result = memory_ranges.front().start;
         CHECK(IsAligned(result, alignment));
+        std::cout << __FUNCTION__ << " " << __LINE__ << " result: " << result
+                  << std::endl;
         return result;
       }
       // The empty memory_ranges means that GetFreeMemoryRangesWithin() API
       // is not supported, so use the lowest address from the preferred region
       // as a hint because it'll be at least as good as the fallback hint but
       // with a higher chances to point to the free address space range.
-      return RoundUp(preferred_region.begin(), alignment);
+      auto result1 = RoundUp(preferred_region.begin(), alignment);
+      std::cout << __FUNCTION__ << " " << __LINE__ << " result1: " << result1
+                << std::endl;
+      return result1;
+      //      return RoundUp(preferred_region.begin(), alignment);
     }
-    return RoundUp(FUNCTION_ADDR(&FunctionInStaticBinaryForAddressHint),
-                   alignment);
+
+    auto result2 = RoundUp(FUNCTION_ADDR(&FunctionInStaticBinaryForAddressHint),
+                           alignment);
+    std::cout << __FUNCTION__ << " " << __LINE__ << " result2: " << result2
+              << std::endl;
+    return result2;
+    // return RoundUp(FUNCTION_ADDR(&FunctionInStaticBinaryForAddressHint),
+    //                alignment);
   }
 
   // Try to reuse near code range first.
@@ -129,10 +149,19 @@ bool CodeRange::InitReservation(v8::PageAllocator* page_allocator,
 
   const size_t allocate_page_size = page_allocator->AllocatePageSize();
   // TODO(v8:11880): Use base_alignment here once ChromeOS issue is fixed.
+
   Address the_hint =
       GetCodeRangeAddressHint()->GetAddressHint(requested, allocate_page_size);
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " PageSize: " << kPageSize << " requested: " << requested
+            << " allocate_page_size: " << allocate_page_size
+            << " the_hint from GetAddressHint: " << the_hint;
   the_hint = RoundDown(the_hint, base_alignment);
+  std::cout << " after RoundDown " << the_hint
+            << " base_alignment: " << base_alignment << std::endl;
 
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " the_hint from GetAddressHint: " << the_hint << std::endl;
   constexpr size_t kRadiusInMB =
       kMaxPCRelativeCodeRangeInMB > 1024 ? kMaxPCRelativeCodeRangeInMB : 4096;
   auto preferred_region = GetPreferredRegion(kRadiusInMB, kPageSize);
