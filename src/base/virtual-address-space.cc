@@ -142,14 +142,14 @@ void VirtualAddressSpace::FreeSharedPages(Address address, size_t size) {
 
   OS::FreeShared(reinterpret_cast<void*>(address), size);
 }
-
+// qj
 std::unique_ptr<v8::VirtualAddressSpace> VirtualAddressSpace::AllocateSubspace(
     Address hint, size_t size, size_t alignment,
     PagePermissions max_page_permissions) {
   DCHECK(IsAligned(alignment, allocation_granularity()));
   DCHECK(IsAligned(hint, alignment));
   DCHECK(IsAligned(size, allocation_granularity()));
-
+  // qj
   base::Optional<AddressSpaceReservation> reservation =
       OS::CreateAddressSpaceReservation(
           reinterpret_cast<void*>(hint), size, alignment,
@@ -329,7 +329,7 @@ void VirtualAddressSubspace::FreeSharedPages(Address address, size_t size) {
   CHECK(reservation_.FreeShared(reinterpret_cast<void*>(address), size));
   CHECK_EQ(size, region_allocator_.FreeRegion(address));
 }
-
+// qj:
 std::unique_ptr<v8::VirtualAddressSpace>
 VirtualAddressSubspace::AllocateSubspace(Address hint, size_t size,
                                          size_t alignment,

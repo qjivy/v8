@@ -5496,9 +5496,13 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
     // When sharing a pointer cage among Isolates, also share the
     // CodeRange. isolate_->page_allocator() is the process-wide pointer
     // compression cage's PageAllocator.
+    std::cout << "V8_COMPRESS_POINTERS_IN_SHARED_CAGE: "
+              << V8_COMPRESS_POINTERS_IN_SHARED_CAGE
+              << " so call CodeRange::EnsureProcessWideCodeRange" << std::endl;
     code_range_ = CodeRange::EnsureProcessWideCodeRange(
         isolate_->page_allocator(), requested_size);
 #else
+    std::cout << " code_range_->InitReservation" << std::endl;
     code_range_ = std::make_unique<CodeRange>();
     if (!code_range_->InitReservation(isolate_->page_allocator(),
                                       requested_size)) {
@@ -5523,6 +5527,7 @@ void Heap::SetUp(LocalHeap* main_thread_local_heap) {
               << code_range_->reservation()->region().size() << std::endl;
     code_page_allocator = code_range_->page_allocator();
   } else {
+    std::cout << " isolate needs not a code range" << std::endl;
     code_page_allocator = isolate_->page_allocator();
   }
 
@@ -5842,6 +5847,7 @@ void Heap::InitializeHashSeed() {
 }
 
 // static
+// qj
 void Heap::InitializeOncePerProcess() {
 #ifdef V8_ENABLE_ALLOCATION_TIMEOUT
   HeapAllocator::InitializeOncePerProcess();

@@ -165,13 +165,20 @@ bool Snapshot::Initialize(Isolate* isolate) {
   if (Snapshot::ShouldVerifyChecksum(blob)) {
     CHECK(VerifyChecksum(blob));
   }
-
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " Begin to ExtractStartupData" << std::endl;
   base::Vector<const byte> startup_data =
       SnapshotImpl::ExtractStartupData(blob);
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " Begin to ExtractReadOnlyData" << std::endl;
   base::Vector<const byte> read_only_data =
       SnapshotImpl::ExtractReadOnlyData(blob);
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " Begin to ExtractSharedHeapData" << std::endl;
   base::Vector<const byte> shared_heap_data =
       SnapshotImpl::ExtractSharedHeapData(blob);
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " Finish Extract" << std::endl;
 
   SnapshotData startup_snapshot_data(MaybeDecompress(isolate, startup_data));
   SnapshotData read_only_snapshot_data(
@@ -179,9 +186,13 @@ bool Snapshot::Initialize(Isolate* isolate) {
   SnapshotData shared_heap_snapshot_data(
       MaybeDecompress(isolate, shared_heap_data));
 
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " Begin isolate->InitWithSnapshot" << std::endl;
   bool success = isolate->InitWithSnapshot(
       &startup_snapshot_data, &read_only_snapshot_data,
       &shared_heap_snapshot_data, ExtractRehashability(blob));
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " End isolate->InitWithSnapshot" << std::endl;
   if (v8_flags.profile_deserialization) {
     double ms = timer.Elapsed().InMillisecondsF();
     int bytes = startup_data.length();

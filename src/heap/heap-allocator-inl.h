@@ -57,7 +57,7 @@ bool HeapAllocator::CanAllocateInReadOnlySpace() const {
 template <AllocationType type>
 V8_WARN_UNUSED_RESULT V8_INLINE AllocationResult HeapAllocator::AllocateRaw(
     int size_in_bytes, AllocationOrigin origin, AllocationAlignment alignment) {
-  std::cout << "***BEGIN Template-typed  AllocateRaw" << __FUNCTION__ << " "
+  std::cout << "***BEGIN Template-typed " << __FUNCTION__ << " "
             << __FILE__ << " "
             << " " << __LINE__ << " " << std::endl;
   DCHECK_EQ(heap_->gc_state(), Heap::NOT_IN_GC);
@@ -186,7 +186,7 @@ AllocationResult HeapAllocator::AllocateRaw(int size_in_bytes,
                                             AllocationType type,
                                             AllocationOrigin origin,
                                             AllocationAlignment alignment) {
-  std::cout << "***BEGIN Common AllocateRaw" << __FUNCTION__ << " " << __FILE__
+  std::cout << "***BEGIN Common " << __FUNCTION__ << " " << __FILE__
             << " "
             << " " << __LINE__ << " " << std::endl;
   switch (type) {

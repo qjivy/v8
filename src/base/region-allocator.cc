@@ -68,12 +68,14 @@ void RegionAllocator::FreeListAddRegion(Region* region) {
 }
 
 RegionAllocator::Region* RegionAllocator::FreeListFindRegion(size_t size) {
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<std::endl;
   Region key(0, size, RegionState::kFree);
   auto iter = free_regions_.lower_bound(&key);
   return iter == free_regions_.end() ? nullptr : *iter;
 }
 
 void RegionAllocator::FreeListRemoveRegion(Region* region) {
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<std::endl;
   DCHECK(region->is_free());
   auto iter = free_regions_.find(region);
   DCHECK_NE(iter, free_regions_.end());
@@ -129,19 +131,25 @@ void RegionAllocator::Merge(AllRegionsSet::iterator prev_iter,
 }
 
 RegionAllocator::Address RegionAllocator::AllocateRegion(size_t size) {
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<std::endl;
   DCHECK_NE(size, 0);
   DCHECK(IsAligned(size, page_size_));
 
-  Region* region = FreeListFindRegion(size);
-  if (region == nullptr) return kAllocationFailure;
+  Region* region = FreeListFindRegion(size); //qj: freelist
+  if (region == nullptr) {
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<"<0>"<<std::endl;
+  	return kAllocationFailure;
+  }
 
   if (region->size() != size) {
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<"<1>"<<std::endl;
     Split(region, size);
   }
   DCHECK(IsAligned(region->begin(), page_size_));
   DCHECK_EQ(region->size(), size);
 
   // Mark region as used.
+ std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<"<2>"<<std::endl;
   FreeListRemoveRegion(region);
   region->set_state(RegionState::kAllocated);
   return region->begin();
@@ -149,20 +157,24 @@ RegionAllocator::Address RegionAllocator::AllocateRegion(size_t size) {
 
 RegionAllocator::Address RegionAllocator::AllocateRegion(
     RandomNumberGenerator* rng, size_t size) {
+    std::cout<<__FUNCTION__<<" "<<__FILE__<<" "<<__LINE__<<free_size()<<std::endl;
   if (free_size() >= max_load_for_randomization_) {
     // There is enough free space for trying to randomize the address.
     size_t random = 0;
 
     for (int i = 0; i < kMaxRandomizationAttempts; i++) {
+  std::cout<<__FUNCTION__<<" <0> "<<i<<std::endl;
       rng->NextBytes(&random, sizeof(random));
       size_t random_offset = page_size_ * (random % region_size_in_pages_);
       Address address = begin() + random_offset;
       if (AllocateRegionAt(address, size, RegionState::kAllocated)) {
+  std::cout<<__FUNCTION__<<" <1> "<<i<<std::endl;
         return address;
       }
     }
     // Fall back to free list allocation.
   }
+  std::cout<<__FUNCTION__<<"<2>"<<std::endl;
   return AllocateRegion(size);
 }
 

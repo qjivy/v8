@@ -33,7 +33,7 @@ void ExternalPointerTable::Init(Isolate* isolate) {
   reservation_size *= 2;
 #endif  // LEAK_SANITIZER
 
-  buffer_ = root_space->AllocatePages(
+  buffer_ = root_space->AllocatePages( //qj: here allocate system stack memory?
       VirtualAddressSpace::kNoHint, reservation_size,
       root_space->allocation_granularity(), PagePermissions::kNoAccess);
   if (!buffer_) {

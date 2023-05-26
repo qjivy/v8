@@ -246,6 +246,7 @@ void V8::Initialize() {
 
 #if defined(V8_ENABLE_SANDBOX)
   // If enabled, the sandbox must be initialized first.
+  // qj here also reserve memory for sandbox
   GetProcessWideSandbox()->Initialize(GetPlatformVirtualAddressSpace());
   CHECK_EQ(kSandboxSize, GetProcessWideSandbox()->size());
 #endif
@@ -253,7 +254,7 @@ void V8::Initialize() {
 #if defined(V8_USE_PERFETTO)
   if (perfetto::Tracing::IsInitialized()) TrackEvent::Register();
 #endif
-  // qj: memory allocation related
+  // qj: memory allocation relased
   IsolateAllocator::InitializeOncePerProcess();
   Isolate::InitializeOncePerProcess();
 

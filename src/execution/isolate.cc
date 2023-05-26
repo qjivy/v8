@@ -385,6 +385,7 @@ uint32_t Isolate::CurrentEmbeddedBlobDataSize() {
 
 // static
 base::AddressRegion Isolate::GetShortBuiltinsCallRegion() {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   // Update calculations below if the assert fails.
   static_assert(kMaxPCRelativeCodeRangeInMB <= 4096);
   if (kMaxPCRelativeCodeRangeInMB == 0) {
@@ -548,6 +549,7 @@ Isolate::PerIsolateThreadData* Isolate::FindPerThreadDataForThread(
   return per_thread;
 }
 
+// qj
 void Isolate::InitializeOncePerProcess() { Heap::InitializeOncePerProcess(); }
 
 Address Isolate::get_address_from_id(IsolateAddressId id) {
@@ -3333,7 +3335,8 @@ Isolate* Isolate::Allocate() {
   // Construct Isolate object in the allocated memory.
   void* isolate_ptr = isolate_allocator->isolate_memory();
   std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
-            << " isolate_ptr: " << isolate_ptr << std::endl;
+            << " isolate_ptr: " << reinterpret_cast<Address>(isolate_ptr)
+            << std::endl;
   Isolate* isolate = new (isolate_ptr) Isolate(std::move(isolate_allocator));
 
 #ifdef DEBUG
@@ -3423,12 +3426,65 @@ Isolate::Isolate(std::unique_ptr<i::IsolateAllocator> isolate_allocator)
   thread_manager_ = new ThreadManager(this);
 
   handle_scope_data()->Initialize();
-
+/*qj
+ exception_behavior_ = (nullptr);
+ oom_behavior_ = (nullptr);
+ event_logger_ = (nullptr);
+ allow_code_gen_callback_ = (nullptr);
+ modify_code_gen_callback_ = (nullptr);
+ modify_code_gen_callback2_ = (nullptr);
+ allow_wasm_code_gen_callback_ = (nullptr);
+ wasm_module_callback_ = (&NoExtension);
+ wasm_instance_callback_ = (&NoExtension);
+ sharedarraybuffer_constructor_enabled_callback_ = (nullptr);
+ wasm_streaming_callback_ = (nullptr);
+ wasm_async_resolve_promise_callback_ =
+ (DefaultWasmAsyncResolvePromiseCallback); wasm_load_source_map_callback_ =
+ (nullptr); wasm_gc_enabled_callback_ = (nullptr); relocatable_top_ = (nullptr);
+ string_stream_debug_object_cache_ = (nullptr);
+ string_stream_current_security_token_ = (Object());
+ api_external_references_ = (nullptr);
+ external_reference_map_ = (nullptr);
+ root_index_map_ = (nullptr);
+ default_microtask_queue_ = (nullptr);
+ code_tracer_ = (nullptr);
+ promise_reject_callback_ = (nullptr);
+ snapshot_blob_ = (nullptr);
+ code_and_metadata_size_ = (0);
+ bytecode_and_metadata_size_ = (0);
+ external_script_source_size_ = (0);
+ num_cpu_profilers_ = (0);
+ formatting_stack_trace_ = (false);
+ disable_bytecode_flushing_ = (false);
+ last_console_context_id_ = (0);
+ inspector_ = (nullptr);
+ next_v8_call_is_safe_for_termination_ = (false);
+ only_terminate_in_safe_scope_ = (false);
+ embedder_wrapper_type_index_ = (-1);
+ embedder_wrapper_object_index_ = (-1);
+ node_observer_ = (nullptr);
+ javascript_execution_assert_ = (true);
+ javascript_execution_throws_ = (true);
+ javascript_execution_dump_ = (true);
+ javascript_execution_counter_ = (0);
+ deoptimization_assert_ = (true);
+ compilation_assert_ = (true);
+ no_exception_assert_ = (true);
+*/
 #define ISOLATE_INIT_EXECUTE(type, name, initial_value) \
   name##_ = (initial_value);
   ISOLATE_INIT_LIST(ISOLATE_INIT_EXECUTE)
 #undef ISOLATE_INIT_EXECUTE
 
+/* qj
+ memset(jsregexp_static_offsets_vector_, 0, sizeof(int32_t) *
+ kJSRegexpStaticOffsetsVectorSize); memset(bad_char_shift_table_, 0, sizeof(int)
+ * kUC16AlphabetSize); memset(good_suffix_shift_table_, 0, sizeof(int) *
+ (kBMMaxShift + 1)); memset(suffix_table_, 0, sizeof(int) * (kBMMaxShift + 1));
+ memset(paged_space_comments_statistics_, 0, sizeof(CommentStatistic) *
+ CommentStatistic::kMaxComments + 1); memset(code_kind_statistics_, 0,
+ sizeof(int) * kCodeKindCount);
+*/
 #define ISOLATE_INIT_ARRAY_EXECUTE(type, name, length) \
   memset(name##_, 0, sizeof(type) * length);
   ISOLATE_INIT_ARRAY_LIST(ISOLATE_INIT_ARRAY_EXECUTE)
@@ -3999,16 +4055,27 @@ void Isolate::InitializeIsShortBuiltinCallsEnabled() {
           GetShortBuiltinsCallRegion().contains(heap_.code_region());
     }
   }
+  std::cout << "is_short_builtin_calls_enabled_: "
+            << is_short_builtin_calls_enabled_ << std::endl;
 }
 
 void Isolate::MaybeRemapEmbeddedBuiltinsIntoCodeRange() {
   if (!is_short_builtin_calls_enabled() || !RequiresCodeRange()) {
     return;
   }
+  std::cout << __FUNCTION__
+            << " heap_.code_region.start: " << heap_.code_region().begin()
+            << " heap_.code_region.end: " << heap_.code_region().end()
+            << std::endl;
   if (V8_ENABLE_NEAR_CODE_RANGE_BOOL &&
-      GetShortBuiltinsCallRegion().contains(heap_.code_region())) {
+      GetShortBuiltinsCallRegion().contains(
+          heap_.code_region())) {  // qj: you can check heap_.code_region and
+                                   // shortbtcllregion
     // The embedded builtins are within the pc-relative reach from the code
     // range, so there's no need to remap embedded builtins.
+    std::cout << " ShortBuiltinsCallRegion contained heap code region, so no "
+                 "need to remap "
+              << std::endl;
     return;
   }
 
@@ -4016,6 +4083,7 @@ void Isolate::MaybeRemapEmbeddedBuiltinsIntoCodeRange() {
   CHECK_NE(embedded_blob_code_size_, 0);
 
   DCHECK_NOT_NULL(heap_.code_range_);
+  std::cout << " Need to remap " << std::endl;
   embedded_blob_code_ = heap_.code_range_->RemapEmbeddedBuiltins(
       this, embedded_blob_code_, embedded_blob_code_size_);
   CHECK_NOT_NULL(embedded_blob_code_);
@@ -4055,10 +4123,15 @@ bool Isolate::InitWithSnapshot(SnapshotData* startup_snapshot_data,
                                SnapshotData* read_only_snapshot_data,
                                SnapshotData* shared_heap_snapshot_data,
                                bool can_rehash) {
-  std::cout << "***BEGIN  Isolate::InitWithSnapshot"
-            << " " << __FILE__ << " "
-            << " "
-            << " " << __FUNCTION__ << " " << std::endl;
+  std::cout << "***BEGIN"
+            << " " << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << " "
+            << " startup_snapshot_data: "
+            << reinterpret_cast<Address>(startup_snapshot_data)
+            << " read_only_snapshot_data: "
+            << reinterpret_cast<Address>(read_only_snapshot_data)
+            << " shared_heap_snapshot_data: "
+            << reinterpret_cast<Address>(shared_heap_snapshot_data)
+            << std::endl;
   DCHECK_NOT_NULL(startup_snapshot_data);
   DCHECK_NOT_NULL(read_only_snapshot_data);
   DCHECK_NOT_NULL(shared_heap_snapshot_data);
@@ -4485,7 +4558,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
 #ifdef V8_COMPRESS_POINTERS
   std::cout << "isolate init V8_COMPRESS_POINTERS true" << std::endl;
-  external_pointer_table().Init(this);
+  external_pointer_table().Init(this); //qj: here sandbox
   if (owns_shareable_data()) {
     isolate_data_.shared_external_pointer_table_ = new ExternalPointerTable();
     shared_external_pointer_table().Init(this);
@@ -4592,7 +4665,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     load_stub_cache_->Initialize();
     store_stub_cache_->Initialize();
     interpreter_->Initialize();
-    heap_.NotifyDeserializationComplete();
+    heap_.NotifyDeserializationComplete(); //qj: here will call GC/Shrinking page
   }
 
 #ifdef VERIFY_HEAP

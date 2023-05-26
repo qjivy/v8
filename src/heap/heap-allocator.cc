@@ -159,6 +159,7 @@ void HeapAllocator::IncrementObjectCounters() {
 
 #ifdef V8_ENABLE_ALLOCATION_TIMEOUT
 // static
+// qj
 void HeapAllocator::InitializeOncePerProcess() {
   SetAllocationGcInterval(v8_flags.gc_interval);
 }

@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   std::cout << __FILE__ << " v8::Isolate::New " << std::endl;
   v8::Isolate* isolate = v8::Isolate::New(create_params);
 
-  std::cout << __FILE__ << " v8::Isolate::New END" << std::endl;
+  std::cout << __FILE__ << " v8::Isolate::New END isolate: "<<isolate << std::endl;
   {
     v8::Isolate::Scope isolate_scope(isolate);
 

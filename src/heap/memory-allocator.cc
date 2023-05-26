@@ -688,7 +688,7 @@ void MemoryAllocator::ZapBlock(Address start, size_t size,
   MemsetTagged(ObjectSlot(start), Object(static_cast<Address>(zap_value)),
                size >> kTaggedSizeLog2);
 }
-
+// qj
 void MemoryAllocator::InitializeOncePerProcess() {
   commit_page_size_ = v8_flags.v8_os_page_size > 0
                           ? v8_flags.v8_os_page_size * KB

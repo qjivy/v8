@@ -6742,7 +6742,7 @@ Genesis::Genesis(
               : global_proxy_template->InternalFieldCount());
     }
     global_proxy =
-        isolate->factory()->NewUninitializedJSGlobalProxy(instance_size);
+        isolate->factory()->NewUninitializedJSGlobalProxy(instance_size); //qj instance_size = 16
   }
 
   // We can only de-serialize a context if the isolate was initialized from

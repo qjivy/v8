@@ -6757,7 +6757,7 @@ Local<Context> NewContext(
   i::HandleScope scope(i_isolate);
   ExtensionConfiguration no_extensions;
   if (extensions == nullptr) extensions = &no_extensions;
-  i::Handle<i::Context> env = CreateEnvironment<i::Context>(
+  i::Handle<i::Context> env = CreateEnvironment<i::Context>( //qj
       i_isolate, extensions, global_template, global_object,
       context_snapshot_index, embedder_fields_deserializer, microtask_queue);
   if (env.is_null()) {
@@ -9458,6 +9458,8 @@ void Isolate::Initialize(Isolate* v8_isolate,
         "V8 snapshot blob was not set during initialization. This can mean "
         "that the snapshot blob file is corrupted or missing.");
   }
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " start to call i::Snapshot::Initialize" << std::endl;
   if (!i::Snapshot::Initialize(i_isolate)) {
     // If snapshot data was provided and we failed to deserialize it must
     // have been corrupted.
@@ -9466,6 +9468,8 @@ void Isolate::Initialize(Isolate* v8_isolate,
         "snapshot blob file is corrupted or missing.");
   }
 
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << " finish to call i::Snapshot::Initialize" << std::endl;
   {
     // Set up code event handlers. Needs to be after i::Snapshot::Initialize
     // because that is where we add the isolate to WasmEngine.

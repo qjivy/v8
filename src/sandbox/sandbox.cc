@@ -159,6 +159,7 @@ bool Sandbox::Initialize(v8::VirtualAddressSpace* vas, size_t size,
   // (multiple seconds or even minutes for a 1TB sandbox on macOS 12.X), in
   // turn causing tests to time out. As such, the maximum page permission
   // inside the sandbox should be read + write.
+  // qj
   address_space_ = vas->AllocateSubspace(
       hint, reservation_size, kSandboxAlignment, PagePermissions::kReadWrite);
 

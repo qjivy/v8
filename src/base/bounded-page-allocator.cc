@@ -34,12 +34,13 @@ void* BoundedPageAllocator::AllocatePages(void* hint, size_t size,
   MutexGuard guard(&mutex_);
   DCHECK(IsAligned(alignment, region_allocator_.page_size()));
   DCHECK(IsAligned(alignment, allocate_page_size_));
-
+  std::cout<<__FUNCTION__<<" "<<__LINE__<<" "<<__FILE__<<" is called"<<std::endl;
   Address address = RegionAllocator::kAllocationFailure;
 
   Address hint_address = reinterpret_cast<Address>(hint);
   if (hint_address && IsAligned(hint_address, alignment) &&
       region_allocator_.contains(hint_address, size)) {
+       std::cout<<__FUNCTION__<<"<0>"<<std::endl;
     if (region_allocator_.AllocateRegionAt(hint_address, size)) {
       address = hint_address;
     }
@@ -48,8 +49,10 @@ void* BoundedPageAllocator::AllocatePages(void* hint, size_t size,
   if (address == RegionAllocator::kAllocationFailure) {
     if (alignment <= allocate_page_size_) {
       // TODO(ishell): Consider using randomized version here.
+       std::cout<<__FUNCTION__<<"<1>"<<std::endl;
       address = region_allocator_.AllocateRegion(size);
     } else {
+       std::cout<<__FUNCTION__<<"<2>"<<std::endl;
       address = region_allocator_.AllocateAlignedRegion(size, alignment);
     }
   }

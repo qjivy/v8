@@ -137,7 +137,7 @@ void ReadOnlyHeap::DeserializeIntoIsolate(Isolate* isolate,
   des.DeserializeIntoIsolate();
   OnCreateRootsComplete(isolate);
   InitFromIsolate(isolate);
-  std::cout << "***BEGIN ReadOnlyHeap::DeserializeIntoIsolate"
+  std::cout << "***END ReadOnlyHeap::DeserializeIntoIsolate"
             << " " << __FILE__ << " "
             << " "
             << " " << __FUNCTION__ << " " << std::endl

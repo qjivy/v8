@@ -160,8 +160,8 @@ void* Allocate(void* hint, size_t size, OS::MemoryPermission access,
   int flags = GetFlagsForMemoryPermission(access, page_type);
   void* result = mmap(hint, size, prot, flags, kMmapFd, kMmapFdOffset);
   if (result == MAP_FAILED) return nullptr;
-  std::cout << "HERE final mmap, hint: " << hint << " size: " << size
-            << " result: " << result << std::endl;
+  std::cout << std::hex << "HERE final mmap, hint: " << hint
+            << " size: " << size << " result: " << result << std::endl;
 #if ENABLE_HUGEPAGE
   std::cout << "ENABLE hugepage" << std::endl;
   if (result != nullptr && size >= kHugePageSize) {
@@ -611,8 +611,8 @@ bool OS::DecommitPages(void* address, size_t size) {
 
 // static
 bool OS::CanReserveAddressSpace() { return true; }
-
-// static
+// qj call for sanbox
+//  static
 Optional<AddressSpaceReservation> OS::CreateAddressSpaceReservation(
     void* hint, size_t size, size_t alignment,
     MemoryPermission max_permission) {
@@ -621,7 +621,7 @@ Optional<AddressSpaceReservation> OS::CreateAddressSpaceReservation(
   if (max_permission == MemoryPermission::kReadWriteExecute) {
     permission = MemoryPermission::kNoAccessWillJitLater;
   }
-
+  // qj here call into
   void* reservation = Allocate(hint, size, alignment, permission);
   if (!reservation && permission == MemoryPermission::kNoAccessWillJitLater) {
     // Retry without MAP_JIT, for example in case we are running on an old OS X.

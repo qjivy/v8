@@ -372,6 +372,10 @@ uint8_t* CodeRange::RemapEmbeddedBuiltins(Isolate* isolate,
                              embedded_blob_code_size));
     SLOW_DCHECK(memcmp(embedded_blob_code, embedded_blob_code_copy,
                        embedded_blob_code_size) == 0);
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << " embedded_blob_code_copy: "
+              << reinterpret_cast<Address>(embedded_blob_code_copy)
+              << std::endl;
     return embedded_blob_code_copy;
   }
 
@@ -431,6 +435,8 @@ uint8_t* CodeRange::RemapEmbeddedBuiltins(Isolate* isolate,
     // embedded builtins are not coming from the binary), fall back to copying.
     if (IsAligned(reinterpret_cast<uintptr_t>(embedded_blob_code),
                   kCommitPageSize)) {
+      std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                << "  base::OS::RemapPages " << std::endl;
       bool ok = base::OS::RemapPages(embedded_blob_code, code_size,
                                      embedded_blob_code_copy,
                                      base::OS::MemoryPermission::kReadExecute);
@@ -438,6 +444,11 @@ uint8_t* CodeRange::RemapEmbeddedBuiltins(Isolate* isolate,
       if (ok) {
         embedded_blob_code_copy_.store(embedded_blob_code_copy,
                                        std::memory_order_release);
+
+        std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                  << " embedded_blob_code_copy: "
+                  << reinterpret_cast<Address>(embedded_blob_code_copy)
+                  << std::endl;
         return embedded_blob_code_copy;
       }
     }

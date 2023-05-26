@@ -154,7 +154,7 @@ void AlignedFree(void* ptr) { base::AlignedFree(ptr); }
 size_t AllocatePageSize() {
   return GetPlatformPageAllocator()->AllocatePageSize();
 }
-
+// qj
 size_t CommitPageSize() { return GetPlatformPageAllocator()->CommitPageSize(); }
 
 void* GetRandomMmapAddr() {
@@ -217,7 +217,7 @@ VirtualMemory::VirtualMemory(v8::PageAllocator* page_allocator, size_t size,
       jit == JitPermission::kMapAsJittable
           ? PageAllocator::kNoAccessWillJitLater
           : PageAllocator::kNoAccess;
-  Address address = reinterpret_cast<Address>(AllocatePages(
+  Address address = reinterpret_cast<Address>(AllocatePages( //qj: here x64 /rv is diff
       page_allocator_, hint, RoundUp(size, page_size), alignment, permissions));
   std::cout << "VirtualMemory::VirtualMemory constructor address:" << std::hex
             << address << std::endl;
@@ -324,8 +324,8 @@ VirtualMemoryCage& VirtualMemoryCage::operator=(VirtualMemoryCage&& other)
 
 bool VirtualMemoryCage::InitReservation(
     const ReservationParams& params, base::AddressRegion existing_reservation) {
-  std::cout << "VirtualMemoryCage::InitReservation memory" << __FILE__
-            << std::endl;
+  std::cout << std::hex << "VirtualMemoryCage::InitReservation memory"
+            << __FILE__ << std::endl;
   DCHECK(!reservation_.IsReserved());
 
   const size_t allocate_page_size = params.page_allocator->AllocatePageSize();
@@ -344,6 +344,14 @@ bool VirtualMemoryCage::InitReservation(
         VirtualMemory(params.page_allocator, existing_reservation.begin(),
                       existing_reservation.size());
     base_ = reservation_.address();
+    std::cout << "VirtualMemoryCage::InitReservation params.reservation_size: "
+              << params.reservation_size
+              << " params.base_alignment: " << params.base_alignment
+              << std::endl
+              << " existing_reservation.begin(): "
+              << existing_reservation.begin()
+              << " existing_reservation.size(): " << existing_reservation.size()
+              << " base_: " << base_ << std::endl;
   } else {
     std::cout << "VirtualMemoryCage::InitReservation "
                  "existing_reservation.is_empty true"
@@ -367,6 +375,7 @@ bool VirtualMemoryCage::InitReservation(
 
     reservation_ = std::move(reservation);
     base_ = reservation_.address();
+    std::cout << __FUNCTION__ << " base_: " << base_ << std::endl;
     CHECK_EQ(reservation_.size(), params.reservation_size);
   }
   CHECK_NE(base_, kNullAddress);

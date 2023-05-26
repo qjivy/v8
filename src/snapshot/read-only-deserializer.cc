@@ -23,16 +23,19 @@ class ReadOnlyHeapImageDeserializer {
   using Bytecode = HeapImageSerializer::Bytecode;
 
   static void Deserialize(SnapshotByteSource& in, Isolate* isolate) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
     auto cage = isolate->GetPtrComprCage();
 
     while (true) {
       switch (in.Get()) {
         case Bytecode::kReadOnlyPage: {
-          Address pos = cage->base() + in.GetInt();
+	  Address pos = cage->base() + in.GetInt();
+	  std::cout<<"Bytecode::kReadOnlyPage isolate->read_only_heap()->read_only_space()->AllocateNextPageAt(pos)" <<std::endl;
           isolate->read_only_heap()->read_only_space()->AllocateNextPageAt(pos);
           break;
         }
         case Bytecode::kReadOnlySegment: {
+	 std::cout<<"Bytecode::kReadOnlySegment just copy"<<std::endl;
           ReadOnlySpace* ro_space =
               isolate->read_only_heap()->read_only_space();
           ReadOnlyPage* cur_page = ro_space->pages().back();
@@ -44,12 +47,14 @@ class ReadOnlyHeapImageDeserializer {
           break;
         }
         case Bytecode::kFinalizeReadOnlyPage: {
+	 std::cout<<"Bytecode::kFinalizeReadOnlyPage FinalizeExternallyInitializedPage"<<std::endl;
           isolate->read_only_heap()
               ->read_only_space()
               ->FinalizeExternallyInitializedPage();
           break;
         }
         case Bytecode::kSynchronize:
+	  std::cout<<"Bytecode::kSynchronize"<<std::endl;
           return;
         default:
           UNREACHABLE();
@@ -88,7 +93,7 @@ void ReadOnlyDeserializer::DeserializeIntoIsolate() {
 
   {
     ReadOnlyRoots roots(isolate());
-    if (V8_STATIC_ROOTS_BOOL) {
+    if (V8_STATIC_ROOTS_BOOL) { //qj: x64 is run here
       ReadOnlyHeapImageDeserializer::Deserialize(*source(), isolate());
       roots.InitFromStaticRootsTable(isolate()->cage_base());
       ro_heap->read_only_space()->RepairFreeSpacesAfterDeserialization();

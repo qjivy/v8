@@ -54,12 +54,21 @@ void IsolateAllocator::FreeProcessWidePtrComprCageForTesting() {
 
 // static
 void IsolateAllocator::InitializeOncePerProcess() {
-  std::cout << "IsolateAllocator init" << std::endl;
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+#if !V8_TARGET_ARCH_RISCV64 && !V8_TARGET_ARCH_RISCV32
+            << " V8_COMPRESS_POINTERS_IN_SHARED_CAGE: "
+            << V8_COMPRESS_POINTERS_IN_SHARED_CAGE
+            << " V8_ENABLE_SANDBOX: " << V8_ENABLE_SANDBOX
+            << " V8_EXTERNAL_CODE_SPACE: " << V8_EXTERNAL_CODE_SPACE
+#endif
+            << std::endl;
 #ifdef V8_COMPRESS_POINTERS_IN_SHARED_CAGE
   PtrComprCageReservationParams params;
   base::AddressRegion existing_reservation;
+  std::cout << __FUNCTION__ << " <0>" << std::endl;
 #ifdef V8_ENABLE_SANDBOX
   // The pointer compression cage must be placed at the start of the sandbox.
+  std::cout << __FUNCTION__ << " <1>" << std::endl;
   auto sandbox = GetProcessWideSandbox();
   CHECK(sandbox->is_initialized());
   Address base = sandbox->address_space()->AllocatePages(
@@ -70,6 +79,7 @@ void IsolateAllocator::InitializeOncePerProcess() {
   params.page_allocator = sandbox->page_allocator();
 #endif
   // qj
+  std::cout << __FUNCTION__ << " <2>" << std::endl;
   if (!GetProcessWidePtrComprCage()->InitReservation(params,
                                                      existing_reservation)) {
     V8::FatalProcessOutOfMemory(
@@ -77,14 +87,20 @@ void IsolateAllocator::InitializeOncePerProcess() {
         "Failed to reserve virtual memory for process-wide V8 "
         "pointer compression cage");
   }
+  std::cout << __FUNCTION__ << "<3> V8HeapCompressionScheme::InitBase: "
+            << GetProcessWidePtrComprCage()->base() << std::endl;
   V8HeapCompressionScheme::InitBase(GetProcessWidePtrComprCage()->base());
 #ifdef V8_EXTERNAL_CODE_SPACE
+  std::cout << __FUNCTION__ << "<4> ExternalCodeCompressionScheme::InitBase: "
+            << V8HeapCompressionScheme::base() << std::endl;
   // Speculatively set the code cage base to the same value in case jitless
   // mode will be used. Once the process-wide CodeRange instance is created
   // the code cage base will be set accordingly.
   ExternalCodeCompressionScheme::InitBase(V8HeapCompressionScheme::base());
 #endif  // V8_EXTERNAL_CODE_SPACE
 #endif  // V8_COMPRESS_POINTERS_IN_SHARED_CAGE
+  std::cout << "Finish" << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << std::endl;
 }
 
 IsolateAllocator::IsolateAllocator() {
