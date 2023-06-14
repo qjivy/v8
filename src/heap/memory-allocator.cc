@@ -529,6 +529,9 @@ void MemoryAllocator::FreePooledChunk(MemoryChunk* chunk) {
 
 Page* MemoryAllocator::AllocatePage(MemoryAllocator::AllocationMode alloc_mode,
                                     Space* space, Executability executable) {
+  std::cout << __FILE__ << __LINE__
+            << " MemoryAllocator::AllocatePage spaceid: " << space->identity()
+	    << " Exe: "<<executable;
   size_t size =
       MemoryChunkLayout::AllocatableMemoryInMemoryChunk(space->identity());
   base::Optional<MemoryChunkAllocationResult> chunk_info;
@@ -546,10 +549,12 @@ Page* MemoryAllocator::AllocatePage(MemoryAllocator::AllocationMode alloc_mode,
   }
 
   if (!chunk_info) return nullptr;
+  std::cout<<" chunk start: "<<std::hex<<chunk_info->start<<" chunk size: "<<chunk_info->size<<" chunk_info->area_start: "<<chunk_info->area_start<<" chunk_info->area_end: "<<chunk_info->area_end<<std::endl;
 
   Page* page = new (chunk_info->start) Page(
       isolate_->heap(), space, chunk_info->size, chunk_info->area_start,
       chunk_info->area_end, std::move(chunk_info->reservation), executable);
+//  std::cout<<" page addr: "<<page->FirstPageAddress()<<std::dec<<std::endl;
 
 #ifdef DEBUG
   if (page->executable()) RegisterExecutableMemoryChunk(page);
@@ -560,12 +565,16 @@ Page* MemoryAllocator::AllocatePage(MemoryAllocator::AllocationMode alloc_mode,
 }
 
 ReadOnlyPage* MemoryAllocator::AllocateReadOnlyPage(ReadOnlySpace* space) {
+  std::cout << __FILE__ << __LINE__
+            << " MemoryAllocator::AllocateReadOnlyPage spaceid: "
+            << space->identity();
   DCHECK_EQ(space->identity(), RO_SPACE);
   size_t size = MemoryChunkLayout::AllocatableMemoryInMemoryChunk(RO_SPACE);
   base::Optional<MemoryChunkAllocationResult> chunk_info =
       AllocateUninitializedChunk(space, size, NOT_EXECUTABLE,
                                  PageSize::kRegular);
   if (!chunk_info) return nullptr;
+  std::cout<<" chunk start: "<<std::hex<<chunk_info->start<<" chunk size: "<<chunk_info->size<<" chunk_info->area_start: "<<chunk_info->area_start<<" chunk_info->area_end: "<<chunk_info->area_end<<std::endl;
   return new (chunk_info->start) ReadOnlyPage(
       isolate_->heap(), space, chunk_info->size, chunk_info->area_start,
       chunk_info->area_end, std::move(chunk_info->reservation));
@@ -574,18 +583,21 @@ ReadOnlyPage* MemoryAllocator::AllocateReadOnlyPage(ReadOnlySpace* space) {
 std::unique_ptr<::v8::PageAllocator::SharedMemoryMapping>
 MemoryAllocator::RemapSharedPage(
     ::v8::PageAllocator::SharedMemory* shared_memory, Address new_address) {
+
+  std::cout << __FILE__ << __LINE__<<" MemoryAllocator::RemapSharedPage "<<std::endl;
   return shared_memory->RemapTo(reinterpret_cast<void*>(new_address));
 }
 
 LargePage* MemoryAllocator::AllocateLargePage(LargeObjectSpace* space,
                                               size_t object_size,
                                               Executability executable) {
+  std::cout << __FILE__ << __LINE__<<" MemoryAllocator::AllocateLargePage spaceid: "<<space->identity()<<std::endl;
   base::Optional<MemoryChunkAllocationResult> chunk_info =
       AllocateUninitializedChunk(space, object_size, executable,
                                  PageSize::kLarge);
 
   if (!chunk_info) return nullptr;
-
+  std::cout<<" chunk start: "<<std::hex<<chunk_info->start<<" chunk size: "<<chunk_info->size<<" chunk_info->area_start: "<<chunk_info->area_start<<" chunk_info->area_end: "<<chunk_info->area_end<<std::endl;
   LargePage* page = new (chunk_info->start) LargePage(
       isolate_->heap(), space, chunk_info->size, chunk_info->area_start,
       chunk_info->area_end, std::move(chunk_info->reservation), executable);
@@ -599,6 +611,7 @@ LargePage* MemoryAllocator::AllocateLargePage(LargeObjectSpace* space,
 
 base::Optional<MemoryAllocator::MemoryChunkAllocationResult>
 MemoryAllocator::AllocateUninitializedPageFromPool(Space* space) {
+  std::cout << __FILE__ << __LINE__<<" MemoryAllocator::AllocateUninitializedPageFromPool spaceid: "<<space->identity()<<std::endl;
   void* chunk = unmapper()->TryGetPooledMemoryChunkSafe();
   if (chunk == nullptr) return {};
   const int size = MemoryChunk::kPageSize;

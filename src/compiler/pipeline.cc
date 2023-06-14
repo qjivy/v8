@@ -2418,7 +2418,8 @@ struct FinalizeCodePhase {
   DECL_MAIN_THREAD_PIPELINE_PHASE_CONSTANTS(FinalizeCode)
 
   void Run(PipelineData* data, Zone* temp_zone) {
-    data->set_code(data->code_generator()->FinalizeCode());
+    data->set_code(data->code_generator()
+                       ->FinalizeCode());  // qj mark for allocation for code
   }
 };
 
@@ -2982,7 +2983,7 @@ MaybeHandle<Code> Pipeline::GenerateCodeForCodeStub(
     jump_opt.set_optimizing();
     return pipeline.GenerateCode(call_descriptor);
   } else {
-    return second_pipeline.FinalizeCode();
+    return second_pipeline.FinalizeCode();  // qj mark allocation for code
   }
 }
 

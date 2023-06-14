@@ -176,7 +176,7 @@ Handle<Code> CodeAssembler::GenerateCode(
   Handle<Code> code;
   Graph* graph = rasm->ExportForOptimization();
 
-  code = Pipeline::GenerateCodeForCodeStub(
+  code = Pipeline::GenerateCodeForCodeStub(  // qj mark for gencode
              rasm->isolate(), rasm->call_descriptor(), graph, state->jsgraph_,
              rasm->source_positions(), state->kind_, state->name_,
              state->builtin_, options, profile_data)

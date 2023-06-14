@@ -5150,7 +5150,9 @@ void Heap::ConfigureHeap(const v8::ResourceConstraints& constraints) {
     max_semi_space_size_ = std::max({max_semi_space_size_, kMinSemiSpaceSize});
     max_semi_space_size_ = RoundDown<Page::kPageSize>(max_semi_space_size_);
   }
-
+  std::cout << __FILE__ << __LINE__
+            << " Heap::ConfigureHeap max_semi_space_size_: "
+            << max_semi_space_size_ << std::endl;
   // Initialize max_old_generation_size_ and max_global_memory_.
   {
     size_t max_old_generation_size = 700ul * (kSystemPointerSize / 4) * MB;
@@ -5179,7 +5181,9 @@ void Heap::ConfigureHeap(const v8::ResourceConstraints& constraints) {
         GlobalMemorySizeFromV8Size(max_old_generation_size);
     set_max_old_generation_size(max_old_generation_size);
   }
-
+  std::cout << __FILE__ << __LINE__
+            << " Heap::ConfigureHeap max_old_generation_size_: "
+            << max_old_generation_size_ << std::endl;
   CHECK_IMPLIES(FLAG_max_heap_size > 0,
                 FLAG_max_semi_space_size == 0 || FLAG_max_old_space_size == 0);
 
@@ -5216,6 +5220,9 @@ void Heap::ConfigureHeap(const v8::ResourceConstraints& constraints) {
   if (FLAG_lazy_new_space_shrinking) {
     initial_semispace_size_ = max_semi_space_size_;
   }
+  std::cout << __FILE__ << __LINE__
+            << " Heap::ConfigureHeap initial_semispace_size_: "
+            << initial_semispace_size_ << std::endl;
 
   // Initialize initial_old_space_size_.
   {
@@ -5247,6 +5254,9 @@ void Heap::ConfigureHeap(const v8::ResourceConstraints& constraints) {
         RoundDown<Page::kPageSize>(initial_old_generation_size_);
   }
 
+  std::cout << __FILE__ << __LINE__
+            << " Heap::ConfigureHeap initial_old_generation_size_: "
+            << initial_old_generation_size_ << std::endl;
   if (old_generation_size_configured_) {
     // If the embedder pre-configures the initial old generation size,
     // then allow V8 to skip full GCs below that threshold.
@@ -5271,7 +5281,9 @@ void Heap::ConfigureHeap(const v8::ResourceConstraints& constraints) {
           AllocationMemento::kSize));
 
   code_range_size_ = constraints.code_range_size_in_bytes();
-
+  std::cout << __FILE__ << __LINE__
+            << " Heap::ConfigureHeap code_range_size_: " << code_range_size_
+            << std::endl;
   configured_ = true;
 }
 
@@ -5874,6 +5886,8 @@ void Heap::InitializeHashSeed() {
 
 // static
 void Heap::InitializeOncePerProcess() {
+  std::cout << __FILE__ << __LINE__ << "Heap::InitializeOncePerProcess"
+            << std::endl;
   MemoryAllocator::InitializeOncePerProcess();
 }
 

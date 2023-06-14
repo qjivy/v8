@@ -159,22 +159,28 @@ PagedSpace* Heap::paged_space(int idx) {
 Space* Heap::space(int idx) { return space_[idx]; }
 
 Address* Heap::NewSpaceAllocationTopAddress() {
-  std::cout<<"DHeap: NewSpaceAllocationTopAddress: "<<(new_space_ ? new_space_->allocation_top_address() : nullptr)<<std::endl;
+  std::cout << "DHeap: NewSpaceAllocationTopAddress: "
+            << *(new_space_ ? new_space_->allocation_top_address() : nullptr)
+            << std::endl;
   return new_space_ ? new_space_->allocation_top_address() : nullptr;
 }
 
 Address* Heap::NewSpaceAllocationLimitAddress() {
-  std::cout<<"DHeap: NewSpaceAllocationLimitAddress: "<<(new_space_ ? new_space_->allocation_limit_address() : nullptr)<<std::endl;
+  std::cout << "DHeap: NewSpaceAllocationLimitAddress: "
+            << *(new_space_ ? new_space_->allocation_limit_address() : nullptr)
+            << std::endl;
   return new_space_ ? new_space_->allocation_limit_address() : nullptr;
 }
 
 Address* Heap::OldSpaceAllocationTopAddress() {
-  std::cout<<"DHeap: OldSpaceAllocationTopAddress: "<< old_space_->allocation_top_address()<<std::endl;
+  std::cout << "DHeap: OldSpaceAllocationTopAddress: "
+            << *(old_space_->allocation_top_address()) << std::endl;
   return old_space_->allocation_top_address();
 }
 
 Address* Heap::OldSpaceAllocationLimitAddress() {
-  std::cout<<"DHeap: OldSpaceAllocationLimitAddress: "<< old_space_->allocation_limit_address()<<std::endl;
+  std::cout << "DHeap: OldSpaceAllocationLimitAddress: "
+            << *(old_space_->allocation_limit_address()) << std::endl;
   return old_space_->allocation_limit_address();
 }
 
@@ -188,7 +194,8 @@ inline const base::AddressRegion& Heap::code_region() {
 }
 
 Address Heap::code_range_base() {
-  std::cout<<"DHeap: code_range_base: "<<(code_range_ ? code_range_->base() : kNullAddress)<<std::endl;
+  std::cout << "DHeap: code_range_base: "
+            << (code_range_ ? code_range_->base() : kNullAddress) << std::endl;
   return code_range_ ? code_range_->base() : kNullAddress;
 }
 

@@ -473,7 +473,7 @@ MaybeHandle<Code> CodeGenerator::FinalizeCode() {
     unwinding_info_writer_.eh_frame_writer()->GetEhFrame(&desc);
   }
 
-  MaybeHandle<Code> maybe_code =
+  MaybeHandle<Code> maybe_code =  // qj mark
       Factory::CodeBuilder(isolate(), desc, info()->code_kind())
           .set_builtin(info()->builtin())
           .set_inlined_bytecode_size(info()->inlined_bytecode_size())

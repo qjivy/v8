@@ -40,6 +40,8 @@ class LinearAllocationArea final {
   }
 
   V8_INLINE Address IncrementTop(size_t bytes) {
+    std::cout << "in linear allocation area old_top: " << top_
+              << " bytes: " << bytes << std::endl;
     Address old_top = top_;
     top_ += bytes;
     Verify();

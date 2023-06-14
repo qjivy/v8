@@ -349,7 +349,7 @@ const uint8_t* Isolate::embedded_blob_code() const {
   return embedded_blob_code_;
 }
 uint32_t Isolate::embedded_blob_code_size() const {
-//  std::cout<<"embedded_blob_code_size:"<<embedded_blob_code_size_<<std::endl;
+  //  std::cout<<"embedded_blob_code_size:"<<embedded_blob_code_size_<<std::endl;
   return embedded_blob_code_size_;
 }
 const uint8_t* Isolate::embedded_blob_data() const {
@@ -3870,13 +3870,14 @@ VirtualMemoryCage* Isolate::GetPtrComprCodeCageForTesting() {
 bool Isolate::Init(SnapshotData* startup_snapshot_data,
                    SnapshotData* read_only_snapshot_data,
                    SnapshotData* shared_heap_snapshot_data, bool can_rehash) {
-  std::cout<<"Begin init"<<std::endl;
+  std::cout << "Begin init" << std::endl;
   TRACE_ISOLATE(init);
   const bool create_heap_objects = (read_only_snapshot_data == nullptr);
   // We either have all or none.
   DCHECK_EQ(create_heap_objects, startup_snapshot_data == nullptr);
   DCHECK_EQ(create_heap_objects, shared_heap_snapshot_data == nullptr);
-  std::cout<<"Begin init create_heap_objects: "<<create_heap_objects<<std::endl;
+  std::cout << "Begin init create_heap_objects: " << create_heap_objects
+            << std::endl;
   base::ElapsedTimer timer;
   if (create_heap_objects && FLAG_profile_deserialization) timer.Start();
 
@@ -3896,9 +3897,9 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   FOR_EACH_ISOLATE_ADDRESS_NAME(ASSIGN_ELEMENT)
 #undef ASSIGN_ELEMENT
 
-
-  for(int i=0;i<IsolateAddressId::kIsolateAddressCount;i++)
-   std::cout<<"isolate_addresses_["<<i<<"]: "<<std::hex<<isolate_addresses_[i]<<std::endl;
+  for (int i = 0; i < IsolateAddressId::kIsolateAddressCount; i++)
+    std::cout << "isolate_addresses_[" << i << "]: " << std::hex
+              << isolate_addresses_[i] << std::endl;
   // We need to initialize code_pages_ before any on-heap code is allocated to
   // make sure we record all code allocations.
   InitializeCodeRanges();
@@ -3920,7 +3921,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   bigint_processor_ = bigint::Processor::New(new BigIntPlatform(this));
 
   if (FLAG_lazy_compile_dispatcher) {
-     std::cout<<"FLAG_lazy_compile_dispatcher true"<<std::endl;
+    std::cout << "FLAG_lazy_compile_dispatcher true" << std::endl;
     lazy_compile_dispatcher_ = std::make_unique<LazyCompileDispatcher>(
         this, V8::GetCurrentPlatform(), FLAG_stack_size);
   }
@@ -3959,7 +3960,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   base::Optional<base::MutexGuard> clients_guard;
 
   if (shared_isolate_) {
-    std::cout<<"shared_isolate_ true"<<std::endl;
+    std::cout << "shared_isolate_ true" << std::endl;
     clients_guard.emplace(&shared_isolate_->global_safepoint()->clients_mutex_);
   }
 
@@ -3970,8 +3971,11 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
   // SetUp the object heap.
   DCHECK(!heap_.HasBeenSetUp());
+  std::cout << "heap_.SetUp" << __FILE__ << __LINE__ << std::endl;
   heap_.SetUp(main_thread_local_heap());
+  std::cout << "ReadOnlyHeap SetUp" << __FILE__ << __LINE__ << std::endl;
   ReadOnlyHeap::SetUp(this, read_only_snapshot_data, can_rehash);
+  std::cout << "heap_eSetUpSpaces" << __FILE__ << __LINE__ << std::endl;
   heap_.SetUpSpaces(&isolate_data_.new_allocation_info_,
                     &isolate_data_.old_allocation_info_);
 
@@ -3984,8 +3988,10 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   }
 
   if (V8_SHORT_BUILTIN_CALLS_BOOL && FLAG_short_builtin_calls) {
-    std::cout<<"Check for short builtin calls"<<V8_SHORT_BUILTIN_CALLS_BOOL<<std::endl;
-    std::cout<<"Check for short builtin calls"<<FLAG_short_builtin_calls<<std::endl;
+    std::cout << "Check for short builtin calls" << V8_SHORT_BUILTIN_CALLS_BOOL
+              << std::endl;
+    std::cout << "Check for short builtin calls" << FLAG_short_builtin_calls
+              << std::endl;
     // Check if the system has more than 4GB of physical memory by comparing the
     // old space size with respective threshold value.
     //
@@ -4009,13 +4015,13 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     }
   }
 #ifdef V8_EXTERNAL_CODE_SPACE
-  std::cout<<"V8_EXTERNAL_CODE_SPACE true"<<std::endl;
+  std::cout << "V8_EXTERNAL_CODE_SPACE true" << std::endl;
   if (heap_.code_range()) {
     code_cage_base_ = GetPtrComprCageBaseAddress(heap_.code_range()->base());
-    std::cout<<"code_cage_base_1: "<<code_cage_base_<<std::endl;
+    std::cout << "code_cage_base_1: " << code_cage_base_ << std::endl;
   } else {
     code_cage_base_ = cage_base();
-    std::cout<<"code_cage_base_2: "<<code_cage_base_<<std::endl;
+    std::cout << "code_cage_base_2: " << code_cage_base_ << std::endl;
   }
 #endif  // V8_EXTERNAL_CODE_SPACE
 
@@ -4040,7 +4046,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   }
 
   if (create_heap_objects) {
-    std::cout<<"create_heap_objects true"<<std::endl;
+    std::cout << "create_heap_objects true" << std::endl;
     // Terminate the startup and shared heap object caches so we can iterate.
     startup_object_cache_.push_back(ReadOnlyRoots(this).undefined_value());
     shared_heap_object_cache_.push_back(ReadOnlyRoots(this).undefined_value());
@@ -4055,7 +4061,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   bootstrapper_->Initialize(create_heap_objects);
 
   if (create_heap_objects) {
-    std::cout<<"setup builtins: create_heap_objects true"<<std::endl;
+    std::cout << "setup builtins: create_heap_objects true" << std::endl;
     builtins_constants_table_builder_ = new BuiltinsConstantsTableBuilder(this);
 
     setup_delegate_->SetupBuiltins(this);
@@ -4079,14 +4085,14 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
     CreateAndSetEmbeddedBlob();
   } else {
-    std::cout<<"setup builtins: create_heap_objects false"<<std::endl;
+    std::cout << "setup builtins: create_heap_objects false" << std::endl;
     setup_delegate_->SetupBuiltins(this);
     MaybeRemapEmbeddedBuiltinsIntoCodeRange();
   }
 
   // Initialize custom memcopy and memmove functions (must happen after
   // embedded blob setup).
-  init_memcopy_functions(); //qj for memcpy optimization
+  init_memcopy_functions();  // qj for memcpy optimization
 
   if (FLAG_log_internal_timer_events) {
     set_event_logger(Logger::DefaultEventLoggerSentinel);
@@ -4112,10 +4118,12 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
     } else {
       SharedHeapDeserializer shared_heap_deserializer(
           this, shared_heap_snapshot_data, can_rehash);
-      shared_heap_deserializer.DeserializeIntoIsolate(); //qj: here deal with share_head_data
+      shared_heap_deserializer
+          .DeserializeIntoIsolate();  // qj: here deal with share_head_data
 
-      StartupDeserializer startup_deserializer(this, startup_snapshot_data, //qj: here deal with startup_data
-                                               can_rehash);
+      StartupDeserializer startup_deserializer(
+          this, startup_snapshot_data,  // qj: here deal with startup_data
+          can_rehash);
       startup_deserializer.DeserializeIntoIsolate();
     }
     load_stub_cache_->Initialize();
@@ -4133,7 +4141,8 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
   delete setup_delegate_;
   setup_delegate_ = nullptr;
 
-  Builtins::InitializeIsolateDataTables(this); //qj: here init builtin tables and tier0 builtin tables
+  Builtins::InitializeIsolateDataTables(
+      this);  // qj: here init builtin tables and tier0 builtin tables
   Builtins::EmitCodeCreateEvents(this);
 
 #ifdef DEBUG
@@ -4225,7 +4234,7 @@ bool Isolate::Init(SnapshotData* startup_snapshot_data,
 
   initialized_ = true;
 
-  std::cout<<"End init"<<std::endl;
+  std::cout << "End init" << std::endl;
   return true;
 }
 

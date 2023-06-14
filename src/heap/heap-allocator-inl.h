@@ -90,6 +90,7 @@ V8_WARN_UNUSED_RESULT V8_INLINE AllocationResult HeapAllocator::AllocateRaw(
     allocation = heap_->tp_heap_->Allocate(size_in_bytes, type, alignment);
   } else {
     if (V8_UNLIKELY(large_object)) {
+      std::cout << "AllocateRaw1 large_object" << std::endl;
       allocation =
           AllocateRawLargeInternal(size_in_bytes, type, origin, alignment);
     } else {
@@ -114,7 +115,7 @@ V8_WARN_UNUSED_RESULT V8_INLINE AllocationResult HeapAllocator::AllocateRaw(
         case AllocationType::kReadOnly:
           DCHECK(read_only_space()->writable());
           DCHECK_EQ(AllocationOrigin::kRuntime, origin);
-          allocation = read_only_space()->AllocateRaw(size_in_bytes, alignment);
+          allocation = read_only_space()->AllocateRaw(size_in_bytes, alignment); //qq go to read_only_spaceread_only_space
           break;
         case AllocationType::kSharedMap:
           allocation = shared_map_allocator_->AllocateRaw(size_in_bytes,
@@ -177,7 +178,7 @@ AllocationResult HeapAllocator::AllocateRaw(int size_in_bytes,
                                                alignment);
     case AllocationType::kReadOnly:
       return AllocateRaw<AllocationType::kReadOnly>(size_in_bytes, origin,
-                                                    alignment);
+                                                    alignment); //qq goto 118
     case AllocationType::kSharedMap:
       return AllocateRaw<AllocationType::kSharedMap>(size_in_bytes, origin,
                                                      alignment);
@@ -208,21 +209,28 @@ AllocationResult HeapAllocator::AllocateRawData(int size_in_bytes,
   }
   UNREACHABLE();
 }
-
+static int counti = 0;
 template <HeapAllocator::AllocationRetryMode mode>
 V8_WARN_UNUSED_RESULT V8_INLINE HeapObject HeapAllocator::AllocateRawWith(
     int size, AllocationType allocation, AllocationOrigin origin,
     AllocationAlignment alignment) {
   AllocationResult result;
   HeapObject object;
+  counti++;
   if (allocation == AllocationType::kYoung) {
     result = AllocateRaw<AllocationType::kYoung>(size, origin, alignment);
     if (result.To(&object)) {
+      std::cout << "AllocationRawWith " << std::dec << counti
+                << " Type: " << allocation << " size: " << std::dec << size
+                << " address: " << std::hex << object.address() << std::endl;
       return object;
     }
   } else if (allocation == AllocationType::kOld) {
     result = AllocateRaw<AllocationType::kOld>(size, origin, alignment);
     if (result.To(&object)) {
+      std::cout << "AllocationRawWith " << std::dec << counti
+                << " Type: " << allocation << " size: " << std::dec << size
+                << " address: " << std::hex << object.address() << std::endl;
       return object;
     }
   }
@@ -237,6 +245,9 @@ V8_WARN_UNUSED_RESULT V8_INLINE HeapObject HeapAllocator::AllocateRawWith(
       break;
   }
   if (result.To(&object)) {
+    std::cout << "AllocationRawWith " << std::dec << counti
+              << " Type: " << allocation << " size: " << std::dec << size
+              << " address: " << std::hex << object.address() << std::endl;
     return object;
   }
   return HeapObject();

@@ -615,7 +615,7 @@ void ReadOnlySpace::FreeLinearAllocationArea() {
   limit_ = kNullAddress;
 }
 
-void ReadOnlySpace::EnsureSpaceForAllocation(int size_in_bytes) {
+void ReadOnlySpace::EnsureSpaceForAllocation(int size_in_bytes) { //qq here make sure whether space has enough space
   if (top_ + size_in_bytes <= limit_) {
     return;
   }
@@ -625,7 +625,7 @@ void ReadOnlySpace::EnsureSpaceForAllocation(int size_in_bytes) {
   FreeLinearAllocationArea();
 
   BasicMemoryChunk* chunk =
-      heap()->memory_allocator()->AllocateReadOnlyPage(this);
+      heap()->memory_allocator()->AllocateReadOnlyPage(this);//qq: here allocate new page
   capacity_ += AreaSize();
 
   accounting_stats_.IncreaseCapacity(chunk->area_size());
@@ -686,7 +686,7 @@ AllocationResult ReadOnlySpace::AllocateRawAligned(
   return AllocationResult::FromObject(object);
 }
 
-AllocationResult ReadOnlySpace::AllocateRawUnaligned(int size_in_bytes) {
+AllocationResult ReadOnlySpace::AllocateRawUnaligned(int size_in_bytes) { //qq
   DCHECK(!IsDetached());
   EnsureSpaceForAllocation(size_in_bytes);
   Address current_top = top_;
@@ -714,6 +714,7 @@ AllocationResult ReadOnlySpace::AllocateRaw(int size_in_bytes,
           : AllocateRawUnaligned(size_in_bytes);
   HeapObject heap_obj;
   if (result.To(&heap_obj)) {
+    std::cout << "RO space alloca address: " << heap_obj.address() << std::endl;
     DCHECK(heap()->incremental_marking()->marking_state()->IsBlack(heap_obj));
   }
   return result;

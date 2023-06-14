@@ -155,13 +155,14 @@ MaybeHandle<Code> Factory::CodeBuilder::BuildInternal(
   Heap* heap = isolate_->heap();
   CodePageCollectionMemoryModificationScope code_allocation(heap);
 
-  Handle<Code> code;
+  Handle<Code> code;  // qj mark
   if (CompiledWithConcurrentBaseline()) {
     if (!AllocateConcurrentSparkplugCode(retry_allocation_or_fail)
              .ToHandle(&code)) {
       return MaybeHandle<Code>();
     }
-  } else if (!AllocateCode(retry_allocation_or_fail).ToHandle(&code)) {
+  } else if (!AllocateCode(retry_allocation_or_fail)
+                  .ToHandle(&code)) {  // qj mark
     return MaybeHandle<Code>();
   }
 
@@ -278,7 +279,7 @@ MaybeHandle<Code> Factory::CodeBuilder::AllocateCode(
     result = allocator->AllocateRawWith<HeapAllocator::kRetryOrFail>(
         object_size, allocation_type, AllocationOrigin::kRuntime);
   } else {
-    result = allocator->AllocateRawWith<HeapAllocator::kLightRetry>(
+    result = allocator->AllocateRawWith<HeapAllocator::kLightRetry>(  // qj mark
         object_size, allocation_type, AllocationOrigin::kRuntime);
     // Return an empty handle if we cannot allocate the code object.
     if (result.is_null()) return MaybeHandle<Code>();
@@ -322,7 +323,7 @@ MaybeHandle<Code> Factory::CodeBuilder::AllocateConcurrentSparkplugCode(
   return code;
 }
 
-MaybeHandle<Code> Factory::CodeBuilder::TryBuild() {
+MaybeHandle<Code> Factory::CodeBuilder::TryBuild() {  // qj mark
   return BuildInternal(false);
 }
 

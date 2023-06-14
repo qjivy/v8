@@ -78,8 +78,8 @@ constexpr AllocationSpace AllocationTypeToGCSpace(AllocationType type) {
 
 AllocationResult HeapAllocator::AllocateRawWithLightRetrySlowPath(
     int size, AllocationType allocation, AllocationOrigin origin,
-    AllocationAlignment alignment) {
-  AllocationResult result = AllocateRaw(size, allocation, origin, alignment);
+    AllocationAlignment alignment) { //qq
+  AllocationResult result = AllocateRaw(size, allocation, origin, alignment);//qq goto heap-allocator-inl.h 
   if (!result.IsFailure()) {
     return result;
   }
