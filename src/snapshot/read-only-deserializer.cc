@@ -85,10 +85,12 @@ void ReadOnlyDeserializer::DeserializeIntoIsolate() {
   {
     ReadOnlyRoots roots(isolate());
     if (V8_STATIC_ROOTS_BOOL) {
+      std::cout<<"V8_STATIC_ROOTS_BOOL: true"<<std::endl;
       ReadOnlyHeapImageDeserializer::Deserialize(*source(), isolate());
       roots.InitFromStaticRootsTable(isolate()->cage_base());
       ro_heap->read_only_space()->RepairFreeSpacesAfterDeserialization();
     } else {
+      std::cout<<"V8_STATIC_ROOTS_BOOL: false"<<std::endl;
       roots.Iterate(this);
 
       // Deserialize the Read-only Object Cache.

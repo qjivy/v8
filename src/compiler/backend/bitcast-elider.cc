@@ -21,6 +21,7 @@ bool IsBitcast(Node* node) {
 }
 
 bool OwnedByWord32Op(Node* node) {
+//#if V8_TARGET_ARCH_LOONG64 || V8_TARGET_ARCH_MIPS64 || V8_TARGET_ARCH_RISCV64
 #if V8_TARGET_ARCH_LOONG64 || V8_TARGET_ARCH_MIPS64
   return false;
 #else
