@@ -50,25 +50,25 @@ namespace internal {
 //
 class CommonFrameConstants : public AllStatic {
  public:
-  static constexpr int kCallerFPOffset = 0 * kSystemPointerSize;
-  static constexpr int kCallerPCOffset = kCallerFPOffset + 1 * kFPOnStackSize;
-  static constexpr int kCallerSPOffset = kCallerPCOffset + 1 * kPCOnStackSize;
+  static constexpr int kCallerFPOffset = 0 * kSystemPointerSize; //qj: 0
+  static constexpr int kCallerPCOffset = kCallerFPOffset + 1 * kFPOnStackSize; //qj: 8
+  static constexpr int kCallerSPOffset = kCallerPCOffset + 1 * kPCOnStackSize; //qj: 8+8=16
 
   // Fixed part of the frame consists of return address, caller fp,
   // constant pool (if V8_EMBEDDED_CONSTANT_POOL_BOOL), context, and
   // function. CommonFrame::IterateExpressions assumes that kLastObjectOffset
   // is the last object pointer.
-  static constexpr int kFixedFrameSizeAboveFp = kPCOnStackSize + kFPOnStackSize;
+  static constexpr int kFixedFrameSizeAboveFp = kPCOnStackSize + kFPOnStackSize; //qj: 8+8=16
   static constexpr int kFixedSlotCountAboveFp =
-      kFixedFrameSizeAboveFp / kSystemPointerSize;
+      kFixedFrameSizeAboveFp / kSystemPointerSize; //qj: 16/8=2
   static constexpr int kCPSlotSize =
-      V8_EMBEDDED_CONSTANT_POOL_BOOL ? kSystemPointerSize : 0;
-  static constexpr int kCPSlotCount = kCPSlotSize / kSystemPointerSize;
+      V8_EMBEDDED_CONSTANT_POOL_BOOL ? kSystemPointerSize : 0; // qj: 8 or 0
+  static constexpr int kCPSlotCount = kCPSlotSize / kSystemPointerSize; //qj: 1 or 0
   static constexpr int kConstantPoolOffset =
-      kCPSlotSize ? -1 * kSystemPointerSize : 0;
-  static constexpr int kContextOrFrameTypeSize = kSystemPointerSize;
+      kCPSlotSize ? -1 * kSystemPointerSize : 0; //qj: -8 or 0
+  static constexpr int kContextOrFrameTypeSize = kSystemPointerSize; //qj: 8
   static constexpr int kContextOrFrameTypeOffset =
-      -(kCPSlotSize + kContextOrFrameTypeSize);
+      -(kCPSlotSize + kContextOrFrameTypeSize); //qj: -16 or -8
 };
 
 // StandardFrames are used for both unoptimized and optimized JavaScript

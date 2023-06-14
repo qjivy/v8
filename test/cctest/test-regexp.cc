@@ -125,6 +125,7 @@ class InterruptTest {
       // DCHECKs. So we can't do this:
       // it.frame()->Print(&accumulator, i::StackFrame::OVERVIEW,
       //                   frame_index++);
+      std::cout<<"QQ Iter stack"<<std::endl;
     }
   }
 

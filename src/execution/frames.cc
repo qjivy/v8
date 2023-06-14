@@ -471,7 +471,7 @@ void StackFrameIteratorForProfiler::AdvanceOneFrame() {
   DCHECK(!done());
   StackFrame* last_frame = frame_;
   Address last_sp = last_frame->sp(), last_fp = last_frame->fp();
-
+  std::cout<<"QQ AdvanceOneFrame last_sp: "<<std::hex<<last_sp<<" last_fp: "<<last_fp<<std::endl;
   // Before advancing to the next stack frame, perform pointer validity tests.
   if (!IsValidFrame(last_frame) || !IsValidCaller(last_frame)) {
     frame_ = nullptr;
@@ -481,6 +481,7 @@ void StackFrameIteratorForProfiler::AdvanceOneFrame() {
   // Advance to the previous frame.
   StackFrame::State state;
   StackFrame::Type type = frame_->GetCallerState(&state);
+  std::cout<<"QQ AdvanceOneFrame type: "<<type<<std::endl;
   frame_ = SingletonFor(type, &state);
   if (!frame_) return;
 
@@ -488,6 +489,7 @@ void StackFrameIteratorForProfiler::AdvanceOneFrame() {
   if (frame_->sp() <= last_sp || frame_->fp() <= last_fp) {
     frame_ = nullptr;
   }
+  std::cout<<"QQ AdvanceOneFrame3 sp: "<<frame_->sp()<<" fp: "<<frame_->fp()<<std::endl;
 }
 
 bool StackFrameIteratorForProfiler::IsValidFrame(StackFrame* frame) const {
@@ -521,6 +523,7 @@ bool StackFrameIteratorForProfiler::IsValidExitFrame(Address fp) const {
 
 void StackFrameIteratorForProfiler::Advance() {
   while (true) {
+    std::cout<<"QQ in frame:Advance"<<std::endl;
     AdvanceOneFrame();
     if (done()) break;
     ExternalCallbackScope* last_callback_scope = nullptr;

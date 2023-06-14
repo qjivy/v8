@@ -2674,6 +2674,7 @@ void MarkCompactCollector::MarkTransitiveClosure() {
 
 void MarkCompactCollector::ProcessTopOptimizedFrame(ObjectVisitor* visitor,
                                                     Isolate* isolate) {
+  std::cout<<"QQGC ProcessTopOptimizedFrame start StackFrameIterator"<<std::endl;
   for (StackFrameIterator it(isolate, isolate->thread_local_top()); !it.done();
        it.Advance()) {
     if (it.frame()->is_unoptimized()) return;

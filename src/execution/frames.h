@@ -175,6 +175,7 @@ class StackFrame {
   // (in terms of code/instruction size) to push as immediates onto the stack.
   static int32_t TypeToMarker(Type type) {
     DCHECK_GE(type, 0);
+    std::cout<<"in TypeToMarker, kSmiTagSize: "<<kSmiTagSize<<" kSmiTag: "<<kSmiTag<<" kHeapObjectTagMask: "<<kHeapObjectTagMask<<" kHeapObjectTag: "<<kHeapObjectTag<<std::endl;
     return (type << kSmiTagSize) | kSmiTag;
   }
 
