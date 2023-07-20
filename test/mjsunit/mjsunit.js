@@ -484,7 +484,9 @@ var prettyPrinted;
   }
 
   assertEquals = function assertEquals(expected, found, name_opt) {
+  print(expected,expected);
     if (!deepEquals(found, expected)) {
+  print(expected,expected);
       fail(prettyPrinted(expected), found, name_opt);
     }
   };

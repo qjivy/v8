@@ -22,6 +22,7 @@ namespace v8::internal::wasm {
 WasmCompilationResult WasmCompilationUnit::ExecuteCompilation(
     CompilationEnv* env, const WireBytesStorage* wire_bytes_storage,
     Counters* counters, WasmFeatures* detected) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" func_index_: "<<func_index_<<std::endl;
   WasmCompilationResult result;
   if (func_index_ < static_cast<int>(env->module->num_imported_functions)) {
     result = ExecuteImportWrapperCompilation(env);
@@ -44,6 +45,7 @@ WasmCompilationResult WasmCompilationUnit::ExecuteCompilation(
 
 WasmCompilationResult WasmCompilationUnit::ExecuteImportWrapperCompilation(
     CompilationEnv* env) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" func_index_: "<<func_index_<<std::endl;
   const FunctionSig* sig = env->module->functions[func_index_].sig;
   // Assume the wrapper is going to be a JS function with matching arity at
   // instantiation time.

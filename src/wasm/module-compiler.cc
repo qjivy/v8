@@ -1464,6 +1464,7 @@ CompilationExecutionResult ExecuteCompilationUnits(
     std::weak_ptr<NativeModule> native_module, Counters* counters,
     JobDelegate* delegate, CompilationTier tier) {
   TRACE_EVENT0("v8.wasm", "wasm.ExecuteCompilationUnits");
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   // These fields are initialized in a {BackgroundCompileScope} before
   // starting compilation.
   base::Optional<CompilationEnv> env;

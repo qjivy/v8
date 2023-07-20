@@ -8442,6 +8442,7 @@ wasm::WasmCompilationResult CompileWasmImportCallWrapper(
     wasm::CompilationEnv* env, wasm::ImportCallKind kind,
     const wasm::FunctionSig* sig, bool source_positions, int expected_arity,
     wasm::Suspend suspend) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   DCHECK_NE(wasm::ImportCallKind::kLinkError, kind);
   DCHECK_NE(wasm::ImportCallKind::kWasmToWasm, kind);
   DCHECK_NE(wasm::ImportCallKind::kWasmToJSFastApi, kind);

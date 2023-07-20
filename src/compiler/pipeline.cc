@@ -3362,6 +3362,7 @@ wasm::WasmCompilationResult Pipeline::GenerateCodeForWasmNativeStub(
     CallDescriptor* call_descriptor, MachineGraph* mcgraph, CodeKind kind,
     const char* debug_name, const AssemblerOptions& options,
     SourcePositionTable* source_positions) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   Graph* graph = mcgraph->graph();
   OptimizedCompilationInfo info(base::CStrVector(debug_name), graph->zone(),
                                 kind);

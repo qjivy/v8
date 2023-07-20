@@ -19,8 +19,11 @@ const debug = false;
 
 let kSig_r_i = makeSig([kWasmI32], [kWasmExternRef]);
 const kPossibleTypes = [kWasmI32, kWasmI64, kWasmF32, kWasmF64, kWasmExternRef];
+//qj
+//const kPossibleTypes = [kWasmF64];
 
 function getRandomInt(max) {
+//  print("getRandomInt: ",max)
   return Math.floor(Math.random() * max);
 }
 
@@ -47,6 +50,7 @@ function ConvertFunctionName(to, from) {
 // function, in addition to the `ToPrimitive` conversion done in the js-to-wasm
 // wrapper.
 function ConversionFunction(to, from, val) {
+print("ConversionFunction,",ConvertFunctionName(to, from)," val: ",val);
   if (to == from) {
     // If {to} and {from} are the same type, then we only have to do the
     // conversion done in the js-to-wasm wrapper.
@@ -285,18 +289,27 @@ interestingParams[kWasmF64] = [
 
 function GetParam(type) {
   if (type == kWasmExternRef) {
+//    print("in GetParam WasmExternRef,",TypeString(type),itoo(interestingParams[kWasmI32][getRandomInt(interestingParams[kWasmI32].length)]));
     return itoo(interestingParams[kWasmI32][getRandomInt(
         interestingParams[kWasmI32].length)]);
   }
+
+//  print("in GetParam Gen,",TypeString(type),interestingParams[type][getRandomInt(interestingParams[kWasmI32].length)]);
   return interestingParams[type][getRandomInt(interestingParams[type].length)];
 }
 
 function GenerateAndRunTest() {
+print("GenerateAndRunTest");
   // Generate signature
   const kMaxParams = 20;
   const kMaxReturns = 10;
   const numParams = getRandomInt(kMaxParams) + 1;
   const numReturns = getRandomInt(kMaxReturns + 1);
+  //const numParams = 14;//getRandomInt(kMaxParams) + 1;
+  // const numReturns = 7;//getRandomInt(kMaxReturns + 1);
+
+  print("numParams: ",numParams);
+  print("numReturns: ",numReturns);
   // The array of parameter types.
   const params = [];
   // The array of return types.
@@ -318,13 +331,25 @@ function GenerateAndRunTest() {
 }
 
 function RunTest(params, returns, map) {
-  if (debug) {
+  print("RunTest");
+  if (1) {
     for (let i = 0; i < map.length; ++i) {
       map[i] = map[i] % params.length;
     }
     while (map.length < returns.length) {
       map.push(0);
     }
+    //qj debug
+    for (let i = 0; i < params.length; ++i) {
+      print("params[",i,"]:",TypeString(params[i]));
+    }
+    for (let i = 0; i < returns.length; ++i) {
+      print("returns[",i,"]:",TypeString(returns[i]));
+    }
+    for (let i = 0; i < map.length; ++i) {
+      print("map[",i,"]:",map[i]);
+    }
+    //qj debug end
     let testcase = 'RunTest([';
     for (let i = 0; i < params.length; ++i) {
       testcase += (i == 0 ? '' : ', ') + TypeString(params[i]);
@@ -375,12 +400,14 @@ function RunTest(params, returns, map) {
 
   // Check result
   for (let i = 0; i < returns.length; ++i) {
+  print("Check result[",i,"]: ",result[i]);
     assertEquals(
         ConversionFunction(returns[i], params[map[i]], args[map[i]]),
         result[i]);
   }
 }
-
+//qj: here is main func
 for (let i = 0; i < 2; ++i) {
+  print("into iter: ",i);
   GenerateAndRunTest();
 }
