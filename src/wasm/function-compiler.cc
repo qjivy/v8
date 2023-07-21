@@ -203,6 +203,7 @@ void WasmCompilationUnit::CompileWasmFunction(Counters* counters,
 namespace {
 bool UseGenericWrapper(const WasmModule* module, const FunctionSig* sig) {
   if constexpr (!SmiValuesAre31Bits()) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" <1>"<<std::endl;
     // The generic wrapper does not work without pointer compression at the
     // moment because without pointer compression, a JavaScript Smi does not fit
     // into a WebAssembly I31. The JSToWasm wrapper then has to canonicalize Smi
@@ -217,9 +218,12 @@ bool UseGenericWrapper(const WasmModule* module, const FunctionSig* sig) {
      V8_TARGET_ARCH_ARM)
   // We don't use the generic wrapper for asm.js, because it creates invalid
   // stack traces.
+
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" <2>"<<std::endl;
   return !is_asmjs_module(module) && v8_flags.wasm_generic_wrapper &&
          IsJSCompatibleSignature(sig);
 #else
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" <3>"<<std::endl;
   return false;
 #endif
 }
@@ -238,13 +242,16 @@ JSToWasmWrapperCompilationUnit::JSToWasmWrapperCompilationUnit(
       job_(use_generic_wrapper_
                ? nullptr
                : compiler::NewJSToWasmCompilationJob(
-                     isolate, sig, module, is_import, enabled_features)) {}
+                     isolate, sig, module, is_import, enabled_features)) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" use_generic_wrapper_: "<<use_generic_wrapper_<<std::endl;
+}
 
 JSToWasmWrapperCompilationUnit::~JSToWasmWrapperCompilationUnit() = default;
 
 void JSToWasmWrapperCompilationUnit::Execute() {
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.wasm.detailed"),
                "wasm.CompileJSToWasmWrapper");
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" use_generic_wrapper_: "<<use_generic_wrapper_<<std::endl;
   if (!use_generic_wrapper_) {
     CompilationJob::Status status = job_->ExecuteJob(nullptr);
     CHECK_EQ(status, CompilationJob::SUCCEEDED);
@@ -252,6 +259,7 @@ void JSToWasmWrapperCompilationUnit::Execute() {
 }
 
 Handle<Code> JSToWasmWrapperCompilationUnit::Finalize() {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" use_generic_wrapper_: "<<use_generic_wrapper_<<std::endl;
   if (use_generic_wrapper_) {
     return isolate_->builtins()->code_handle(Builtin::kJSToWasmWrapper);
   }
@@ -272,6 +280,7 @@ Handle<Code> JSToWasmWrapperCompilationUnit::Finalize() {
 Handle<Code> JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper(
     Isolate* isolate, const FunctionSig* sig, uint32_t canonical_sig_index,
     const WasmModule* module, bool is_import) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" kAllowGeneric: "<<kAllowGeneric<<std::endl;
   // Run the compilation unit synchronously.
   WasmFeatures enabled_features = WasmFeatures::FromIsolate(isolate);
   JSToWasmWrapperCompilationUnit unit(isolate, sig, canonical_sig_index, module,
@@ -285,6 +294,7 @@ Handle<Code> JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper(
 Handle<Code> JSToWasmWrapperCompilationUnit::CompileSpecificJSToWasmWrapper(
     Isolate* isolate, const FunctionSig* sig, uint32_t canonical_sig_index,
     const WasmModule* module) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" kDontAllowGeneric: "<<kDontAllowGeneric<<std::endl;
   // Run the compilation unit synchronously.
   const bool is_import = false;
   WasmFeatures enabled_features = WasmFeatures::FromIsolate(isolate);

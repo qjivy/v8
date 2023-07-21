@@ -1484,6 +1484,8 @@ Handle<JSFunction> WasmInternalFunction::GetOrCreateExternal(
     // The wrapper may not exist yet if no function in the exports section has
     // this signature. We compile it and store the wrapper in the module for
     // later use.
+
+    std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" about call CompileJSToWasmWrapper"<<std::endl;
     wrapper = wasm::JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper(
         isolate, function.sig, canonical_sig_index, instance->module(),
         function.imported);

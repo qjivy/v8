@@ -1569,6 +1569,7 @@ using JSToWasmWrapperKey = std::pair<bool, uint32_t>;
 // Returns the number of units added.
 int AddExportWrapperUnits(Isolate* isolate, NativeModule* native_module,
                           CompilationUnitBuilder* builder) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   std::unordered_set<JSToWasmWrapperKey, base::hash<JSToWasmWrapperKey>> keys;
   for (auto exp : native_module->module()->export_table) {
     if (exp.kind != kExternalFunction) continue;
@@ -1591,6 +1592,7 @@ int AddExportWrapperUnits(Isolate* isolate, NativeModule* native_module,
     }
     JSToWasmWrapperKey key(function.imported, canonical_type_index);
     if (keys.insert(key).second) {
+      std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" About call JSToWasmWrapperCompilationUnit "<<std::endl;
       auto unit = std::make_shared<JSToWasmWrapperCompilationUnit>(
           isolate, function.sig, canonical_type_index, native_module->module(),
           function.imported, native_module->enabled_features(),
@@ -1605,6 +1607,7 @@ int AddExportWrapperUnits(Isolate* isolate, NativeModule* native_module,
 // Returns the number of units added.
 int AddImportWrapperUnits(NativeModule* native_module,
                           CompilationUnitBuilder* builder) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   std::unordered_set<WasmImportWrapperCache::CacheKey,
                      WasmImportWrapperCache::CacheKeyHash>
       keys;
@@ -1633,14 +1636,19 @@ int AddImportWrapperUnits(NativeModule* native_module,
 std::unique_ptr<CompilationUnitBuilder> InitializeCompilation(
     Isolate* isolate, NativeModule* native_module,
     ProfileInformation* pgo_info) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   CompilationStateImpl* compilation_state =
       Impl(native_module->compilation_state());
   auto builder = std::make_unique<CompilationUnitBuilder>(native_module);
   int num_import_wrappers = AddImportWrapperUnits(native_module, builder.get());
+
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" num_import_wrappers: "<<num_import_wrappers<<std::endl;
   int num_export_wrappers =
       AddExportWrapperUnits(isolate, native_module, builder.get());
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" num_import_wrappers: "<<num_import_wrappers<<" num_export_wrappers: "<<num_export_wrappers<<std::endl;
   compilation_state->InitializeCompilationProgress(
       num_import_wrappers, num_export_wrappers, pgo_info);
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<" finish compilation initialize "<<std::endl;
   return builder;
 }
 
@@ -1885,9 +1893,12 @@ class AsyncCompileJSToWasmWrapperJob final
       std::weak_ptr<NativeModule> native_module, size_t compilation_units)
       : BaseCompileJSToWasmWrapperJob(compilation_units),
         native_module_(std::move(native_module)),
-        engine_barrier_(GetWasmEngine()->GetBarrierForBackgroundCompile()) {}
+        engine_barrier_(GetWasmEngine()->GetBarrierForBackgroundCompile()) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
+}
 
   void Run(JobDelegate* delegate) override {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
     auto engine_scope = engine_barrier_->TryLock();
     if (!engine_scope) return;
     std::shared_ptr<JSToWasmWrapperCompilationUnit> wrapper_unit = nullptr;

@@ -2765,7 +2765,9 @@ class WasmHeapStubCompilationJob final : public TurbofanCompilationJob {
         data_(&zone_stats_, &info_, isolate, wasm::GetWasmEngine()->allocator(),
               graph_, nullptr, nullptr, nullptr,
               zone_->New<NodeOriginTable>(graph_), nullptr, options, nullptr),
-        pipeline_(&data_) {}
+        pipeline_(&data_) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
+	}
 
   WasmHeapStubCompilationJob(const WasmHeapStubCompilationJob&) = delete;
   WasmHeapStubCompilationJob& operator=(const WasmHeapStubCompilationJob&) =
@@ -2793,6 +2795,7 @@ std::unique_ptr<TurbofanCompilationJob> Pipeline::NewWasmHeapStubCompilationJob(
     Isolate* isolate, CallDescriptor* call_descriptor,
     std::unique_ptr<Zone> zone, Graph* graph, CodeKind kind,
     std::unique_ptr<char[]> debug_name, const AssemblerOptions& options) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   return std::make_unique<WasmHeapStubCompilationJob>(
       isolate, call_descriptor, std::move(zone), graph, kind,
       std::move(debug_name), options);

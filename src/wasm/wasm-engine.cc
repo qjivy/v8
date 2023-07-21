@@ -1057,6 +1057,7 @@ void WasmEngine::DeleteCompileJobsOnIsolate(Isolate* isolate) {
 }
 
 OperationsBarrier::Token WasmEngine::StartWrapperCompilation(Isolate* isolate) {
+  std::cout<<__FILE__<<" "<<__FUNCTION__<<" "<<__LINE__<<std::endl;
   base::MutexGuard guard(&mutex_);
   auto isolate_info_it = isolates_.find(isolate);
   if (isolate_info_it == isolates_.end()) return {};
