@@ -288,6 +288,10 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   // that the C++ stack grows faster than the JS stack, resulting in an overflow
   // there. Add a check here to make that less likely.
   StackLimitCheck check(isolate);
+  std::cout << "Invoke GetCurrent C++ StackPosition: " << std::hex
+            << GetCurrentStackPosition()
+            << " realclimit: " << isolate->stack_guard()->real_climit()
+            << std::endl;
   if (check.HasOverflowed()) {
     isolate->StackOverflow();
     isolate->ReportPendingMessages(params.message_handling ==
@@ -416,6 +420,13 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       Address recv = (*params.receiver).ptr();
       Address** argv = reinterpret_cast<Address**>(params.argv);
       RCS_SCOPE(isolate, RuntimeCallCounterId::kJS_Execution);
+      std::cout << "2Invoke GetCurrent C++ StackPosition: " << std::hex
+                << GetCurrentStackPosition()
+                << " realclimit: " << isolate->stack_guard()->real_climit()
+                << " real_jslimit: " << isolate->stack_guard()->real_jslimit()
+                << " c_entry_fp" << *isolate->c_entry_fp_address() << " @"
+                << isolate->c_entry_fp_address() << std::endl;
+
       value = Tagged<Object>(
           stub_entry.Call(isolate->isolate_data()->isolate_root(), orig_func,
                           func, recv, JSParameterCount(params.argc), argv));

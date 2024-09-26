@@ -7407,6 +7407,8 @@ void Isolate::InitializeBuiltinJSDispatchTable() {
          idx = static_cast<JSBuiltinDispatchHandleRoot::Idx>(
              static_cast<int>(idx) + 1)) {
       Builtin builtin = JSBuiltinDispatchHandleRoot::to_builtin(idx);
+      std::cout << __FUNCTION__ << " " << Builtins::name(builtin)
+                << " id: " << Builtins::ToInt(builtin) << std::endl;
       DCHECK(Builtins::IsIsolateIndependent(builtin));
       Tagged<Code> code = builtins_.code(builtin);
       DCHECK(code->entrypoint_tag() == CodeEntrypointTag::kJSEntrypointTag);

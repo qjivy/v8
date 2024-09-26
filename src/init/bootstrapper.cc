@@ -411,6 +411,14 @@ bool IsFunctionMapOrSpecialBuiltin(DirectHandle<Map> map, Builtin builtin,
 Handle<SharedFunctionInfo> CreateSharedFunctionInfoForBuiltin(
     Isolate* isolate, Handle<String> name, Builtin builtin, int len,
     bool adapt) {
+#if 0
+  {
+    v8::String::Utf8Value utf8(isolate, name);
+    printf("%s\n", *utf8 != nullptr ? *utf8 : "null");
+  }
+#endif
+  std::cout << __FUNCTION__ << " " << Builtins::name(builtin)
+            << " id: " << Builtins::ToInt(builtin) << std::endl;
   Handle<SharedFunctionInfo> info =
       isolate->factory()->NewSharedFunctionInfoForBuiltin(name, builtin);
   info->set_language_mode(LanguageMode::kStrict);

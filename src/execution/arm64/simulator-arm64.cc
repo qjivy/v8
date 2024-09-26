@@ -227,6 +227,7 @@ void Simulator::CheckPCSComplianceAndRun() {
 #endif
   // Start the simulation!
   Run();
+  std::cout << "QQA icount_: " << icount_for_stop_sim_at_ << std::endl;
 #ifdef DEBUG
   DCHECK_EQ(original_stack, sp());
   DCHECK_EQ(original_fp, fp());
@@ -422,22 +423,27 @@ void Simulator::Run() {
   LogAllWrittenRegisters();
 
   pc_modified_ = false;
-
-  if (v8_flags.stop_sim_at == 0) {
-    // Fast version of the dispatch loop without checking whether the simulator
-    // should be stopping at a particular executed instruction.
-    while (pc_ != kEndOfSimAddress) {
-      ExecuteInstruction();
-    }
-  } else {
+  /*
+    if (v8_flags.stop_sim_at == 0) {
+       // Fast version of the dispatch loop without checking whether the
+    simulator
+      // should be stopping at a particular executed instruction.
+      while (pc_ != kEndOfSimAddress) {
+        ExecuteInstruction();
+      }
+    } else {
+    */
+  {
     // v8_flags.stop_sim_at is at the non-default value. Stop in the debugger
     // when we reach the particular instruction count.
     while (pc_ != kEndOfSimAddress) {
-      icount_for_stop_sim_at_ =
-          base::AddWithWraparound(icount_for_stop_sim_at_, 1);
+      icount_for_stop_sim_at_ += 1;
+      //          base::AddWithWraparound(icount_for_stop_sim_at_, 1);
+      /*
       if (icount_for_stop_sim_at_ == v8_flags.stop_sim_at) {
         Debug();
       }
+      */
       ExecuteInstruction();
     }
   }
@@ -446,6 +452,7 @@ void Simulator::Run() {
 void Simulator::RunFrom(Instruction* start) {
   set_pc(start);
   Run();
+  std::cout << "QQA icount_: " << icount_for_stop_sim_at_ << std::endl;
 }
 
 // Calls into the V8 runtime are based on this very simple interface.

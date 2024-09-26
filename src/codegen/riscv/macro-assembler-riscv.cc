@@ -6919,8 +6919,9 @@ void MacroAssembler::JumpJSFunction(Register function_object,
       kJSEntrypointTag);
   DCHECK_EQ(jump_mode, JumpMode::kJump);
   // We jump through x17 here because for Branch Identification (BTI) we use
-  // "Call" (`bti c`) rather than "Jump" (`bti j`) landing pads for tail-called
-  // code. See TailCallBuiltin for more information.
+  // //qj: here comment error "Call" (`bti c`) rather than "Jump" (`bti j`)
+  // landing pads for tail-called code. See TailCallBuiltin for more
+  // information.
   DCHECK_NE(code, t6);
   mv(t6, code);
   Jump(t6);

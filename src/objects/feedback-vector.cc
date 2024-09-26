@@ -214,6 +214,7 @@ FeedbackSlotKind FeedbackVector::GetKind(FeedbackSlot slot,
 Handle<ClosureFeedbackCellArray> ClosureFeedbackCellArray::New(
     Isolate* isolate, DirectHandle<SharedFunctionInfo> shared,
     AllocationType allocation) {
+  std::cout << __FUNCTION__ << std::endl;
   int length = shared->feedback_metadata()->create_closure_slot_count();
   if (length == 0) {
     return isolate->factory()->empty_closure_feedback_cell_array();
@@ -250,6 +251,7 @@ Handle<FeedbackVector> FeedbackVector::New(
     DirectHandle<ClosureFeedbackCellArray> closure_feedback_cell_array,
     DirectHandle<FeedbackCell> parent_feedback_cell,
     IsCompiledScope* is_compiled_scope) {
+  std::cout << __FUNCTION__ << std::endl;
   DCHECK(is_compiled_scope->is_compiled());
   Factory* factory = isolate->factory();
 

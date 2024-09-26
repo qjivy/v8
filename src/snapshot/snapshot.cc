@@ -288,6 +288,7 @@ void Snapshot::ClearReconstructableDataForSerialization(
 
       // Also, clear out feedback vectors and recompilable code.
       if (fun->CanDiscardCompiled(isolate)) {
+        std::cout << __FUNCTION__ << " set CompileLazy" << std::endl;
         fun->UpdateCode(*BUILTIN_CODE(isolate, CompileLazy));
       }
       if (!IsUndefined(fun->raw_feedback_cell(cage_base)->value(cage_base))) {

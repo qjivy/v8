@@ -317,6 +317,7 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
                                       Handle<FeedbackVector> vector,
                                       Handle<AbstractCode> abstract_code,
                                       CodeKind kind, double time_taken_ms) {
+  std::cout << __FUNCTION__ << std::endl;
   DCHECK_NE(*abstract_code,
             Cast<AbstractCode>(*BUILTIN_CODE(isolate, CompileLazy)));
 
@@ -1310,6 +1311,7 @@ MaybeHandle<Code> GetOrCompileOptimized(
     Isolate* isolate, Handle<JSFunction> function, ConcurrencyMode mode,
     CodeKind code_kind, BytecodeOffset osr_offset = BytecodeOffset::None(),
     CompileResultBehavior result_behavior = CompileResultBehavior::kDefault) {
+  std::cout << __FUNCTION__ << std::endl;
   DCHECK(CodeKindIsOptimizedJSFunction(code_kind));
 
   DirectHandle<SharedFunctionInfo> shared(function->shared(), isolate);
@@ -2928,6 +2930,8 @@ bool Compiler::Compile(Isolate* isolate, Handle<SharedFunctionInfo> shared_info,
 bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
                        ClearExceptionFlag flag,
                        IsCompiledScope* is_compiled_scope) {
+  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
+            << std::endl;
   // We should never reach here if the function is already compiled or
   // optimized.
   DCHECK(!function->is_compiled(isolate));
@@ -2946,8 +2950,11 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
   *is_compiled_scope = shared_info->is_compiled_scope(isolate);
   if (!is_compiled_scope->is_compiled() &&
       !Compile(isolate, shared_info, flag, is_compiled_scope)) {
+    std::cout << __FUNCTION__ << " <0> " << std::endl;
     return false;
   }
+
+  std::cout << __FUNCTION__ << " <1> " << std::endl;
 
   DCHECK(is_compiled_scope->is_compiled());
   DirectHandle<Code> code(shared_info->GetCode(isolate), isolate);
@@ -2970,6 +2977,8 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
                                               CodeKindForTopTier());
 
     const CodeKind code_kind = CodeKindForTopTier();
+    std::cout << __FUNCTION__ << " kind: " << CodeKindToString(code_kind)
+              << std::endl;
     const ConcurrencyMode concurrency_mode = ConcurrencyMode::kSynchronous;
 
     if (v8_flags.stress_concurrent_inlining &&
@@ -2987,11 +2996,23 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
 
     function->UpdateMaybeContextSpecializedCode(isolate, *code);
   } else {
+    const CodeKind code_kind = CodeKindForTopTier();
+    std::cout << __FUNCTION__ << " kind1: " << CodeKindToString(code_kind)
+              << std::endl;
+
+    std::cout << __FUNCTION__ << " kind2: " << CodeKindToString(code->kind())
+              << std::endl;
+    if (Builtins::IsBuiltin(*code)) {
+      std::cout << __FUNCTION__
+                << " bt-code: " << Builtins::name((*code)->builtin_id())
+                << std::endl;
+    }
     function->UpdateCode(*code);
   }
 
   // Install a feedback vector if necessary.
   if (code->kind() == CodeKind::BASELINE) {
+    std::cout << __FUNCTION__ << " into Baseline" << std::endl;
     JSFunction::EnsureFeedbackVector(isolate, function, is_compiled_scope);
   }
 

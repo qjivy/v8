@@ -3421,6 +3421,7 @@ void MarkCompactCollector::ClearFlushedJsFunctions() {
           // builtin. Once we use leaptiering on all platforms, we can probably
           // simplify the other code related to baseline flushing.
           // TODO(olivf): Should we check that this is baseline code?
+          std::cout << __FUNCTION__ << " set CompileLazy" << std::endl;
           jdt->SetCode(handle, *BUILTIN_CODE(heap_->isolate(), CompileLazy));
         }
       });

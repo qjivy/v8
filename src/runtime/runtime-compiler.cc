@@ -23,14 +23,21 @@ namespace v8::internal {
 namespace {
 void LogExecution(Isolate* isolate, DirectHandle<JSFunction> function) {
   DCHECK(v8_flags.log_function_events);
+  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
+            << std::endl;
   if (!function->has_feedback_vector()) return;
+
+  std::cout << __FUNCTION__ << " <0> " << std::endl;
   if (!function->feedback_vector()->log_next_execution()) return;
+
+  std::cout << __FUNCTION__ << " <0> " << std::endl;
   DirectHandle<SharedFunctionInfo> sfi(function->shared(), isolate);
   DirectHandle<String> name = SharedFunctionInfo::DebugName(isolate, sfi);
   DisallowGarbageCollection no_gc;
   Tagged<SharedFunctionInfo> raw_sfi = *sfi;
   std::string event_name = "first-execution";
   CodeKind kind = function->abstract_code(isolate)->kind(isolate);
+  std::cout << __FUNCTION__ << " kind: " << CodeKindToString(kind) << std::endl;
   // Not adding "-interpreter" for tooling backwards compatiblity.
   if (kind != CodeKind::INTERPRETED_FUNCTION) {
     event_name += "-";
@@ -48,6 +55,8 @@ RUNTIME_FUNCTION(Runtime_CompileLazy) {
   DCHECK_EQ(1, args.length());
   Handle<JSFunction> function = args.at<JSFunction>(0);
   StackLimitCheck check(isolate);
+  std::cout << __FUNCTION__ << " <0> " << function->DebugNameCStr().get()
+            << " is_compiled: " << function->is_compiled(isolate) << std::endl;
   if (V8_UNLIKELY(
           check.JsHasOverflowed(kStackSpaceRequiredForCompilation * KB))) {
     return isolate->StackOverflow();
@@ -66,10 +75,13 @@ RUNTIME_FUNCTION(Runtime_CompileLazy) {
                          &is_compiled_scope)) {
     return ReadOnlyRoots(isolate).exception();
   }
+  std::cout << __FUNCTION__ << " <1>" << std::endl;
   if (V8_UNLIKELY(v8_flags.log_function_events)) {
     LogExecution(isolate, function);
   }
   DCHECK(function->is_compiled(isolate));
+  std::cout << __FUNCTION__ << " <2> kind: "
+            << CodeKindToString(function->code(isolate)->kind()) << std::endl;
   return function->code(isolate);
 }
 
@@ -110,6 +122,7 @@ RUNTIME_FUNCTION(Runtime_InstallSFICode) {
 }
 
 RUNTIME_FUNCTION(Runtime_CompileOptimized) {
+  std::cout << __FUNCTION__ << std::endl;
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   Handle<JSFunction> function = args.at<JSFunction>(0);

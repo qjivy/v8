@@ -2428,6 +2428,14 @@ Simulator::Simulator(Isolate* isolate) : isolate_(isolate), builtins_(isolate) {
   vl_ = 0;
   vlenb_ = 0;
 #endif
+
+#define REG_INFO(name)                             \
+  name, GetRegisterValue(Registers::Number(name)), \
+      GetRegisterValue(Registers::Number(name))
+
+  std::cout << "Simulator New ra: " << std::hex << registers_[ra]
+            << " sp: " << registers_[sp] << " fp: " << registers_[fp]
+            << " gp: " << registers_[gp] << std::endl;
 }
 
 Simulator::~Simulator() {
@@ -8260,6 +8268,7 @@ void Simulator::CallInternal(Address entry) {
 
   // Start the simulation.
   Execute();
+  std::cout << "QQ icount_: " << icount_ << std::endl;
 
   // Check that the callee-saved registers have been preserved.
   CHECK_EQ(callee_saved_value, get_register(s0));
@@ -8299,15 +8308,19 @@ void Simulator::CallImpl(Address entry, CallArgument* args) {
   int index_fp = 0;
   std::vector<int64_t> stack_args(0);
   for (int i = 0; !args[i].IsEnd(); i++) {
+    std::cout << "CallImpl arg[" << i << "]";
     CallArgument arg = args[i];
     if (arg.IsGP() && (index_gp < 8)) {
+      std::cout << " gp arg" << std::endl;
       set_register(index_gp + kRegCode_a0, arg.bits());
       index_gp++;
     } else if (arg.IsFP() && (index_fp < 8)) {
+      std::cout << " fp arg" << std::endl;
       set_fpu_register(index_fp + kDoubleCode_fa0, arg.bits());
       index_fp++;
     } else {
       DCHECK(arg.IsFP() || arg.IsGP());
+      std::cout << " stack arg" << std::endl;
       stack_args.push_back(arg.bits());
     }
   }
@@ -8319,7 +8332,7 @@ void Simulator::CallImpl(Address entry, CallArgument* args) {
               << " a2 (func/target) = 0x" << get_register(a2)
               << " a3 (receiver) = 0x" << get_register(a3) << " a4 (argc) = 0x"
               << get_register(a4) << " a5 (argv) = 0x" << get_register(a5)
-              << std::endl;
+              << " sp = 0x" << get_register(sp) << std::endl;
   }
   // Remaining arguments passed on stack.
   int64_t original_stack = get_register(sp);
@@ -8335,6 +8348,7 @@ void Simulator::CallImpl(Address entry, CallArgument* args) {
   memcpy(stack_argument + kCArgSlotCount, stack_args.data(),
          stack_args.size() * sizeof(int64_t));
   set_register(sp, entry_stack);
+  std::cout << " sp = 0x" << get_register(sp) << std::endl;
   CallInternal(entry);
   // Pop stack passed arguments.
   CHECK_EQ(entry_stack, get_register(sp));

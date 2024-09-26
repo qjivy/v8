@@ -587,6 +587,7 @@ void Generate_JSEntryVariant(MacroAssembler* masm, StackFrame::Type type,
   // If the c_entry_fp is not already zero and we don't clear it, the
   // StackFrameIteratorForProfiler will assume we are executing C++ and miss the
   // JS frames on top.
+  // qj // Do the same for the fast C call fp and pc.
   __ StoreWord(zero_reg, MemOperand(s5));
 
   __ LoadIsolateField(s1, IsolateFieldId::kFastCCallCallerFP);
@@ -609,9 +610,9 @@ void Generate_JSEntryVariant(MacroAssembler* masm, StackFrame::Type type,
   //  or
   //   a1: microtask_queue
   //
-  // Stack:
-  // fast api call pc
-  // fast api call fp
+  // Stack: (好像应该倒过来写，按照高地址到低地址的顺序）
+  // fast api call pc //s3
+  // fast api call fp //s2
   // caller fp          |
   // function slot      | entry frame
   // context slot       |
@@ -637,7 +638,7 @@ void Generate_JSEntryVariant(MacroAssembler* masm, StackFrame::Type type,
 
   // Jump to a faked try block that does the invoke, with a faked catch
   // block that sets the exception.
-  __ BranchShort(&invoke);
+  __ BranchShort(&invoke);  // qj: here really invoke
   __ bind(&handler_entry);
 
   // Store the current pc as the handler offset. It's used later to create the
@@ -686,7 +687,7 @@ void Generate_JSEntryVariant(MacroAssembler* masm, StackFrame::Type type,
   // handler frame
   // entry frame
   // callee saved registers + ra
-  // [ O32: 4 args slots]
+  // [ O32: 4 args slots] #qj: here modify it
   // args
   //
   // Invoke the function by calling through JS entry trampoline builtin and
@@ -772,7 +773,9 @@ static void Generate_JSEntryTrampolineHelper(MacroAssembler* masm,
 
     // Check if we have enough stack space to push all arguments.
     __ mv(a6, a4);
-    Generate_CheckStackOverflow(masm, a6, a0, s2);
+    Generate_CheckStackOverflow(
+        masm, a6, a0,
+        s2);  // qj should here change to UseScratchRegisterScope for a0/s2?
 
     // Copy arguments to the stack.
     // a4: argc
@@ -800,7 +803,7 @@ static void Generate_JSEntryTrampolineHelper(MacroAssembler* masm,
     __ Move(s2, a4);
     __ Move(s3, a4);
     __ Move(s4, a4);
-    __ Move(s5, a4);
+    __ Move(s5, a4);  // qj: why here not save s6~s10?
 #ifndef V8_COMPRESS_POINTERS
     __ Move(s11, a4);
 #endif
@@ -2655,7 +2658,7 @@ void Builtins::Generate_Call(MacroAssembler* masm, ConvertReceiverMode mode) {
   //  -- a0 : the number of arguments
   //  -- a1 : the target to call (can be any Object).
   // -----------------------------------
-
+  // qj: why here not use tempscope
   Register target = a1;
   Register map = t1;
   Register instance_type = t2;
