@@ -317,7 +317,6 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
                                       Handle<FeedbackVector> vector,
                                       Handle<AbstractCode> abstract_code,
                                       CodeKind kind, double time_taken_ms) {
-  std::cout << __FUNCTION__ << std::endl;
   DCHECK_NE(*abstract_code,
             Cast<AbstractCode>(*BUILTIN_CODE(isolate, CompileLazy)));
 
@@ -334,6 +333,8 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
                                  ? Cast<String>(script->name())
                                  : ReadOnlyRoots(isolate).empty_string(),
                              isolate);
+  std::cout << __FUNCTION__ << " " << CodeKindToString(kind) << " "
+            << *script_name << " " << *abstract_code << std::endl;
   LogEventListener::CodeTag log_tag =
       V8FileLogger::ToNativeByScript(code_type, *script);
   PROFILE(isolate, CodeCreateEvent(log_tag, abstract_code, shared, script_name,
@@ -373,6 +374,9 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
 
   DirectHandle<String> debug_name =
       SharedFunctionInfo::DebugName(isolate, shared);
+  std::cout << __FUNCTION__ << " log function: " << *debug_name << " "
+            << name.c_str() << " Gen bytecode  time:" << time_taken_ms
+            << std::endl;
   DisallowGarbageCollection no_gc;
   LOG(isolate, FunctionEvent(name.c_str(), script->id(), time_taken_ms,
                              shared->StartPosition(), shared->EndPosition(),
@@ -718,6 +722,11 @@ template <typename IsolateT>
 void InstallUnoptimizedCode(UnoptimizedCompilationInfo* compilation_info,
                             DirectHandle<SharedFunctionInfo> shared_info,
                             IsolateT* isolate) {
+  {
+    //   DirectHandle<String> name = SharedFunctionInfo::DebugName(isolate,
+    //   shared_info);
+    std::cout << __FUNCTION__ << " for function " << *shared_info << std::endl;
+  }
   if (compilation_info->has_bytecode_array()) {
     DCHECK(!shared_info->HasBytecodeArray());  // Only compiled once.
     DCHECK(!compilation_info->has_asm_wasm_data());
@@ -4474,16 +4483,21 @@ void Compiler::FinalizeMaglevCompilationJob(maglev::MaglevCompilationJob* job,
 void Compiler::PostInstantiation(Isolate* isolate,
                                  DirectHandle<JSFunction> function,
                                  IsCompiledScope* is_compiled_scope) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   DirectHandle<SharedFunctionInfo> shared(function->shared(), isolate);
 
   // If code is compiled to bytecode (i.e., isn't asm.js), then allocate a
   // feedback and check for optimized code.
   if (is_compiled_scope->is_compiled() && shared->HasBytecodeArray()) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <0>"
+              << std::endl;
     // Don't reset budget if there is a closure feedback cell array already. We
     // are just creating a new closure that shares the same feedback cell.
     JSFunction::InitializeFeedbackCell(function, is_compiled_scope, false);
 
     if (function->has_feedback_vector()) {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <1>"
+                << std::endl;
       // Evict any deoptimized code on feedback vector. We need to do this after
       // creating the closure, since any heap allocations could trigger a GC and
       // deoptimized the code on the feedback vector. So check for any
@@ -4504,6 +4518,8 @@ void Compiler::PostInstantiation(Isolate* isolate,
     if (v8_flags.always_turbofan && shared->allows_lazy_compilation() &&
         !shared->optimization_disabled() &&
         !function->HasAvailableOptimizedCode(isolate)) {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <2>"
+                << std::endl;
       CompilerTracer::TraceMarkForAlwaysOpt(isolate, function);
       JSFunction::EnsureFeedbackVector(isolate, function, is_compiled_scope);
       function->MarkForOptimization(isolate, CodeKind::TURBOFAN,
@@ -4512,6 +4528,8 @@ void Compiler::PostInstantiation(Isolate* isolate,
   }
 
   if (shared->is_toplevel() || shared->is_wrapped()) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <3>"
+              << std::endl;
     // If it's a top-level script, report compilation to the debugger.
     DirectHandle<Script> script(Cast<Script>(shared->script()), isolate);
     isolate->debug()->OnAfterCompile(script);

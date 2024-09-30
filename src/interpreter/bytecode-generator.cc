@@ -810,6 +810,8 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
                                           BytecodeGenerator* generator,
                                           Handle<Script> script,
                                           IsolateT* isolate) {
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << std::endl;
     DCHECK(has_constant_pool_entry_);
 
     Handle<FixedArray> data =
@@ -817,6 +819,8 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
 
     int array_index = 0;
     if (info->scope()->is_module_scope()) {
+      std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                << "module scope" << std::endl;
       for (Declaration* decl : *info->scope()->declarations()) {
         Variable* var = decl->var();
         if (!var->is_used()) continue;
@@ -826,6 +830,7 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
 #endif
         if (decl->IsFunctionDeclaration()) {
           FunctionLiteral* f = static_cast<FunctionDeclaration*>(decl)->fun();
+          std::cout << "function decl" << std::endl;
           Handle<SharedFunctionInfo> sfi(
               Compiler::GetSharedFunctionInfo(f, script, isolate));
           // Return a null handle if any initial values can't be created. Caller
@@ -838,6 +843,7 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
           data->set(array_index++, Smi::FromInt(var->index()));
           DCHECK_EQ(start + kModuleFunctionDeclarationSize, array_index);
         } else if (var->IsExport() && var->binding_needs_init()) {
+          std::cout << "module var decl" << std::endl;
           data->set(array_index++, Smi::FromInt(var->index()));
           DCHECK_EQ(start + kModuleVariableDeclarationSize, array_index);
         }
@@ -851,9 +857,11 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
         int start = array_index;
 #endif
         if (decl->IsVariableDeclaration()) {
+          std::cout << "global var decl" << std::endl;
           data->set(array_index++, *var->raw_name()->string());
           DCHECK_EQ(start + kGlobalVariableDeclarationSize, array_index);
         } else {
+          std::cout << "function decl" << std::endl;
           FunctionLiteral* f = static_cast<FunctionDeclaration*>(decl)->fun();
           Handle<SharedFunctionInfo> sfi(
               Compiler::GetSharedFunctionInfo(f, script, isolate));

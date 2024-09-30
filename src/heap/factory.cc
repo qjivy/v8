@@ -4634,6 +4634,7 @@ Factory::JSFunctionBuilder::JSFunctionBuilder(Isolate* isolate,
     : isolate_(isolate), sfi_(sfi), context_(context) {}
 
 Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   PrepareMap();
   PrepareFeedbackCell();
 
@@ -4655,12 +4656,20 @@ Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
 
 Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     DirectHandle<Code> code) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " "
+            << CodeKindToString(code->kind()) << std::endl;
+  if (Builtins::IsBuiltin(*code)) {
+    std::cout << __FUNCTION__
+              << " bt-code: " << Builtins::name((*code)->builtin_id())
+              << std::endl;
+  }
   Isolate* isolate = isolate_;
   Factory* factory = isolate_->factory();
 
   DirectHandle<Map> map = maybe_map_.ToHandleChecked();
   DirectHandle<FeedbackCell> feedback_cell =
       maybe_feedback_cell_.ToHandleChecked();
+  std::cout << *feedback_cell << std::endl;
 
   DCHECK(InstanceTypeChecker::IsJSFunction(*map));
 
@@ -4684,6 +4693,8 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
   // generic many_closures_cell (for example builtin functions), and only for
   // functions using certain kinds of code.
   if (feedback_cell->dispatch_handle() == kNullJSDispatchHandle) {
+    std::cout << "feedback_cell->dispatch_handle() == kNullJSDispatchHandle"
+              << std::endl;
     DCHECK_EQ(*feedback_cell, *factory->many_closures_cell());
     // We currently only expect to see these kinds of Code here. For BASELINE
     // code, we will allocate a FeedbackCell after building the JSFunction. See
@@ -4698,6 +4709,7 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
         isolate, sfi_->internal_formal_parameter_count_with_receiver(), *code,
         code->instruction_start());
   } else {
+    std::cout << "dispatch handle not kNullJSDispatchHandle" << std::endl;
     // TODO(olivf, 42204201): Here we are explicitly not updating (only
     // potentially initializing) the code. Worst case the dispatch handle still
     // contains bytecode or CompileLazy and we'll tier on the next call. Otoh,
@@ -4709,6 +4721,7 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     // and maybe find some alternative to initialize it correctly from the
     // beginning.
     if (!jdt->HasCode(handle) || jdt->GetCode(handle)->is_builtin()) {
+      std::cout << "init the handle in the jdt" << std::endl;
       jdt->SetCode(handle, *code);
     }
     function->set_dispatch_handle(handle);
@@ -4730,6 +4743,7 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
 }
 
 void Factory::JSFunctionBuilder::PrepareMap() {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   if (maybe_map_.is_null()) {
     // No specific map requested, use the default.
     maybe_map_ = handle(
@@ -4739,11 +4753,16 @@ void Factory::JSFunctionBuilder::PrepareMap() {
 }
 
 void Factory::JSFunctionBuilder::PrepareFeedbackCell() {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   Handle<FeedbackCell> feedback_cell;
   if (maybe_feedback_cell_.ToHandle(&feedback_cell)) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <0>"
+              << std::endl;
     // Track the newly-created closure.
     feedback_cell->IncrementClosureCount(isolate_);
   } else {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <1>"
+              << std::endl;
     // Fall back to the many_closures_cell.
     maybe_feedback_cell_ = isolate_->factory()->many_closures_cell();
   }

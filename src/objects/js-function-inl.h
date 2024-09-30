@@ -445,6 +445,10 @@ void JSFunction::ResetIfCodeFlushed(
   if (kBytecodeCanFlush && NeedsResetDueToFlushedBytecode(isolate)) {
     // Bytecode was flushed and function is now uncompiled, reset JSFunction
     // by setting code to CompileLazy and clearing the feedback vector.
+    std::cout << __FUNCTION__
+              << " Bytecode was flushed and function is now uncompiled Update "
+                 "to CompilerLazy"
+              << std::endl;
     UpdateCode(*BUILTIN_CODE(isolate, CompileLazy));
     raw_feedback_cell()->reset_feedback_vector(gc_notify_updated_slot);
     return;
@@ -453,6 +457,10 @@ void JSFunction::ResetIfCodeFlushed(
   DCHECK_IMPLIES(NeedsResetDueToFlushedBaselineCode(isolate),
                  kBaselineCodeCanFlush);
   if (kBaselineCodeCanFlush && NeedsResetDueToFlushedBaselineCode(isolate)) {
+    std::cout
+        << __FUNCTION__
+        << " kBaselineCodeCanFlush UpdateCode to InterpreterEntryTrampoline"
+        << std::endl;
     // Flush baseline code from the closure if required
     UpdateCode(*BUILTIN_CODE(isolate, InterpreterEntryTrampoline));
   }

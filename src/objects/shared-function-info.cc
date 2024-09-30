@@ -102,6 +102,8 @@ Tagged<Code> SharedFunctionInfo::GetCode(Isolate* isolate) const {
       // Having uncompiled data (with or without scope) means we need to
       // compile.
       DCHECK(HasUncompiledData());
+      // qj yes here is the init for JSFunction
+      //      return isolate->builtins()->code(Builtin::kDebugBreakTrampoline);
       return isolate->builtins()->code(Builtin::kCompileLazy);
     }
 #if V8_ENABLE_WEBASSEMBLY

@@ -24,6 +24,7 @@ namespace v8::internal {
 
 FeedbackSlot FeedbackVectorSpec::AddSlot(FeedbackSlotKind kind) {
   int slot = slot_count();
+  std::cout << "FeedbackVectorSpec::AddSlot: " << slot << std::endl;
   int entries_per_slot = FeedbackMetadata::GetSlotSize(kind);
   append(kind);
   for (int i = 1; i < entries_per_slot; i++) {
@@ -81,6 +82,7 @@ void FeedbackMetadata::SetCreateClosureParameterCount(
 template <typename IsolateT>
 Handle<FeedbackMetadata> FeedbackMetadata::New(IsolateT* isolate,
                                                const FeedbackVectorSpec* spec) {
+  std::cout << " FeedbackMetadata::New: " << std::endl;
   auto* factory = isolate->factory();
 
   const int slot_count = spec->slot_count();
@@ -214,8 +216,14 @@ FeedbackSlotKind FeedbackVector::GetKind(FeedbackSlot slot,
 Handle<ClosureFeedbackCellArray> ClosureFeedbackCellArray::New(
     Isolate* isolate, DirectHandle<SharedFunctionInfo> shared,
     AllocationType allocation) {
-  std::cout << __FUNCTION__ << std::endl;
   int length = shared->feedback_metadata()->create_closure_slot_count();
+  {
+    std::cout << "ClosureFeedbackCellArray::" << __FUNCTION__
+              << " length:  " << std::dec << length << std::endl;
+    DirectHandle<String> debug_name =
+        SharedFunctionInfo::DebugName(isolate, shared);
+    std::cout << "for function: " << *debug_name << std::endl;
+  }
   if (length == 0) {
     return isolate->factory()->empty_closure_feedback_cell_array();
   }
@@ -229,7 +237,13 @@ Handle<ClosureFeedbackCellArray> ClosureFeedbackCellArray::New(
 #ifdef V8_ENABLE_LEAPTIERING
     uint16_t parameter_count =
         shared->feedback_metadata()->GetCreateClosureParameterCount(i);
+    std::cout << "In ClosureFeedbackCellArray::" << __FUNCTION__
+              << " initialize_dispatch_handle to CompileLazy "
+              << " para_cnt: " << parameter_count << " cell" << *cell
+              << std::endl;
     Tagged<Code> initial_code = *BUILTIN_CODE(isolate, CompileLazy);
+    // qj no use
+    // Tagged<Code> initial_code = *BUILTIN_CODE(isolate, DebugBreakTrampoline);
     cell->initialize_dispatch_handle(isolate, parameter_count, initial_code,
                                      initial_code->instruction_start());
 #endif
@@ -251,13 +265,14 @@ Handle<FeedbackVector> FeedbackVector::New(
     DirectHandle<ClosureFeedbackCellArray> closure_feedback_cell_array,
     DirectHandle<FeedbackCell> parent_feedback_cell,
     IsCompiledScope* is_compiled_scope) {
-  std::cout << __FUNCTION__ << std::endl;
   DCHECK(is_compiled_scope->is_compiled());
   Factory* factory = isolate->factory();
 
   DirectHandle<FeedbackMetadata> feedback_metadata(shared->feedback_metadata(),
                                                    isolate);
   const int slot_count = feedback_metadata->slot_count();
+  std::cout << " FeedbackVector::" << __FUNCTION__ << *shared
+            << " slot count: " << slot_count << std::endl;
 
   Handle<FeedbackVector> vector = factory->NewFeedbackVector(
       shared, closure_feedback_cell_array, parent_feedback_cell);

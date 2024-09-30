@@ -516,6 +516,9 @@ Handle<String> JSFunction::GetName(Isolate* isolate,
 void JSFunction::EnsureClosureFeedbackCellArray(
     DirectHandle<JSFunction> function,
     bool reset_budget_for_feedback_allocation) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " reset_budget_for_feedback_allocation: "
+            << reset_budget_for_feedback_allocation << std::endl;
   Isolate* const isolate = function->GetIsolate();
   DCHECK(function->shared()->is_compiled());
   DCHECK(function->shared()->HasFeedbackMetadata());
@@ -561,6 +564,8 @@ void JSFunction::EnsureClosureFeedbackCellArray(
     // ever copy a dispatch handle from a FeedbackCell to a JSFunction. That
     // would probably require refactoring the way JSFunctions are built so that
     // we always allocate a FeedbackCell up front (if needed).
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "LeapTiring setting" << std::endl;
     DCHECK_NE(function->dispatch_handle(), kNullJSDispatchHandle);
     // The feedback cell should never contain context specialized code.
     DCHECK(!function->code(isolate)->is_context_specialized());
@@ -592,6 +597,7 @@ void JSFunction::EnsureFeedbackVector(Isolate* isolate,
 void JSFunction::CreateAndAttachFeedbackVector(
     Isolate* isolate, DirectHandle<JSFunction> function,
     IsCompiledScope* compiled_scope) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   CHECK(compiled_scope->is_compiled());
   DCHECK(function->shared()->HasFeedbackMetadata());
   DCHECK(!function->has_feedback_vector());
@@ -640,6 +646,7 @@ void JSFunction::CreateAndAttachFeedbackVector(
 void JSFunction::InitializeFeedbackCell(
     DirectHandle<JSFunction> function, IsCompiledScope* is_compiled_scope,
     bool reset_budget_for_feedback_allocation) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   Isolate* const isolate = function->GetIsolate();
 #if V8_ENABLE_WEBASSEMBLY
   // The following checks ensure that the feedback vectors are compatible with
@@ -672,6 +679,8 @@ void JSFunction::InitializeFeedbackCell(
           CachedTieringDecision::kPending;
 
   if (needs_feedback_vector) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << " needs_feedback_vector true " << std::endl;
     CreateAndAttachFeedbackVector(isolate, function, is_compiled_scope);
   } else {
     EnsureClosureFeedbackCellArray(function,

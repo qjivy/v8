@@ -104,7 +104,9 @@ void LazyBuiltinsAssembler::MaybeTailCallOptimizedCodeSlot(
 }
 
 void LazyBuiltinsAssembler::CompileLazy(TNode<JSFunction> function) {
-  // First lookup code, maybe we don't need to compile!
+  // qj: if break here right
+  // DebugBreak();
+  //  First lookup code, maybe we don't need to compile!
   Label compile_function(this, Label::kDeferred);
 
   // Check the code object for the SFI. If SFI's code entry points to

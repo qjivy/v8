@@ -17039,6 +17039,9 @@ TNode<Code> CodeStubAssembler::GetSharedFunctionInfoCode(
     // Compile lazy
     BIND(&check_is_uncompiled_data);
     sfi_code = HeapConstantNoHole(BUILTIN_CODE(isolate(), CompileLazy));
+    // qj no ues
+    // sfi_code = HeapConstantNoHole(BUILTIN_CODE(isolate(),
+    // DebugBreakTrampoline));
     Goto(if_compile_lazy ? if_compile_lazy : &done);
 
 #if V8_ENABLE_WEBASSEMBLY

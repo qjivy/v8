@@ -1239,6 +1239,7 @@ void Builtins::Generate_BaselineOutOfLinePrologue(MacroAssembler* masm) {
     ASM_CODE_COMMENT_STRING(masm, "Optimized marker check");
     // Drop the frame created by the baseline call.
     __ Pop<MacroAssembler::kAuthLR>(fp, lr);
+    //__ DebugBreak(); //qj: no use
     __ OptimizeCodeOrTailCallOptimizedCodeSlot(flags, feedback_vector);
     __ Trap();
   }
@@ -1539,6 +1540,7 @@ void Builtins::Generate_InterpreterEntryTrampoline(
 #endif  // !V8_JITLESS
 
   __ bind(&compile_lazy);
+  __ DebugBreak();
   __ GenerateTailCallToReturnedCode(Runtime::kCompileLazy);
   __ Unreachable();  // Should not return.
 

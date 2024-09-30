@@ -944,6 +944,8 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
     }
   }
   Local<Script> script;
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << "QQ Start CompileString" << std::endl;
   if (!CompileString<Script>(isolate, context, source, origin)
            .ToLocal(&script)) {
     return false;
@@ -968,6 +970,8 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
         *Utils::OpenDirectHandle(*(origin.GetHostDefinedOptions()))));
   }
 
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << "QQ Start Run" << std::endl;
   MaybeLocal<Value> maybe_result = script->Run(realm);
 
   if (options.code_cache_options ==
@@ -4726,6 +4730,8 @@ bool SourceGroup::Execute(Isolate* isolate) {
     }
     Shell::set_script_executed();
     Shell::update_script_size(source->Length());
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "QQ Start ExecuteString" << std::endl;
     if (!Shell::ExecuteString(isolate, source, file_name,
                               Shell::kReportExceptions)) {
       success = false;

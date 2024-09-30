@@ -473,6 +473,10 @@ class V8_EXPORT_PRIVATE FeedbackVectorSpec {
   }
 
   int AddCreateClosureParameterCount(uint16_t parameter_count) {
+    std::cout << "FeedbackVectorSpec AddCreateClosureParameterCount: "
+              << parameter_count
+              << " create_closure_slot_count(): " << create_closure_slot_count()
+              << std::endl;
     create_closure_parameter_counts_.push_back(parameter_count);
     return create_closure_slot_count() - 1;
   }

@@ -79,6 +79,8 @@ TF_BUILTIN(ReturnReceiver, CodeStubAssembler) {
 
 TF_BUILTIN(DebugBreakTrampoline, CodeStubAssembler) {
   Label tailcall_to_shared(this);
+  // qj yes hit it
+  // DebugBreak();
   auto context = Parameter<Context>(Descriptor::kContext);
   auto new_target = Parameter<Object>(Descriptor::kJSNewTarget);
   auto arg_count =

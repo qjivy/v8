@@ -24,13 +24,13 @@ namespace {
 void LogExecution(Isolate* isolate, DirectHandle<JSFunction> function) {
   DCHECK(v8_flags.log_function_events);
   std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
-            << std::endl;
+            << *function << std::endl;
   if (!function->has_feedback_vector()) return;
 
   std::cout << __FUNCTION__ << " <0> " << std::endl;
   if (!function->feedback_vector()->log_next_execution()) return;
 
-  std::cout << __FUNCTION__ << " <0> " << std::endl;
+  std::cout << __FUNCTION__ << " <1> " << std::endl;
   DirectHandle<SharedFunctionInfo> sfi(function->shared(), isolate);
   DirectHandle<String> name = SharedFunctionInfo::DebugName(isolate, sfi);
   DisallowGarbageCollection no_gc;
@@ -174,6 +174,7 @@ RUNTIME_FUNCTION(Runtime_CompileOptimized) {
 }
 
 RUNTIME_FUNCTION(Runtime_FunctionLogNextExecution) {
+  std::cout << __FUNCTION__ << std::endl;
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> js_function = args.at<JSFunction>(0);
