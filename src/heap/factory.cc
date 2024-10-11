@@ -4638,7 +4638,9 @@ Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
   PrepareMap();
   PrepareFeedbackCell();
 
-  DirectHandle<Code> code(sfi_->GetCode(isolate_), isolate_);
+  DirectHandle<Code> code(
+      sfi_->GetCode(isolate_),
+      isolate_);  // qj: Yes here it get the default code from SFI
   // Retain the code across the call to BuildRaw, because it allocates and can
   // trigger code to be flushed. Otherwise the SFI's compiled state and the
   // function's compiled state can diverge, and the call to PostInstantiation
@@ -4709,7 +4711,10 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
         isolate, sfi_->internal_formal_parameter_count_with_receiver(), *code,
         code->instruction_start());
   } else {
-    std::cout << "dispatch handle not kNullJSDispatchHandle" << std::endl;
+    std::cout << "dispatch handle2index: "
+              << ((uint32_t)feedback_cell->dispatch_handle() >>
+                  kJSDispatchHandleShift)
+              << " Name: " << sfi_->Name() << std::endl;
     // TODO(olivf, 42204201): Here we are explicitly not updating (only
     // potentially initializing) the code. Worst case the dispatch handle still
     // contains bytecode or CompileLazy and we'll tier on the next call. Otoh,
@@ -4721,7 +4726,8 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     // and maybe find some alternative to initialize it correctly from the
     // beginning.
     if (!jdt->HasCode(handle) || jdt->GetCode(handle)->is_builtin()) {
-      std::cout << "init the handle in the jdt" << std::endl;
+      std::cout << "set the code field in jdt, the para-cnt: "
+                << jdt->GetParameterCount(handle) << std::endl;
       jdt->SetCode(handle, *code);
     }
     function->set_dispatch_handle(handle);

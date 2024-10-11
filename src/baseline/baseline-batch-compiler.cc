@@ -65,7 +65,8 @@ class BaselineCompilerTask {
       return;
     }
 
-    shared_function_info_->set_baseline_code(*code, kReleaseStore);
+    shared_function_info_->set_baseline_code(
+        *code, kReleaseStore);  // qj: now you see the code  "installed" to sfi
     shared_function_info_->set_age(0);
     if (v8_flags.trace_baseline) {
       CodeTracer::Scope scope(isolate->GetCodeTracer());
@@ -253,7 +254,9 @@ bool BaselineBatchCompiler::concurrent() const {
          !isolate_->EfficiencyModeEnabledForTiering();
 }
 
-void BaselineBatchCompiler::EnqueueFunction(DirectHandle<JSFunction> function) {
+void BaselineBatchCompiler::EnqueueFunction(
+    DirectHandle<JSFunction>
+        function) {  // qj: here call by TieringManager::OnInterruptTick
   DirectHandle<SharedFunctionInfo> shared(function->shared(), isolate_);
   // Immediately compile the function if batch compilation is disabled.
   if (!is_enabled()) {
@@ -263,9 +266,9 @@ void BaselineBatchCompiler::EnqueueFunction(DirectHandle<JSFunction> function) {
                               &is_compiled_scope);
     return;
   }
-  if (ShouldCompileBatch(*shared)) {
+  if (ShouldCompileBatch(*shared)) {  // qj: here judge
     if (concurrent()) {
-      CompileBatchConcurrent(*shared);
+      CompileBatchConcurrent(*shared);  // qj: here kick off
     } else {
       CompileBatch(function);
     }
@@ -327,7 +330,8 @@ void BaselineBatchCompiler::CompileBatch(DirectHandle<JSFunction> function) {
 void BaselineBatchCompiler::CompileBatchConcurrent(
     Tagged<SharedFunctionInfo> shared) {
   Enqueue(Handle<SharedFunctionInfo>(shared, isolate_));
-  concurrent_compiler_->CompileBatch(compilation_queue_, last_index_);
+  concurrent_compiler_->CompileBatch(compilation_queue_,
+                                     last_index_);  // qj: here kickoff
   ClearBatch();
 }
 
@@ -339,7 +343,8 @@ bool BaselineBatchCompiler::ShouldCompileBatch(
   // If we're already compiling this function, return.
   if (shared->is_sparkplug_compiling()) return false;
   if (!CanCompileWithBaseline(isolate_, shared)) return false;
-
+  // qj: now you know why batch creatP, CalcNormal and Init, because their
+  // estimated_size are accumulated
   int estimated_size;
   {
     DisallowHeapAllocation no_gc;

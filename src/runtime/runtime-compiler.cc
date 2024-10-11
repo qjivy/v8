@@ -23,7 +23,7 @@ namespace v8::internal {
 namespace {
 void LogExecution(Isolate* isolate, DirectHandle<JSFunction> function) {
   DCHECK(v8_flags.log_function_events);
-  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
+  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get() << " "
             << *function << std::endl;
   if (!function->has_feedback_vector()) return;
 
@@ -90,6 +90,8 @@ RUNTIME_FUNCTION(Runtime_InstallBaselineCode) {
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> function = args.at<JSFunction>(0);
   DirectHandle<SharedFunctionInfo> sfi(function->shared(), isolate);
+  std::cout << __FUNCTION__
+            << " jsfunction: " << function->DebugNameCStr().get() << std::endl;
   DCHECK(sfi->HasBaselineCode());
   {
     if (!V8_ENABLE_LEAPTIERING_BOOL || !function->has_feedback_vector()) {
@@ -101,7 +103,8 @@ RUNTIME_FUNCTION(Runtime_InstallBaselineCode) {
     }
     DisallowGarbageCollection no_gc;
     Tagged<Code> baseline_code = sfi->baseline_code(kAcquireLoad);
-    function->UpdateCode(baseline_code);
+    function->UpdateCode(
+        baseline_code);  // qj: here you know updatecode do the JDT update!!!
     if V8_LIKELY (!v8_flags.log_function_events) return baseline_code;
   }
   DCHECK(v8_flags.log_function_events);
@@ -115,6 +118,8 @@ RUNTIME_FUNCTION(Runtime_InstallSFICode) {
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> function = args.at<JSFunction>(0);
   Tagged<SharedFunctionInfo> sfi = function->shared();
+  std::cout << __FUNCTION__
+            << " jsfunction: " << function->DebugNameCStr().get() << std::endl;
   DCHECK(sfi->is_compiled());
   Tagged<Code> sfi_code = sfi->GetCode(isolate);
   function->UpdateCode(sfi_code);
@@ -122,7 +127,6 @@ RUNTIME_FUNCTION(Runtime_InstallSFICode) {
 }
 
 RUNTIME_FUNCTION(Runtime_CompileOptimized) {
-  std::cout << __FUNCTION__ << std::endl;
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   Handle<JSFunction> function = args.at<JSFunction>(0);
@@ -152,6 +156,10 @@ RUNTIME_FUNCTION(Runtime_CompileOptimized) {
       UNREACHABLE();
   }
 
+  std::cout << __FUNCTION__
+            << " jsfunction: " << function->DebugNameCStr().get()
+            << " target_code_kind: " << CodeKindToString(target_kind)
+            << std::endl;
   // As a pre- and post-condition of CompileOptimized, the function *must* be
   // compiled, i.e. the installed InstructionStream object must not be
   // CompileLazy.
@@ -174,10 +182,12 @@ RUNTIME_FUNCTION(Runtime_CompileOptimized) {
 }
 
 RUNTIME_FUNCTION(Runtime_FunctionLogNextExecution) {
-  std::cout << __FUNCTION__ << std::endl;
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> js_function = args.at<JSFunction>(0);
+  std::cout << __FUNCTION__
+            << " jsfunction: " << js_function->DebugNameCStr().get()
+            << std::endl;
   DCHECK(v8_flags.log_function_events);
   LogExecution(isolate, js_function);
   return js_function->code(isolate);

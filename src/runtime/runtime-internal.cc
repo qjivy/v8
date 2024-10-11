@@ -379,6 +379,8 @@ Tagged<Object> BytecodeBudgetInterruptWithStackCheck(Isolate* isolate,
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> function = args.at<JSFunction>(0);
+  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
+            << std::endl;
   TRACE_EVENT0("v8.execute", "V8.BytecodeBudgetInterruptWithStackCheck");
 
   // Check for stack interrupts here so that we can fold the interrupt check
@@ -405,6 +407,8 @@ Tagged<Object> BytecodeBudgetInterrupt(Isolate* isolate, RuntimeArguments& args,
   HandleScope scope(isolate);
   DCHECK_EQ(1, args.length());
   DirectHandle<JSFunction> function = args.at<JSFunction>(0);
+  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
+            << std::endl;
   TRACE_EVENT0("v8.execute", "V8.BytecodeBudgetInterrupt");
 
   isolate->tiering_manager()->OnInterruptTick(function, code_kind);
@@ -414,28 +418,34 @@ Tagged<Object> BytecodeBudgetInterrupt(Isolate* isolate, RuntimeArguments& args,
 }  // namespace
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterruptWithStackCheck_Ignition) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterruptWithStackCheck(isolate, args,
                                                CodeKind::INTERPRETED_FUNCTION);
 }
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterrupt_Ignition) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterrupt(isolate, args, CodeKind::INTERPRETED_FUNCTION);
 }
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterruptWithStackCheck_Sparkplug) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterruptWithStackCheck(isolate, args,
                                                CodeKind::BASELINE);
 }
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterrupt_Sparkplug) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterrupt(isolate, args, CodeKind::BASELINE);
 }
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterrupt_Maglev) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterrupt(isolate, args, CodeKind::MAGLEV);
 }
 
 RUNTIME_FUNCTION(Runtime_BytecodeBudgetInterruptWithStackCheck_Maglev) {
+  std::cout << __FUNCTION__ << std::endl;
   return BytecodeBudgetInterruptWithStackCheck(isolate, args, CodeKind::MAGLEV);
 }
 

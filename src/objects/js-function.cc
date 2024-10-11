@@ -239,6 +239,11 @@ void JSFunction::MarkForOptimization(Isolate* isolate, CodeKind target_kind,
 
 void JSFunction::SetInterruptBudget(
     Isolate* isolate, std::optional<CodeKind> override_active_tier) {
+  std::cout << __FUNCTION__ << " for: " << this->DebugNameCStr().get()
+            << " to: "
+            << TieringManager::InterruptBudgetFor(isolate, *this,
+                                                  override_active_tier)
+            << std::endl;
   raw_feedback_cell()->set_interrupt_budget(
       TieringManager::InterruptBudgetFor(isolate, *this, override_active_tier));
 }
@@ -1397,8 +1402,10 @@ int JSFunction::CalculateExpectedNofProperties(Isolate* isolate,
     DirectHandle<SharedFunctionInfo> shared(func->shared(), isolate);
     IsCompiledScope is_compiled_scope(shared->is_compiled_scope(isolate));
     if (is_compiled_scope.is_compiled() ||
-        Compiler::Compile(isolate, func, Compiler::CLEAR_EXCEPTION,
-                          &is_compiled_scope)) {
+        Compiler::Compile(
+            isolate, func,
+            Compiler::CLEAR_EXCEPTION,  // qj: here compile the constructor
+            &is_compiled_scope)) {
       DCHECK(shared->is_compiled());
       int count = shared->expected_nof_properties();
       // Check that the estimate is sensible.

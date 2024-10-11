@@ -523,6 +523,8 @@ TieringManager::OnInterruptTickScope::OnInterruptTickScope() {
 
 void TieringManager::OnInterruptTick(DirectHandle<JSFunction> function,
                                      CodeKind code_kind) {
+  std::cout << __FUNCTION__ << " kind: " << CodeKindToString(code_kind) << " "
+            << function->DebugNameCStr().get() << std::endl;
   IsCompiledScope is_compiled_scope(
       function->shared()->is_compiled_scope(isolate_));
 
@@ -541,7 +543,12 @@ void TieringManager::OnInterruptTick(DirectHandle<JSFunction> function,
   const bool compile_sparkplug =
       CanCompileWithBaseline(isolate_, function->shared()) &&
       function->ActiveTierIsIgnition(isolate_) && !maybe_had_optimized_osr_code;
-
+  std::cout << __FUNCTION__ << " "
+            << " had_feedback_vector: " << had_feedback_vector
+            << " first_time_tiered_up_to_sparkplug: "
+            << first_time_tiered_up_to_sparkplug
+            << " maybe_had_optimized_osr_code: " << maybe_had_optimized_osr_code
+            << " compile_sparkplug: " << compile_sparkplug << std::endl;
   // Ensure that the feedback vector has been allocated.
   if (!had_feedback_vector) {
     if (compile_sparkplug && function->shared()->cached_tiering_decision() ==
@@ -575,10 +582,14 @@ void TieringManager::OnInterruptTick(DirectHandle<JSFunction> function,
   if (compile_sparkplug) {
 #ifdef V8_ENABLE_SPARKPLUG
     if (v8_flags.baseline_batch_compilation) {
+      std::cout << __FUNCTION__ << "<0> into baseline batch enqueue "
+                << function->DebugNameCStr().get() << std::endl;
       isolate_->baseline_batch_compiler()->EnqueueFunction(function);
     } else {
       IsCompiledScope is_compiled_scope(
           function->shared()->is_compiled_scope(isolate_));
+      std::cout << __FUNCTION__ << "<1> into CompileBaseline "
+                << function->DebugNameCStr().get() << std::endl;
       Compiler::CompileBaseline(isolate_, function, Compiler::CLEAR_EXCEPTION,
                                 &is_compiled_scope);
     }
@@ -589,6 +600,8 @@ void TieringManager::OnInterruptTick(DirectHandle<JSFunction> function,
 
   // We only tier up beyond sparkplug if we already had a feedback vector.
   if (first_time_tiered_up_to_sparkplug) {
+    std::cout << __FUNCTION__ << "<2> first_time_tiered_up_to_sparkplug"
+              << std::endl;
     // If we didn't have a feedback vector, the interrupt budget has already
     // been set by JSFunction::CreateAndAttachFeedbackVector, so no need to
     // set it again.

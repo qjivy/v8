@@ -333,8 +333,8 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
                                  ? Cast<String>(script->name())
                                  : ReadOnlyRoots(isolate).empty_string(),
                              isolate);
-  std::cout << __FUNCTION__ << " " << CodeKindToString(kind) << " "
-            << *script_name << " " << *abstract_code << std::endl;
+  std::cout << __FUNCTION__ << " " << CodeKindToString(kind) << " " << *shared
+            << " " << *abstract_code << std::endl;
   LogEventListener::CodeTag log_tag =
       V8FileLogger::ToNativeByScript(code_type, *script);
   PROFILE(isolate, CodeCreateEvent(log_tag, abstract_code, shared, script_name,
@@ -374,8 +374,8 @@ void Compiler::LogFunctionCompilation(Isolate* isolate,
 
   DirectHandle<String> debug_name =
       SharedFunctionInfo::DebugName(isolate, shared);
-  std::cout << __FUNCTION__ << " log function: " << *debug_name << " "
-            << name.c_str() << " Gen bytecode  time:" << time_taken_ms
+  std::cout << __FUNCTION__ << " log function: " << *debug_name
+            << " gen code type: " << name.c_str() << " time:" << time_taken_ms
             << std::endl;
   DisallowGarbageCollection no_gc;
   LOG(isolate, FunctionEvent(name.c_str(), script->id(), time_taken_ms,
@@ -2939,8 +2939,8 @@ bool Compiler::Compile(Isolate* isolate, Handle<SharedFunctionInfo> shared_info,
 bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
                        ClearExceptionFlag flag,
                        IsCompiledScope* is_compiled_scope) {
-  std::cout << __FUNCTION__ << " " << function->DebugNameCStr().get()
-            << std::endl;
+  std::cout << __FUNCTION__ << " for jsfunction name "
+            << function->DebugNameCStr().get() << std::endl;
   // We should never reach here if the function is already compiled or
   // optimized.
   DCHECK(!function->is_compiled(isolate));
@@ -2958,7 +2958,8 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
   // Ensure shared function info is compiled.
   *is_compiled_scope = shared_info->is_compiled_scope(isolate);
   if (!is_compiled_scope->is_compiled() &&
-      !Compile(isolate, shared_info, flag, is_compiled_scope)) {
+      !Compile(isolate, shared_info, flag,
+               is_compiled_scope)) {  // qj: see here into  Compile
     std::cout << __FUNCTION__ << " <0> " << std::endl;
     return false;
   }
@@ -3012,8 +3013,11 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
     std::cout << __FUNCTION__ << " kind2: " << CodeKindToString(code->kind())
               << std::endl;
     if (Builtins::IsBuiltin(*code)) {
-      std::cout << __FUNCTION__
-                << " bt-code: " << Builtins::name((*code)->builtin_id())
+      std::cout << __FUNCTION__ << " bt-code: "
+                << Builtins::name(
+                       (*code)->builtin_id())  // qj: here now Init has compiled
+                                               // to Bytecode and it;s code set
+                                               // to InterpreterEntryTrampoline
                 << std::endl;
     }
     function->UpdateCode(*code);
@@ -3680,6 +3684,7 @@ MaybeHandle<SharedFunctionInfo> CompileScriptOnMainThread(
     MaybeHandle<Script> maybe_script, IsCompiledScope* is_compiled_scope,
     CompileHintCallback compile_hint_callback = nullptr,
     void* compile_hint_callback_data = nullptr) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   UnoptimizedCompileState compile_state;
   ReusableUnoptimizedCompileState reusable_state(isolate);
   ParseInfo parse_info(isolate, flags, &compile_state, &reusable_state);
