@@ -39,6 +39,7 @@ void MaybeReportStatistics(ParseInfo* info, DirectHandle<Script> script,
 bool ParseProgram(ParseInfo* info, DirectHandle<Script> script,
                   MaybeHandle<ScopeInfo> maybe_outer_scope_info,
                   Isolate* isolate, ReportStatisticsMode mode) {
+  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
   DCHECK(info->flags().is_toplevel());
   DCHECK_NULL(info->literal());
 

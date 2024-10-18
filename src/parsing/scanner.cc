@@ -98,10 +98,12 @@ Scanner::Scanner(Utf16CharacterStream* source, UnoptimizedCompileFlags flags)
       found_html_comment_(false),
       octal_pos_(Location::invalid()),
       octal_message_(MessageTemplate::kNone) {
+  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
   DCHECK_NOT_NULL(source);
 }
 
 void Scanner::Initialize() {
+  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
   // Need to capture identifiers in order to recognize "get" and "set"
   // in object literals.
   Init();

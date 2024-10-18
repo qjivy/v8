@@ -1601,7 +1601,8 @@ bool NeedsContextInitialization(DeclarationScope* scope) {
 }
 }  // namespace
 
-void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {
+void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) { //qj
+  std::cout<<__FUNCTION__<<" stack_limit: "<<std::hex<<stack_limit<<std::endl;
   InitializeAstVisitor(stack_limit);
   if (v8_flags.stress_lazy_compilation && local_isolate_->is_main_thread()) {
     // Trigger stack overflow with 1/stress_lazy_compilation probability.

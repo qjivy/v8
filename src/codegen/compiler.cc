@@ -412,7 +412,7 @@ CompilationJob::Status UnoptimizedCompilationJob::ExecuteJob() {
   DCHECK_EQ(state(), State::kReadyToExecute);
   base::ScopedTimer t(v8_flags.log_function_events ? &time_taken_to_execute_
                                                    : nullptr);
-  return UpdateState(ExecuteJobImpl(), State::kReadyToFinalize);
+  return UpdateState(ExecuteJobImpl(), State::kReadyToFinalize); //qj
 }
 
 CompilationJob::Status UnoptimizedCompilationJob::FinalizeJob(
@@ -853,7 +853,7 @@ ExecuteSingleUnoptimizedCompilationJob(
           parse_info, literal, script, allocator, eager_inner_literals,
           local_isolate));
 
-  if (job->ExecuteJob() != CompilationJob::SUCCEEDED) {
+  if (job->ExecuteJob() != CompilationJob::SUCCEEDED) { //qj
     // Compilation failed, return null.
     return std::unique_ptr<UnoptimizedCompilationJob>();
   }
@@ -884,7 +884,7 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
     // the inner function in that case.
     if (shared_info.is_null()) continue;
     if (shared_info->is_compiled()) continue;
-
+//qj: here compile
     std::unique_ptr<UnoptimizedCompilationJob> job =
         ExecuteSingleUnoptimizedCompilationJob(parse_info, literal, script,
                                                allocator, &functions_to_compile,
@@ -1559,6 +1559,7 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
     ParseInfo* parse_info, Handle<Script> script,
     MaybeHandle<ScopeInfo> maybe_outer_scope_info, Isolate* isolate,
     IsCompiledScope* is_compiled_scope) {
+  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
   TimerEventScope<TimerEventCompileCode> top_level_timer(isolate);
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"), "V8.CompileCode");
   DCHECK_EQ(ThreadId::Current(), isolate->thread_id());
@@ -2892,16 +2893,17 @@ bool Compiler::Compile(Isolate* isolate, Handle<SharedFunctionInfo> shared_info,
   }
 
   // Parse and update ParseInfo with the results.
-  if (!parsing::ParseAny(&parse_info, shared_info, isolate,
+  if (!parsing::ParseAny(&parse_info, shared_info, isolate, //qj: here to non-toplevel script then parse
                          parsing::ReportStatisticsMode::kYes)) {
     return FailWithException(isolate, script, &parse_info, flag);
   }
   parse_info.literal()->set_shared_function_info(shared_info);
+  std::cout<<__FUNCTION__<<" ParseAny end"<<std::endl;
 
   // Generate the unoptimized bytecode or asm-js data.
   FinalizeUnoptimizedCompilationDataList
       finalize_unoptimized_compilation_data_list;
-
+//qj: here compile to bytecode
   if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
           isolate, script, &parse_info, isolate->allocator(), is_compiled_scope,
           &finalize_unoptimized_compilation_data_list, nullptr)) {
