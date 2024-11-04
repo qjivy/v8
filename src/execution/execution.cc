@@ -113,7 +113,9 @@ InvokeParams InvokeParams::SetUpForCall(Isolate* isolate,
   DCHECK_IMPLIES(params.IsScript(), IsFixedArray(*argv[0]));
   params.argc = argc;
   params.argv = argv;
-  params.new_target = isolate->factory()->undefined_value();
+  params.new_target =
+      isolate->factory()
+          ->undefined_value();  // qj: here you know undefined value:
   params.microtask_queue = nullptr;
   params.message_handling = Execution::MessageHandling::kReport;
   params.exception_out = nullptr;
@@ -291,6 +293,7 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
   std::cout << "Invoke GetCurrent C++ StackPosition: " << std::hex
             << GetCurrentStackPosition()
             << " realclimit: " << isolate->stack_guard()->real_climit()
+            << " target is JSFUNCTION: " << IsJSFunction(*params.target)
             << std::endl;
   if (check.HasOverflowed()) {
     isolate->StackOverflow();
@@ -394,8 +397,8 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
 
   // Placeholder for return value.
   Tagged<Object> value;
-  DirectHandle<Code> code =
-      JSEntry(isolate, params.execution_target, params.is_construct);
+  DirectHandle<Code> code = JSEntry(isolate, params.execution_target,
+                                    params.is_construct);  // qj: here JSEntry
   {
     // Save and restore context around invocation and block the
     // allocation of handles without explicit handle scopes.
@@ -405,12 +408,14 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
     if (v8_flags.clear_exceptions_on_js_entry) isolate->clear_exception();
 
     if (params.execution_target == Execution::Target::kCallable) {
+      std::cout << "params.execution_target is Execution::Target::kCallable"
+                << std::endl;
       // clang-format off
       // {new_target}, {target}, {receiver}, return value: tagged pointers
       // {argv}: pointer to array of tagged pointers
       using JSEntryFunction = GeneratedCode<Address(
           Address root_register_value, Address new_target, Address target,
-          Address receiver, intptr_t argc, Address** argv)>;
+          Address receiver, intptr_t argc, Address** argv)>; //this is JSEntry's signature
       // clang-format on
       JSEntryFunction stub_entry =
           JSEntryFunction::FromAddress(isolate, code->instruction_start());
@@ -424,12 +429,12 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
                 << GetCurrentStackPosition()
                 << " realclimit: " << isolate->stack_guard()->real_climit()
                 << " real_jslimit: " << isolate->stack_guard()->real_jslimit()
-                << " c_entry_fp" << *isolate->c_entry_fp_address() << " @"
+                << " c_entry_fp: " << *isolate->c_entry_fp_address() << " @"
                 << isolate->c_entry_fp_address() << std::endl;
 
-      value = Tagged<Object>(
-          stub_entry.Call(isolate->isolate_data()->isolate_root(), orig_func,
-                          func, recv, JSParameterCount(params.argc), argv));
+      value = Tagged<Object>(stub_entry.Call(
+          isolate->isolate_data()->isolate_root(), orig_func, func, recv,
+          JSParameterCount(params.argc), argv));  // qj: here really call
     } else {
       DCHECK_EQ(Execution::Target::kRunMicrotasks, params.execution_target);
 

@@ -5366,9 +5366,10 @@ void MacroAssembler::StackOverflowCheck(Register num_args, Register scratch1,
   }
 }
 
-void MacroAssembler::InvokePrologue(Register expected_parameter_count,
-                                    Register actual_parameter_count,
-                                    Label* done, InvokeType type) {
+void MacroAssembler::InvokePrologue(
+    Register expected_parameter_count, Register actual_parameter_count,
+    Label* done,
+    InvokeType type) {  // qj:here you konw the acutal overapplication path
   Label regular_invoke;
 
   //  a0: actual arguments count

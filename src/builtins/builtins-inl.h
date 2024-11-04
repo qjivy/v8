@@ -55,7 +55,8 @@ constexpr Builtin Builtins::CallFunction(ConvertReceiverMode mode) {
 }
 
 // static
-constexpr Builtin Builtins::Call(ConvertReceiverMode mode) {
+constexpr Builtin Builtins::Call(
+    ConvertReceiverMode mode) {  // qj: here choose Call
   switch (mode) {
     case ConvertReceiverMode::kNullOrUndefined:
       return Builtin::kCall_ReceiverIsNullOrUndefined;

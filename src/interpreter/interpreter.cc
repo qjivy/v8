@@ -181,7 +181,9 @@ InterpreterCompilationJob::InterpreterCompilationJob(
                  parse_info->ast_string_constants(), eager_inner_literals,
                  script) {}
 
-InterpreterCompilationJob::Status InterpreterCompilationJob::ExecuteJobImpl() { //qj: here is the impl of unoptimizedcompilation job
+InterpreterCompilationJob::Status
+InterpreterCompilationJob::ExecuteJobImpl() {  // qj: here is the impl of
+                                               // unoptimizedcompilation job
   RCS_SCOPE(parse_info()->runtime_call_stats(),
             RuntimeCallCounterId::kCompileIgnition,
             RuntimeCallStats::kThreadSpecific);

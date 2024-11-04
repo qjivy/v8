@@ -700,7 +700,7 @@ void MaybeProcessSourceRanges(ParseInfo* parse_info, Expression* root,
 void Parser::ParseProgram(Isolate* isolate, DirectHandle<Script> script,
                           ParseInfo* info,
                           MaybeHandle<ScopeInfo> maybe_outer_scope_info) {
-  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK_EQ(script->id(), flags().script_id());
 
   // It's OK to use the Isolate & counters here, since this function is only
@@ -749,7 +749,7 @@ FunctionLiteral* Parser::DoParseProgram(Isolate* isolate, ParseInfo* info) {
   // background thread. We should not access anything Isolate / heap dependent
   // via ParseInfo, and also not pass it forward. If not on the main thread
   // isolate will be nullptr.
-  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK_EQ(parsing_on_main_thread_, isolate != nullptr);
   DCHECK_NULL(scope_);
 
@@ -995,7 +995,7 @@ Expression* Parser::WrapREPLResult(Expression* value) {
 
 void Parser::ParseFunction(Isolate* isolate, ParseInfo* info,
                            DirectHandle<SharedFunctionInfo> shared_info) {
-  std::cout << __FUNCTION__ << " "<< __LINE__<<" "<<__FILE__<<std::endl;
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // It's OK to use the Isolate & counters here, since this function is only
   // called in the main thread.
   DCHECK(parsing_on_main_thread_);
@@ -2985,7 +2985,12 @@ bool Parser::SkipFunction(const AstRawString* function_name, FunctionKind kind,
 
   DCHECK_IMPLIES(IsArrowFunction(kind),
                  scanner()->current_token() == Token::kArrow);
-  std::cout<<__FUNCTION__<<" "<<function_name<<" "<<FunctionKind2String(kind)<<" num_parameters: "<<*num_parameters<<" function_length: "<<*function_length<<" consumed_preparse_data_: "<<consumed_preparse_data_<<std::endl;
+  std::cout << __FUNCTION__ << " " << function_name << " "
+            << FunctionKind2String(kind)
+            << " num_parameters: " << *num_parameters
+            << " function_length: " << *function_length
+            << " consumed_preparse_data_: " << consumed_preparse_data_
+            << std::endl;
   // FIXME(marja): There are 2 ways to skip functions now. Unify them.
   if (consumed_preparse_data_) {
     int end_position;
@@ -3075,9 +3080,12 @@ bool Parser::SkipFunction(const AstRawString* function_name, FunctionKind kind,
     }
     function_scope->AnalyzePartially(this, factory(), MaybeParsingArrowhead());
   }
-  std::cout<<__FUNCTION__<<" "<<function_name<<" "<<FunctionKind2String(kind)<<" num_parameters: "<<*num_parameters<<" function_length: "<<*function_length<<std::endl;
+  std::cout << __FUNCTION__ << " " << function_name << " "
+            << FunctionKind2String(kind)
+            << " num_parameters: " << *num_parameters
+            << " function_length: " << *function_length << std::endl;
   function_name->Print();
-  std::cout<<std::endl;
+  std::cout << std::endl;
   return true;
 }
 

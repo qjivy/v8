@@ -688,18 +688,26 @@ void JSFunction::InitializeFeedbackCell(
               << " needs_feedback_vector true " << std::endl;
     CreateAndAttachFeedbackVector(isolate, function, is_compiled_scope);
   } else {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << " needs_feedback_vector false " << std::endl;
     EnsureClosureFeedbackCellArray(function,
                                    reset_budget_for_feedback_allocation);
   }
 #ifdef V8_ENABLE_SPARKPLUG
   // TODO(jgruber): Unduplicate these conditions from tiering-manager.cc.
+  // qj: now you can see how to jump to baseline compiling
   if (function->shared()->cached_tiering_decision() !=
           CachedTieringDecision::kPending &&
       CanCompileWithBaseline(isolate, function->shared()) &&
       function->ActiveTierIsIgnition(isolate)) {
     if (v8_flags.baseline_batch_compilation) {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+                << " now enqueque function to baseline batch queue"
+                << std::endl;
       isolate->baseline_batch_compiler()->EnqueueFunction(function);
     } else {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+                << " now baseline compile function" << std::endl;
       IsCompiledScope is_compiled_scope(
           function->shared()->is_compiled_scope(isolate));
       Compiler::CompileBaseline(isolate, function, Compiler::CLEAR_EXCEPTION,

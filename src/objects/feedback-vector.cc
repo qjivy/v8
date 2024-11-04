@@ -87,6 +87,9 @@ Handle<FeedbackMetadata> FeedbackMetadata::New(IsolateT* isolate,
 
   const int slot_count = spec->slot_count();
   const int create_closure_slot_count = spec->create_closure_slot_count();
+  std::cout << " FeedbackMetadata::New: " << " slot_count: " << slot_count
+            << " create_closure_slot_count: " << create_closure_slot_count
+            << std::endl;
   if (slot_count == 0 && create_closure_slot_count == 0) {
     return factory->empty_feedback_metadata();
   }
