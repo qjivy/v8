@@ -209,13 +209,17 @@ JSToWasmWrapperCompilationUnit::JSToWasmWrapperCompilationUnit(
       sig_(sig),
       canonical_sig_index_(canonical_sig_index),
       job_(compiler::NewJSToWasmCompilationJob(isolate, sig, module, is_import,
-                                               enabled_features)) {}
+                                               enabled_features)) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " construct " << __LINE__
+            << std::endl;
+}
 
 JSToWasmWrapperCompilationUnit::~JSToWasmWrapperCompilationUnit() = default;
 
 void JSToWasmWrapperCompilationUnit::Execute() {
   TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.wasm.detailed"),
                "wasm.CompileJSToWasmWrapper");
+	         std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__<<std::endl;
   CompilationJob::Status status = job_->ExecuteJob(nullptr);
   CHECK_EQ(status, CompilationJob::SUCCEEDED);
 }
@@ -237,12 +241,15 @@ Handle<Code> JSToWasmWrapperCompilationUnit::Finalize() {
 Handle<Code> JSToWasmWrapperCompilationUnit::CompileJSToWasmWrapper(
     Isolate* isolate, const FunctionSig* sig, uint32_t canonical_sig_index,
     const WasmModule* module, bool is_import) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__<<" prepare JSToWasmWrapperCU"<<std::endl;
   // Run the compilation unit synchronously.
   WasmFeatures enabled_features = WasmFeatures::FromIsolate(isolate);
   JSToWasmWrapperCompilationUnit unit(isolate, sig, canonical_sig_index, module,
-                                      is_import, enabled_features);
-  unit.Execute();
-  return unit.Finalize();
+                                      is_import, enabled_features); //qj: here prepare unit
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__<<" execute CU"<<std::endl;
+  unit.Execute(); //qj: here Exe
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__<<" finalize CU"<<std::endl;
+  return unit.Finalize(); //qj: here Finalize
 }
 
 }  // namespace v8::internal::wasm

@@ -7629,9 +7629,15 @@ class WasmWrapperGraphBuilder : public WasmGraphBuilder {
   void BuildJSToWasmWrapper(bool is_import, bool do_conversion = true,
                             Node* frame_state = nullptr,
                             bool set_in_wasm_flag = true) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "<0>: is_import: " << is_import << std::endl;
     const int wasm_param_count = static_cast<int>(sig_->parameter_count());
 
     // Build the start and the JS parameter nodes.
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "<1> wasm_param_count: " << wasm_param_count
+              << " returncount: " << sig_->return_count()
+              << std::endl;
     Start(wasm_param_count + 5);
 
     // Create the js_closure and js_context parameters.
@@ -7641,6 +7647,10 @@ class WasmWrapperGraphBuilder : public WasmGraphBuilder {
     Node* function_data = gasm_->LoadFunctionDataFromJSFunction(js_closure);
 
     if (!wasm::IsJSCompatibleSignature(sig_)) {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+                << "<2> wasm::IsJSCompatibleSignature(sig_): "
+                << wasm::IsJSCompatibleSignature(sig_) << " sig: " << sig_
+                << std::endl;
       // Throw a TypeError. Use the js_context of the calling javascript
       // function (passed as a parameter), such that the generated code is
       // js_context independent.
@@ -7658,6 +7668,9 @@ class WasmWrapperGraphBuilder : public WasmGraphBuilder {
     bool include_fast_path = do_conversion && wasm_param_count > 0 &&
                              QualifiesForFastTransform(sig_);
 
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "<3> include_fast_path: " << include_fast_path << std::endl;
+
     // Prepare Param() nodes. Param() nodes can only be created once,
     // so we need to use the same nodes along all possible transformation paths.
     base::SmallVector<Node*, 16> params(args_count);
@@ -7665,6 +7678,9 @@ class WasmWrapperGraphBuilder : public WasmGraphBuilder {
 
     auto done = gasm_->MakeLabel(MachineRepresentation::kTagged);
     if (include_fast_path) {
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+                << "<4> convert JS para to Wasm para using fast path"
+                << std::endl;
       auto slow_path = gasm_->MakeDeferredLabel();
       // Check if the params received on runtime can be actually transformed
       // using the fast transformation. When a param that cannot be transformed
@@ -7688,6 +7704,9 @@ class WasmWrapperGraphBuilder : public WasmGraphBuilder {
     }
     // Convert JS parameters to wasm numbers using the default transformation
     // and build the call.
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << "<5> convert JS para to Wasm para using slow path"
+              << std::endl;
     base::SmallVector<Node*, 16> args(args_count);
     for (int i = 0; i < wasm_param_count; ++i) {
       if (do_conversion) {
@@ -8603,6 +8622,7 @@ std::unique_ptr<TurbofanCompilationJob> NewJSToWasmCompilationJob(
     Isolate* isolate, const wasm::FunctionSig* sig,
     const wasm::WasmModule* module, bool is_import,
     wasm::WasmFeatures enabled_features) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   //----------------------------------------------------------------------------
   // Create the Graph.
   //----------------------------------------------------------------------------
@@ -8619,7 +8639,8 @@ std::unique_ptr<TurbofanCompilationJob> NewJSToWasmCompilationJob(
   WasmWrapperGraphBuilder builder(
       zone.get(), mcgraph, sig, module, WasmGraphBuilder::kJSFunctionAbiMode,
       isolate, nullptr, StubCallMode::kCallBuiltinPointer, enabled_features);
-  builder.BuildJSToWasmWrapper(is_import);
+  builder.BuildJSToWasmWrapper(
+      is_import);  // qj: here build the mcgraph wrapper part
 
   //----------------------------------------------------------------------------
   // Create the compilation job.
@@ -8629,7 +8650,8 @@ std::unique_ptr<TurbofanCompilationJob> NewJSToWasmCompilationJob(
   int params = static_cast<int>(sig->parameter_count());
   CallDescriptor* incoming = Linkage::GetJSCallDescriptor(
       zone.get(), false, params + 1, CallDescriptor::kNoFlags);
-
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " about call NewWasmHeapStubCompilationJob" << std::endl;
   return Pipeline::NewWasmHeapStubCompilationJob(
       isolate, incoming, std::move(zone), graph, CodeKind::JS_TO_WASM_FUNCTION,
       std::move(debug_name), WasmAssemblerOptions());

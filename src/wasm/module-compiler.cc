@@ -1642,6 +1642,7 @@ using JSToWasmWrapperKey = std::pair<bool, uint32_t>;
 // Returns the number of units added.
 int AddExportWrapperUnits(Isolate* isolate, NativeModule* native_module,
                           CompilationUnitBuilder* builder) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   // Remember units already triggered for compilation.
   std::unordered_set<JSToWasmWrapperKey, base::hash<JSToWasmWrapperKey>> keys;
 
@@ -1667,9 +1668,13 @@ int AddExportWrapperUnits(Isolate* isolate, NativeModule* native_module,
     }
     JSToWasmWrapperKey key(function.imported, canonical_type_index);
     if (!keys.insert(key).second) continue;  // Already triggered.
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << " About call JSToWasmWrapperCompilationUnit " << std::endl;
     auto unit = std::make_shared<JSToWasmWrapperCompilationUnit>(
         isolate, function.sig, canonical_type_index, module, function.imported,
         native_module->enabled_features());
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << " About call AddJSToWasmWrapperUnit " << std::endl;
     builder->AddJSToWasmWrapperUnit(std::move(unit));
   }
 
@@ -1683,6 +1688,9 @@ int AddImportWrapperUnits(NativeModule* native_module,
                      WasmImportWrapperCache::CacheKeyHash>
       keys;
   int num_imported_functions = native_module->num_imported_functions();
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " num_imported_functions: " << num_imported_functions
+            << std::endl;
   for (int func_index = 0; func_index < num_imported_functions; func_index++) {
     const WasmFunction& function =
         native_module->module()->functions[func_index];
@@ -1699,6 +1707,9 @@ int AddImportWrapperUnits(NativeModule* native_module,
       // cache later without locking.
       (*native_module->import_wrapper_cache())[key] = nullptr;
       builder->AddImportUnit(func_index);
+      std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+                << " func_index: " << func_index << " added by AddImportUnit"
+                << std::endl;
     }
   }
   return static_cast<int>(keys.size());
@@ -1707,6 +1718,7 @@ int AddImportWrapperUnits(NativeModule* native_module,
 std::unique_ptr<CompilationUnitBuilder> InitializeCompilation(
     Isolate* isolate, NativeModule* native_module,
     ProfileInformation* pgo_info) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   CompilationStateImpl* compilation_state =
       Impl(native_module->compilation_state());
   auto builder = std::make_unique<CompilationUnitBuilder>(native_module);
@@ -1717,6 +1729,8 @@ std::unique_ptr<CompilationUnitBuilder> InitializeCompilation(
       v8_flags.wasm_to_js_generic_wrapper
           ? 0
           : AddImportWrapperUnits(native_module, builder.get());
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " num_import_wrappers: " << num_import_wrappers << std::endl;
   // Assume that the generic js-to-wasm wrapper can be used if it is enabled and
   // skip eager compilation of any export wrapper. Note that the generic
   // js-to-wasm wrapper does not support asm.js (yet).
@@ -1724,8 +1738,13 @@ std::unique_ptr<CompilationUnitBuilder> InitializeCompilation(
       v8_flags.wasm_generic_wrapper && !is_asmjs_module(native_module->module())
           ? 0
           : AddExportWrapperUnits(isolate, native_module, builder.get());
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " num_import_wrappers: " << num_import_wrappers
+            << " num_export_wrappers: " << num_export_wrappers << std::endl;
   compilation_state->InitializeCompilationProgress(
       num_import_wrappers, num_export_wrappers, pgo_info);
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " finish compilation initialize " << std::endl;
   return builder;
 }
 
@@ -1848,6 +1867,7 @@ void CompileNativeModule(Isolate* isolate,
                          ErrorThrower* thrower,
                          std::shared_ptr<NativeModule> native_module,
                          ProfileInformation* pgo_info) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   CHECK(!v8_flags.jitless);
   const WasmModule* module = native_module->module();
 
@@ -1858,12 +1878,18 @@ void CompileNativeModule(Isolate* isolate,
         isolate->async_counters(), isolate->metrics_recorder(), context_id,
         native_module, CompilationTimeCallback::kSynchronous));
   }
-
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <1>"
+            << std::endl;
   // Initialize the compilation units and kick off background compile tasks.
   std::unique_ptr<CompilationUnitBuilder> builder =
       InitializeCompilation(isolate, native_module.get(), pgo_info);
-  compilation_state->InitializeCompilationUnits(std::move(builder));
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <2>"
+            << std::endl;
+  compilation_state->InitializeCompilationUnits(
+      std::move(builder));  // qj: kick off
 
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <3>"
+            << std::endl;
   // Validate wasm modules for lazy compilation if requested. Never validate
   // asm.js modules as these are valid by construction (additionally a CHECK
   // will catch this during lazy compilation).
@@ -2066,6 +2092,7 @@ std::shared_ptr<NativeModule> CompileToNativeModule(
     std::shared_ptr<const WasmModule> module, ModuleWireBytes wire_bytes,
     int compilation_id, v8::metrics::Recorder::ContextId context_id,
     ProfileInformation* pgo_info) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   WasmEngine* engine = GetWasmEngine();
   base::OwnedVector<uint8_t> wire_bytes_copy =
       base::OwnedVector<uint8_t>::Of(wire_bytes.module_bytes());
@@ -2076,6 +2103,8 @@ std::shared_ptr<NativeModule> CompileToNativeModule(
   std::shared_ptr<NativeModule> native_module = engine->MaybeGetNativeModule(
       module->origin, wire_bytes_copy.as_vector(), isolate);
   if (native_module) {
+    std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+              << " <1> call to CompileJsToWasmWrappers" << std::endl;
     // Ensure that we have the right wrappers in this isolate.
     CompileJsToWasmWrappers(isolate, module.get());
     return native_module;
@@ -2107,6 +2136,8 @@ std::shared_ptr<NativeModule> CompileToNativeModule(
   native_module->SetWireBytes(std::move(wire_bytes_copy));
   native_module->compilation_state()->set_compilation_id(compilation_id);
 
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " <3> call to CompileNativeModule" << std::endl;
   CompileNativeModule(isolate, context_id, thrower, native_module, pgo_info);
 
   if (thrower->error()) {
@@ -3438,6 +3469,10 @@ void CompilationStateImpl::InitializeCompilationProgress(
 void CompilationStateImpl::AddCompilationUnitInternal(
     CompilationUnitBuilder* builder, int function_index,
     uint8_t function_progress) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " function_index: " << function_index
+            << " function_progress: " << static_cast<int>(function_progress)
+            << std::endl;
   ExecutionTier required_baseline_tier =
       CompilationStateImpl::RequiredBaselineTierField::decode(
           function_progress);
@@ -3447,17 +3482,24 @@ void CompilationStateImpl::AddCompilationUnitInternal(
       CompilationStateImpl::ReachedTierField::decode(function_progress);
 
   if (reached_tier < required_baseline_tier) {
+    std::cout << " AddBaselineUnit: " << function_index << std::endl;
     builder->AddBaselineUnit(function_index, required_baseline_tier);
   }
   if (reached_tier < required_top_tier &&
       required_baseline_tier != required_top_tier) {
+    std::cout << " AddTopTierUnit: " << function_index << std::endl;
     builder->AddTopTierUnit(function_index, required_top_tier);
   }
 }
 
 void CompilationStateImpl::InitializeCompilationUnits(
     std::unique_ptr<CompilationUnitBuilder> builder) {
-  int offset = native_module_->module()->num_imported_functions;
+  int offset =
+      native_module_->module()
+          ->num_imported_functions;  // qj: no action for imported functions
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " progress-size: " << compilation_progress_.size()
+            << " offset: " << offset << std::endl;
   {
     base::MutexGuard guard(&callbacks_mutex_);
 
@@ -3467,7 +3509,11 @@ void CompilationStateImpl::InitializeCompilationUnits(
       AddCompilationUnitInternal(builder.get(), func_index, function_progress);
     }
   }
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <1>"
+            << " before commit " << std::endl;
   builder->Commit();
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " <1>"
+            << " after commit " << std::endl;
 }
 
 void CompilationStateImpl::AddCompilationUnit(CompilationUnitBuilder* builder,
