@@ -193,7 +193,10 @@ RUNTIME_FUNCTION(Runtime_DeclareGlobals) {
 
   // Traverse the name/value pairs and set the properties.
   int length = declarations->length();
+  std::cout << __FUNCTION__ << " " << "declarations len: " << length
+            << std::endl;
   FOR_WITH_HANDLE_SCOPE(isolate, int, i = 0, i, i < length, i++, {
+    std::cout << __FUNCTION__ << " " << "decl[" << i << "]: ";
     Handle<Object> decl(declarations->get(i), isolate);
     Handle<String> name;
     Handle<Object> value;
@@ -201,10 +204,12 @@ RUNTIME_FUNCTION(Runtime_DeclareGlobals) {
 
     if (is_var) {
       name = Cast<String>(decl);
+      std::cout << "is var " << name << std::endl;
       value = isolate->factory()->undefined_value();
     } else {
       Handle<SharedFunctionInfo> sfi = Cast<SharedFunctionInfo>(decl);
       name = handle(sfi->Name(), isolate);
+      std::cout << "is function " << name << std::endl;
       int index = Smi::ToInt(declarations->get(++i));
       Handle<FeedbackCell> feedback_cell(
           closure_feedback_cell_array->get(index), isolate);

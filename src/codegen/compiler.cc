@@ -725,6 +725,8 @@ void InstallUnoptimizedCode(UnoptimizedCompilationInfo* compilation_info,
   {
     //   DirectHandle<String> name = SharedFunctionInfo::DebugName(isolate,
     //   shared_info);
+    std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+              << std::endl;
     std::cout << __FUNCTION__ << " for function " << *shared_info << std::endl;
   }
   if (compilation_info->has_bytecode_array()) {
@@ -739,7 +741,7 @@ void InstallUnoptimizedCode(UnoptimizedCompilationInfo* compilation_info,
       shared_info->set_is_asm_wasm_broken(true);
     }
 #endif  // V8_ENABLE_WEBASSEMBLY
-
+        // qj:here new metadata for feedback
     DirectHandle<FeedbackMetadata> feedback_metadata = FeedbackMetadata::New(
         isolate, compilation_info->feedback_vector_spec());
     shared_info->set_feedback_metadata(*feedback_metadata, kReleaseStore);
@@ -758,6 +760,8 @@ void InstallUnoptimizedCode(UnoptimizedCompilationInfo* compilation_info,
     UNREACHABLE();
 #endif  // V8_ENABLE_WEBASSEMBLY
   }
+  std::cout << "END " << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << std::endl;
 }
 
 template <typename IsolateT>
@@ -803,6 +807,7 @@ CompilationJob::Status FinalizeSingleUnoptimizedCompilationJob(
     IsolateT* isolate,
     FinalizeUnoptimizedCompilationDataList*
         finalize_unoptimized_compilation_data_list) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   UnoptimizedCompilationInfo* compilation_info = job->compilation_info();
 
   CompilationJob::Status status = job->FinalizeJob(shared_info, isolate);
@@ -825,6 +830,8 @@ CompilationJob::Status FinalizeSingleUnoptimizedCompilationJob(
   }
   DCHECK_IMPLIES(status == CompilationJob::RETRY_ON_MAIN_THREAD,
                  (std::is_same<IsolateT, LocalIsolate>::value));
+  std::cout << "END " << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << std::endl;
   return status;
 }
 
@@ -834,6 +841,7 @@ ExecuteSingleUnoptimizedCompilationJob(
     AccountingAllocator* allocator,
     std::vector<FunctionLiteral*>* eager_inner_literals,
     LocalIsolate* local_isolate) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
 #if V8_ENABLE_WEBASSEMBLY
   if (UseAsmWasm(literal, parse_info->flags().is_asm_wasm_broken())) {
     std::unique_ptr<UnoptimizedCompilationJob> asm_job(
@@ -851,13 +859,16 @@ ExecuteSingleUnoptimizedCompilationJob(
   std::unique_ptr<UnoptimizedCompilationJob> job(
       interpreter::Interpreter::NewCompilationJob(
           parse_info, literal, script, allocator, eager_inner_literals,
-          local_isolate));
+          local_isolate));  // qj: here you can see how the
+                            // UnoptimizedCompilationJob is constructed
 
   if (job->ExecuteJob() != CompilationJob::SUCCEEDED) {  // qj
     // Compilation failed, return null.
     return std::unique_ptr<UnoptimizedCompilationJob>();
   }
 
+  std::cout << "END " << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << std::endl;
   return job;
 }
 
@@ -869,6 +880,7 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
         finalize_unoptimized_compilation_data_list,
     DeferredFinalizationJobDataList*
         jobs_to_retry_finalization_on_main_thread) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DeclarationScope::AllocateScopeInfos(parse_info, script, isolate);
 
   std::vector<FunctionLiteral*> functions_to_compile;
@@ -885,6 +897,9 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
     if (shared_info.is_null()) continue;
     if (shared_info->is_compiled()) continue;
     // qj: here compile
+    std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+              << " Start call ExecuteSingleUnoptimizedCompilationJob"
+              << std::endl;
     std::unique_ptr<UnoptimizedCompilationJob> job =
         ExecuteSingleUnoptimizedCompilationJob(parse_info, literal, script,
                                                allocator, &functions_to_compile,
@@ -944,6 +959,8 @@ bool IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
     parse_info->pending_error_handler()->PrepareWarnings(isolate);
   }
 
+  std::cout << "END " << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << std::endl;
   return compilation_succeeded;
 }
 
@@ -1304,7 +1321,8 @@ MaybeHandle<Code> CompileMaglev(Isolate* isolate, Handle<JSFunction> function,
   DCHECK(IsConcurrent(mode));
 
   // Enqueue it.
-  isolate->maglev_concurrent_dispatcher()->EnqueueJob(std::move(job));
+  isolate->maglev_concurrent_dispatcher()->EnqueueJob(
+      std::move(job));  // qj: here enqueque job
 
   // Remember that the function is currently being processed.
   SetTieringState(isolate, *function, osr_offset, TieringState::kInProgress);
@@ -1320,7 +1338,7 @@ MaybeHandle<Code> GetOrCompileOptimized(
     Isolate* isolate, Handle<JSFunction> function, ConcurrencyMode mode,
     CodeKind code_kind, BytecodeOffset osr_offset = BytecodeOffset::None(),
     CompileResultBehavior result_behavior = CompileResultBehavior::kDefault) {
-  std::cout << __FUNCTION__ << std::endl;
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK(CodeKindIsOptimizedJSFunction(code_kind));
 
   DirectHandle<SharedFunctionInfo> shared(function->shared(), isolate);
@@ -1387,7 +1405,8 @@ MaybeHandle<Code> GetOrCompileOptimized(
                            result_behavior);
   } else {
     DCHECK_EQ(code_kind, CodeKind::MAGLEV);
-    return CompileMaglev(isolate, function, mode, osr_offset, result_behavior);
+    return CompileMaglev(isolate, function, mode, osr_offset,
+                         result_behavior);  // qj: here kick off Maglev
   }
 }
 
@@ -1570,6 +1589,8 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
                          ? RuntimeCallCounterId::kCompileEval
                          : RuntimeCallCounterId::kCompileScript);
   VMState<BYTECODE_COMPILER> state(isolate);
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << " Start ParseProgram" << std::endl;
   if (parse_info->literal() == nullptr &&
       !parsing::ParseProgram(parse_info, script, maybe_outer_scope_info,
                              isolate, parsing::ReportStatisticsMode::kYes)) {
@@ -1577,6 +1598,8 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
                       Compiler::ClearExceptionFlag::KEEP_EXCEPTION);
     return MaybeHandle<SharedFunctionInfo>();
   }
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << " End ParseProgram" << std::endl;
   // Measure how long it takes to do the compilation; only take the
   // rest of the function into account to avoid overlap with the
   // parsing statistics.
@@ -1596,7 +1619,8 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
       finalize_unoptimized_compilation_data_list;
 
   // Prepare and execute compilation of the outer-most function.
-  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(
+  if (!IterativelyExecuteAndFinalizeUnoptimizedCompilationJobs(  // qj: should
+                                                                 // here
           isolate, script, parse_info, isolate->allocator(), is_compiled_scope,
           &finalize_unoptimized_compilation_data_list, nullptr)) {
     FailWithException(isolate, script, parse_info,
@@ -1615,6 +1639,8 @@ MaybeHandle<SharedFunctionInfo> CompileToplevel(
     CompileAllWithBaseline(isolate, finalize_unoptimized_compilation_data_list);
   }
 
+  std::cout << "END " << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+            << std::endl;
   return shared_info;
 }
 
@@ -3862,6 +3888,7 @@ MaybeHandle<SharedFunctionInfo> GetSharedFunctionInfoForScriptImpl(
     ScriptCompiler::CompileOptions compile_options,
     ScriptCompiler::NoCacheReason no_cache_reason, NativesFlag natives,
     ScriptCompiler::CompilationDetails* compilation_details) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   ScriptCompileTimerScope compile_timer(isolate, no_cache_reason,
                                         compilation_details);
 
@@ -3992,7 +4019,7 @@ MaybeHandle<SharedFunctionInfo> GetSharedFunctionInfoForScriptImpl(
         flags.set_script_id(script->id());
       }
 
-      maybe_result = CompileScriptOnMainThread(
+      maybe_result = CompileScriptOnMainThread(  // qj
           flags, source, script_details, natives, extension, isolate,
           maybe_script, &is_compiled_scope, compile_hint_callback,
           compile_hint_callback_data);
@@ -4013,6 +4040,8 @@ MaybeHandle<SharedFunctionInfo> GetSharedFunctionInfoForScriptImpl(
     Cast<Script>(result->script())->set_produce_compile_hints(true);
   }
 
+  std::cout << "END " << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << std::endl;
   return maybe_result;
 }
 
@@ -4024,6 +4053,7 @@ MaybeHandle<SharedFunctionInfo> Compiler::GetSharedFunctionInfoForScript(
     ScriptCompiler::CompileOptions compile_options,
     ScriptCompiler::NoCacheReason no_cache_reason, NativesFlag natives,
     ScriptCompiler::CompilationDetails* compilation_details) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   return GetSharedFunctionInfoForScriptImpl(
       isolate, source, script_details, nullptr, nullptr, nullptr, nullptr,
       nullptr, compile_options, no_cache_reason, natives, compilation_details);

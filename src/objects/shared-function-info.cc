@@ -73,6 +73,8 @@ void SharedFunctionInfo::Init(ReadOnlyRoots ro_roots, int unique_id) {
 }
 
 Tagged<Code> SharedFunctionInfo::GetCode(Isolate* isolate) const {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " "
+            << std::endl;
   // ======
   // NOTE: This chain of checks MUST be kept in sync with the equivalent CSA
   // GetSharedFunctionInfoCode method in code-stub-assembler.cc.

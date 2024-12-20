@@ -4634,7 +4634,9 @@ Factory::JSFunctionBuilder::JSFunctionBuilder(Isolate* isolate,
     : isolate_(isolate), sfi_(sfi), context_(context) {}
 
 Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
-  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
+  std::cout << __FILE__
+            << " Factory::JSFunctionBuilder::Build::" << __FUNCTION__ << " "
+            << __LINE__ << std::endl;
   PrepareMap();
   PrepareFeedbackCell();
 
@@ -4652,7 +4654,8 @@ Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
     JSFunction::EnsureFeedbackVector(isolate_, result, &is_compiled_scope);
   }
 
-  Compiler::PostInstantiation(isolate_, result, &is_compiled_scope);
+  Compiler::PostInstantiation(isolate_, result,
+                              &is_compiled_scope);  // qj: note here
   return result;
 }
 

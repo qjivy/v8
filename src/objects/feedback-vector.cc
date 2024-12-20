@@ -87,6 +87,7 @@ Handle<FeedbackMetadata> FeedbackMetadata::New(IsolateT* isolate,
 
   const int slot_count = spec->slot_count();
   const int create_closure_slot_count = spec->create_closure_slot_count();
+  // qj slot count from ICs, closure slot count from functions
   std::cout << " FeedbackMetadata::New: " << " slot_count: " << slot_count
             << " create_closure_slot_count: " << create_closure_slot_count
             << std::endl;
@@ -97,6 +98,9 @@ Handle<FeedbackMetadata> FeedbackMetadata::New(IsolateT* isolate,
   for (int i = 0; i < slot_count;) {
     FeedbackSlotKind kind = spec->GetKind(FeedbackSlot(i));
     int entry_size = FeedbackMetadata::GetSlotSize(kind);
+    std::cout << __FUNCTION__ << " slot[" << i
+              << "] kind: " << FeedbackMetadata::Kind2String(kind)
+              << " size:" << entry_size << std::endl;
     for (int j = 1; j < entry_size; j++) {
       kind = spec->GetKind(FeedbackSlot(i + j));
       DCHECK_EQ(FeedbackSlotKind::kInvalid, kind);
@@ -221,8 +225,9 @@ Handle<ClosureFeedbackCellArray> ClosureFeedbackCellArray::New(
     AllocationType allocation) {
   int length = shared->feedback_metadata()->create_closure_slot_count();
   {
-    std::cout << "ClosureFeedbackCellArray::" << __FUNCTION__
-              << " length:  " << std::dec << length << std::endl;
+    std::cout << "ClosureFeedbackCellArray::" << __FUNCTION__ << " " << __FILE__
+              << " " << __LINE__ << " length:  " << std::dec << length
+              << std::endl;
     DirectHandle<String> debug_name =
         SharedFunctionInfo::DebugName(isolate, shared);
     std::cout << "for function: " << *debug_name << std::endl;
@@ -254,7 +259,15 @@ Handle<ClosureFeedbackCellArray> ClosureFeedbackCellArray::New(
   }
 
   std::optional<DisallowGarbageCollection> no_gc;
-  auto result = Allocate(isolate, length, &no_gc, allocation);
+  auto result = Allocate(isolate, length, &no_gc, allocation);  // qj:
+  /*
+  #0  v8::internal::TaggedArrayBase<v8::internal::ClosureFeedbackCellArray,
+  v8::internal::ClosureFeedbackCellArrayShape,
+  v8::internal::HeapObject>::Allocate<v8::internal::Isolate>
+  (isolate=0x55d31c3b6000, capacity=15, no_gc_out=0x7ffc4d8b9bb8,
+  allocation=v8::internal::AllocationType::kYoung) at
+  ../../src/objects/fixed-array-inl.h:369
+  */
   for (int i = 0; i < length; i++) {
     result->set(i, *cells[i]);
   }
@@ -274,8 +287,9 @@ Handle<FeedbackVector> FeedbackVector::New(
   DirectHandle<FeedbackMetadata> feedback_metadata(shared->feedback_metadata(),
                                                    isolate);
   const int slot_count = feedback_metadata->slot_count();
-  std::cout << " FeedbackVector::" << __FUNCTION__ << *shared
-            << " slot count: " << slot_count << std::endl;
+  std::cout << " FeedbackVector::" << __FUNCTION__ << " " << *shared << " "
+            << __FILE__ << " " << __LINE__ << " slot count: " << slot_count
+            << std::endl;
 
   Handle<FeedbackVector> vector = factory->NewFeedbackVector(
       shared, closure_feedback_cell_array, parent_feedback_cell);

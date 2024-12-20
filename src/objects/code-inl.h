@@ -351,9 +351,15 @@ uintptr_t Code::GetBaselinePCForBytecodeOffset(
   uintptr_t pc = 0;
   if (position == kPcAtStartOfBytecode) {
     pc = offset_iterator.current_pc_start_offset();
+    std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+              << " bytecode_offset: " << bytecode_offset
+              << " start baseline pc:" << pc << std::endl;
   } else {
     DCHECK_EQ(position, kPcAtEndOfBytecode);
     pc = offset_iterator.current_pc_end_offset();
+    std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__
+              << " bytecode_offset: " << bytecode_offset
+              << " end baseline pc:" << pc << std::endl;
   }
   return pc;
 }

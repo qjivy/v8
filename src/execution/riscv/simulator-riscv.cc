@@ -3466,6 +3466,15 @@ void Simulator::SoftwareInterrupt() {
 #endif  // V8_TARGET_ARCH_RISCV64
       SimulatorRuntimeCall target =
           reinterpret_cast<SimulatorRuntimeCall>(external);
+      if (ExternalReferenceTable::NameOfIsolateIndependentAddress(
+              pc, IsolateGroup::current()->external_ref_table()) !=
+          std::string("check_object_type")) {
+        std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+                  << " call runtime: "
+                  << ExternalReferenceTable::NameOfIsolateIndependentAddress(
+                         pc, IsolateGroup::current()->external_ref_table())
+                  << std::endl;
+      }
       if (v8_flags.trace_sim) {
         PrintF(
             "Call to host function %s at %p "

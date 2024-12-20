@@ -1961,6 +1961,7 @@ ScriptCompiler::StreamedSource::StreamedSource(
 ScriptCompiler::StreamedSource::~StreamedSource() = default;
 
 Local<Script> UnboundScript::BindToCurrentContext() {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   auto function_info = Utils::OpenHandle(this);
   // TODO(jgruber): Remove this DCHECK once Function::GetUnboundScript is gone.
   DCHECK(!InReadOnlySpace(*function_info));
@@ -1970,6 +1971,8 @@ Local<Script> UnboundScript::BindToCurrentContext() {
       i::Factory::JSFunctionBuilder{i_isolate, function_info,
                                     i_isolate->native_context()}
           .Build();
+  std::cout << "END " << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << std::endl;
   return ToApiHandle<Script>(function);
 }
 
@@ -2099,11 +2102,13 @@ Local<Value> UnboundModuleScript::GetSourceMappingURL() {
 }
 
 MaybeLocal<Value> Script::Run(Local<Context> context) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   return Run(context, Local<Data>());
 }
 
 MaybeLocal<Value> Script::Run(Local<Context> context,
                               Local<Data> host_defined_options) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   auto v8_isolate = context->GetIsolate();
   auto i_isolate = reinterpret_cast<i::Isolate*>(v8_isolate);
   TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.Execute");
@@ -2550,6 +2555,7 @@ i::ScriptDetails GetScriptDetails(
 MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
     Isolate* v8_isolate, Source* source, CompileOptions options,
     NoCacheReason no_cache_reason) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   auto i_isolate = reinterpret_cast<i::Isolate*>(v8_isolate);
   TRACE_EVENT_CALL_STATS_SCOPED(i_isolate, "v8", "V8.ScriptCompiler");
   ENTER_V8_NO_SCRIPT(i_isolate, v8_isolate->GetCurrentContext(), ScriptCompiler,
@@ -2598,11 +2604,63 @@ MaybeLocal<UnboundScript> ScriptCompiler::CompileUnboundInternal(
             i::NOT_NATIVES_CODE, &source->compilation_details);
   } else {
     // Compile without any cache.
+    // qj here
+    /*
+    #0  0x00007f6b885c9260 in
+    v8::internal::Compiler::CompileToplevel(v8::internal::ParseInfo*,
+    v8::internal::Handle<v8::internal::Script>, v8::internal::Isolate*,
+    v8::internal::IsCompiledScope*)@plt () from
+    /home/qjivy/work/v8-engine/v8-perf/v8/out/riscv64.debug/libv8.so #1
+    0x00007f6b84ebac9d in v8::internal::(anonymous
+    namespace)::CompileScriptOnMainThread (flags=..., source=...,
+    script_details=..., natives=v8::internal::NOT_NATIVES_CODE, extension=0x0,
+    isolate=0x55cfd6806000, maybe_script=..., is_compiled_scope=0x7ffe525e4410,
+            compile_hint_callback=0x0, compile_hint_callback_data=0x0) at
+    ../../src/codegen/compiler.cc:3704 #2  0x00007f6b84eae76e in
+    v8::internal::(anonymous namespace)::GetSharedFunctionInfoForScriptImpl
+    (isolate=0x55cfd6806000, source=..., script_details=..., extension=0x0,
+    cached_data=0x0, deserialize_task=0x0, compile_hint_callback=0x0,
+    compile_hint_callback_data=0x0,
+                    compile_options=v8::ScriptCompiler::kNoCompileOptions,
+    no_cache_reason=v8::ScriptCompiler::kNoCacheNoReason,
+    natives=v8::internal::NOT_NATIVES_CODE, compilation_details=0x7ffe525e48f0)
+    at ../../src/codegen/compiler.cc:3995 #3  0x00007f6b84eadc7b in
+    v8::internal::Compiler::GetSharedFunctionInfoForScript
+    (isolate=0x55cfd6806000, source=..., script_details=...,
+                            compile_options=v8::ScriptCompiler::kNoCompileOptions,
+    no_cache_reason=v8::ScriptCompiler::kNoCacheNoReason,
+    natives=v8::internal::NOT_NATIVES_CODE, compilation_details=0x7ffe525e48f0)
+    at ../../src/codegen/compiler.cc:4027 #4  0x00007f6b84c0a62f in
+    v8::ScriptCompiler::CompileUnboundInternal (v8_isolate=0x55cfd6806000,
+    source=0x7ffe525e48a0, options=v8::ScriptCompiler::kNoCompileOptions,
+    no_cache_reason=v8::ScriptCompiler::kNoCacheNoReason) at
+    ../../src/api/api.cc:2601 #5  0x00007f6b84c0aa65 in
+    v8::ScriptCompiler::Compile (context=..., source=0x7ffe525e48a0,
+    options=v8::ScriptCompiler::kNoCompileOptions,
+                                        no_cache_reason=v8::ScriptCompiler::kNoCacheNoReason)
+    at ../../src/api/api.cc:2631 #6  0x000055cfd47ae04d in v8::(anonymous
+    namespace)::Compile<v8::Script> (context=..., source=0x7ffe525e48a0,
+    options=v8::ScriptCompiler::kNoCompileOptions) at ../../src/d8/d8.cc:656 #7
+    0x000055cfd47b1662 in v8::Shell::CompileString<v8::Script>
+    (isolate=0x55cfd6806000, context=..., source=..., origin=...) at
+    ../../src/d8/d8.cc:691 #8  0x000055cfd478c09d in v8::Shell::ExecuteString
+    (isolate=0x55cfd6806000, source=..., name=...,
+    report_exceptions=v8::Shell::kReportExceptions, out_result=0x0) at
+    ../../src/d8/d8.cc:949 #9  0x000055cfd47a3a56 in v8::SourceGroup::Execute
+    (this=0x55cfd6260388, isolate=0x55cfd6806000) at ../../src/d8/d8.cc:4735 #10
+    0x000055cfd47a884c in v8::Shell::RunMainIsolate (isolate=0x55cfd6806000,
+    keep_context_alive=false) at ../../src/d8/d8.cc:5669 #11 0x000055cfd47a83f4
+    in v8::Shell::RunMain (isolate=0x55cfd6806000, last_run=true) at
+    ../../src/d8/d8.cc:5578 #12 0x000055cfd47a9e26 in v8::Shell::Main (argc=3,
+    argv=0x7ffe525e57f8) at ../../src/d8/d8.cc:6431 #13 0x000055cfd47aa3b2 in
+    main (argc=3, argv=0x7ffe525e57f8) at ../../src/d8/d8.cc:6523
+    */
     maybe_function_info = i::Compiler::GetSharedFunctionInfoForScript(
         i_isolate, str, script_details, options, no_cache_reason,
         i::NOT_NATIVES_CODE, &source->compilation_details);
   }
-
+  std::cout << "END " << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << std::endl;
   has_exception = !maybe_function_info.ToHandle(&result);
   DCHECK_IMPLIES(!has_exception, !InReadOnlySpace(*result));
   RETURN_ON_FAILED_EXECUTION(UnboundScript);
@@ -2623,16 +2681,22 @@ MaybeLocal<Script> ScriptCompiler::Compile(Local<Context> context,
                                            Source* source,
                                            CompileOptions options,
                                            NoCacheReason no_cache_reason) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   Utils::ApiCheck(
       !source->GetResourceOptions().IsModule(), "v8::ScriptCompiler::Compile",
       "v8::ScriptCompiler::CompileModule must be used to compile modules");
   auto i_isolate = context->GetIsolate();
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << "<0> goto CompileUnboundInternal" << std::endl;
   MaybeLocal<UnboundScript> maybe =
-      CompileUnboundInternal(i_isolate, source, options, no_cache_reason);
+      CompileUnboundInternal(i_isolate, source, options,
+                             no_cache_reason);  // qj: now compile to gen BC
   Local<UnboundScript> result;
   if (!maybe.ToLocal(&result)) return MaybeLocal<Script>();
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << "<0> goto BindToCurrentContext" << std::endl;
   v8::Context::Scope scope(context);
-  return result->BindToCurrentContext();
+  return result->BindToCurrentContext();  // qj: now create SFI for toplev
 }
 
 MaybeLocal<Module> ScriptCompiler::CompileModule(

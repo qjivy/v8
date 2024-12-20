@@ -4910,7 +4910,7 @@ void Generate_BaselineOrInterpreterEntry(MacroAssembler* masm,
     __ LoadWord(
         kInterpreterBytecodeArrayRegister,
         MemOperand(fp, InterpreterFrameConstants::kBytecodeArrayFromFp));
-    Generate_OSREntry(masm, code_obj);
+    Generate_OSREntry(masm, code_obj);  // qj: here
   } else {
     __ Jump(code_obj);
   }

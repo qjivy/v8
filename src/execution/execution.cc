@@ -105,6 +105,7 @@ InvokeParams InvokeParams::SetUpForCall(Isolate* isolate,
                                         Handle<Object> callable,
                                         Handle<Object> receiver, int argc,
                                         Handle<Object>* argv) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   InvokeParams params;
   params.target = callable;
   params.receiver = NormalizeReceiver(isolate, receiver);
@@ -394,7 +395,8 @@ V8_WARN_UNUSED_RESULT MaybeHandle<Object> Invoke(Isolate* isolate,
       return MaybeHandle<Object>();
     }
   }
-
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+            << "now into JSEntry" << std::endl;
   // Placeholder for return value.
   Tagged<Object> value;
   DirectHandle<Code> code = JSEntry(isolate, params.execution_target,
@@ -528,6 +530,7 @@ MaybeHandle<Object> Execution::CallScript(Isolate* isolate,
                                           Handle<JSFunction> script_function,
                                           Handle<Object> receiver,
                                           Handle<Object> host_defined_options) {
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << std::endl;
   DCHECK(script_function->shared()->is_script());
   DCHECK(IsJSGlobalProxy(*receiver) || IsJSGlobalObject(*receiver));
   return Invoke(

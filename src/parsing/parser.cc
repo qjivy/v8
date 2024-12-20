@@ -802,7 +802,7 @@ FunctionLiteral* Parser::DoParseProgram(Isolate* isolate, ParseInfo* info) {
       // Don't count the mode in the use counters--give the program a chance
       // to enable script-wide strict mode below.
       this->scope()->SetLanguageMode(info->language_mode());
-      ParseStatementList(&body, Token::kEos);
+      ParseStatementList(&body, Token::kEos);  // qj
     }
 
     // The parser will peek but not consume kEos.  Our scope logically goes all
@@ -1071,6 +1071,7 @@ FunctionLiteral* Parser::DoParseFunction(Isolate* isolate, ParseInfo* info,
                                          int start_position, int end_position,
                                          int function_literal_id,
                                          const AstRawString* raw_name) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK_EQ(parsing_on_main_thread_, isolate != nullptr);
   DCHECK_NOT_NULL(raw_name);
   DCHECK_NULL(scope_);
@@ -2752,6 +2753,7 @@ FunctionLiteral* Parser::ParseFunctionLiteral(
     int function_token_pos, FunctionSyntaxKind function_syntax_kind,
     LanguageMode language_mode,
     ZonePtrList<const AstRawString>* arguments_for_wrapped_function) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // Function ::
   //   '(' FormalParameterList? ')' '{' FunctionBody '}'
   //
@@ -2985,7 +2987,7 @@ bool Parser::SkipFunction(const AstRawString* function_name, FunctionKind kind,
 
   DCHECK_IMPLIES(IsArrowFunction(kind),
                  scanner()->current_token() == Token::kArrow);
-  std::cout << __FUNCTION__ << " " << function_name << " "
+  std::cout << __FUNCTION__ << "<0> " << function_name << " "
             << FunctionKind2String(kind)
             << " num_parameters: " << *num_parameters
             << " function_length: " << *function_length
@@ -3080,10 +3082,11 @@ bool Parser::SkipFunction(const AstRawString* function_name, FunctionKind kind,
     }
     function_scope->AnalyzePartially(this, factory(), MaybeParsingArrowhead());
   }
-  std::cout << __FUNCTION__ << " " << function_name << " "
+  std::cout << __FUNCTION__ << " <1> " << function_name << " "
             << FunctionKind2String(kind)
             << " num_parameters: " << *num_parameters
-            << " function_length: " << *function_length << std::endl;
+            << " function_length: " << *function_length
+            << " name on next line! See " << std::endl;
   function_name->Print();
   std::cout << std::endl;
   return true;

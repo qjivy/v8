@@ -4580,6 +4580,7 @@ template <typename Impl>
 typename ParserBase<Impl>::StatementT
 ParserBase<Impl>::ParseHoistableDeclaration(
     ZonePtrList<const AstRawString>* names, bool default_export) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   Consume(Token::kFunction);
 
   int pos = position();
@@ -4595,6 +4596,7 @@ typename ParserBase<Impl>::StatementT
 ParserBase<Impl>::ParseHoistableDeclaration(
     int pos, ParseFunctionFlags flags, ZonePtrList<const AstRawString>* names,
     bool default_export) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   CheckStackOverflow();
 
   // FunctionDeclaration ::
@@ -5559,6 +5561,7 @@ typename ParserBase<Impl>::ExpressionT ParserBase<Impl>::ParseV8Intrinsic() {
 template <typename Impl>
 void ParserBase<Impl>::ParseStatementList(StatementListT* body,
                                           Token::Value end_token) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // StatementList ::
   //   (StatementListItem)* <end_token>
   DCHECK_NOT_NULL(body);
@@ -5624,6 +5627,7 @@ void ParserBase<Impl>::ParseStatementList(StatementListT* body,
 template <typename Impl>
 typename ParserBase<Impl>::StatementT
 ParserBase<Impl>::ParseStatementListItem() {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // ECMA 262 6th Edition
   // StatementListItem[Yield, Return] :
   //   Statement[?Yield, ?Return]

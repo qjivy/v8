@@ -132,6 +132,8 @@ void JSFunction::UpdateCode(Tagged<Code> value, WriteBarrierMode mode) {
   DisallowGarbageCollection no_gc;
   DCHECK(!value->is_context_specialized());
 
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " "
+            << "value: " << value << std::endl;
 #ifdef V8_ENABLE_LEAPTIERING
   JSDispatchHandle canonical_handle = raw_feedback_cell()->dispatch_handle();
   auto jdt = GetProcessWideJSDispatchTable();

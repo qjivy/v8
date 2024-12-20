@@ -1438,6 +1438,7 @@ using NullContextScopeFor = typename NullContextScopeHelper<Isolate>::Type;
 template <typename IsolateT>
 Handle<BytecodeArray> BytecodeGenerator::FinalizeBytecode(
     IsolateT* isolate, Handle<Script> script) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK_EQ(ThreadId::Current(), isolate->thread_id());
 #ifdef DEBUG
   // Unoptimized compilation should be context-independent. Verify that we don't
@@ -1638,7 +1639,7 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {  // qj
     BuildLocalActivationContextInitialization();
     GenerateBytecodeBody();
   } else {
-    GenerateBytecodeBody();
+    GenerateBytecodeBody();  // qj: here
   }
 
   // Reset variables with hole check bitmap indices for subsequent compilations
@@ -1652,6 +1653,7 @@ void BytecodeGenerator::GenerateBytecode(uintptr_t stack_limit) {  // qj
 }
 
 void BytecodeGenerator::GenerateBytecodeBody() {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   GenerateBodyPrologue();
 
   if (IsBaseConstructor(function_kind())) {
@@ -1668,6 +1670,7 @@ void BytecodeGenerator::GenerateBytecodeBody() {
 }
 
 void BytecodeGenerator::GenerateBodyPrologue() {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // Build the arguments object if it is used.
   VisitArgumentsObject(closure_scope()->arguments());
 
@@ -1836,6 +1839,7 @@ void BytecodeGenerator::GenerateAsyncFunctionBody() {
 }
 
 void BytecodeGenerator::GenerateBodyStatements() {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   GenerateBodyStatementsWithoutImplicitFinalReturn();
 
   // Emit an implicit return instruction in case control flow can fall off the
@@ -1857,6 +1861,7 @@ void BytecodeGenerator::GenerateBodyStatements() {
 }
 
 void BytecodeGenerator::GenerateBodyStatementsWithoutImplicitFinalReturn() {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   ZonePtrList<Statement>* body = info()->literal()->body();
   if (v8_flags.js_explicit_resource_management && closure_scope() != nullptr &&
       (closure_scope()->has_using_declaration() ||
@@ -2132,6 +2137,7 @@ void BytecodeGenerator::VisitDeclarations(Declaration::List* declarations) {
 
 void BytecodeGenerator::VisitStatements(
     const ZonePtrList<Statement>* statements) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   for (int i = 0; i < statements->length(); i++) {
     // Allocate an outer register allocations scope for the statement.
     RegisterAllocationScope allocation_scope(this);

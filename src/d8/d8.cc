@@ -653,7 +653,8 @@ template <>
 MaybeLocal<Script> Compile(Local<Context> context,
                            ScriptCompiler::Source* source,
                            ScriptCompiler::CompileOptions options) {
-  return ScriptCompiler::Compile(context, source, options);
+  return ScriptCompiler::Compile(context, source,
+                                 options);  // qj api/api.cc:2631
 }
 
 template <>
@@ -688,7 +689,7 @@ MaybeLocal<T> Shell::CompileString(Isolate* isolate, Local<Context> context,
   }
   ScriptCompiler::Source script_source(source, origin, cached_code);
   MaybeLocal<T> result =
-      Compile<T>(context, &script_source,
+      Compile<T>(context, &script_source,  // qj: here is d8/d8.cc:656
                  cached_code ? ScriptCompiler::kConsumeCodeCache
                              : ScriptCompiler::kNoCompileOptions);
   if (cached_code) CHECK(!cached_code->rejected);
@@ -950,6 +951,8 @@ bool Shell::ExecuteString(Isolate* isolate, Local<String> source,
            .ToLocal(&script)) {
     return false;
   }
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << "QQ End CompileString" << std::endl;
 
   if (options.code_cache_options ==
       ShellOptions::CodeCacheOptions::kProduceCache) {
@@ -4731,7 +4734,7 @@ bool SourceGroup::Execute(Isolate* isolate) {
     Shell::set_script_executed();
     Shell::update_script_size(source->Length());
     std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
-              << "QQ Start ExecuteString" << std::endl;
+              << " QQ Start ExecuteString" << std::endl;
     if (!Shell::ExecuteString(isolate, source, file_name,
                               Shell::kReportExceptions)) {
       success = false;
