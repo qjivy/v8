@@ -1474,37 +1474,13 @@ TF_BUILTIN(StringPrototypeMatchAll, StringBuiltinsAssembler) {
 TNode<JSArray> StringBuiltinsAssembler::StringToArray(
     TNode<NativeContext> context, TNode<String> subject_string,
     TNode<Smi> subject_length, TNode<Number> limit_number) {
-  CSA_DCHECK(this, SmiGreaterThan(subject_length, SmiConstant(0)));
-
-  Label done(this), call_runtime(this, Label::kDeferred),
-      fill_thehole_and_call_runtime(this, Label::kDeferred);
-  TVARIABLE(JSArray, result_array);
-
+  /*...*/
   TNode<Uint16T> instance_type = LoadInstanceType(subject_string);
   GotoIfNot(IsOneByteStringInstanceType(instance_type), &call_runtime);
-
+  /*下面处理One Byte String*/
   // Try to use cached one byte characters.
   {
-    TNode<Smi> length_smi = Select<Smi>(
-        TaggedIsSmi(limit_number),
-        [=, this] { return SmiMin(CAST(limit_number), subject_length); },
-        [=] { return subject_length; });
-    TNode<IntPtrT> length = SmiToIntPtr(length_smi);
-
-    ToDirectStringAssembler to_direct(state(), subject_string);
-    to_direct.TryToDirect(&call_runtime);
-
-    // The extracted direct string may be two-byte even though the wrapping
-    // string is one-byte.
-    GotoIfNot(to_direct.IsOneByte(), &call_runtime);
-
-    TNode<FixedArray> elements =
-        CAST(AllocateFixedArray(PACKED_ELEMENTS, length));
-    // Don't allocate anything while {string_data} is live!
-    TNode<RawPtrT> string_data =
-        to_direct.PointerToData(&fill_thehole_and_call_runtime);
-    TNode<IntPtrT> string_data_offset = to_direct.offset();
-
+  /*...再次判断是否符合快速处理one byte characters string...*/
     BuildFastLoop<IntPtrT>(
         IntPtrConstant(0), length,
         [&](TNode<IntPtrT> index) {
@@ -1515,6 +1491,7 @@ TNode<JSArray> StringBuiltinsAssembler::StringToArray(
                                      string_data));
           TNode<Uint8T> char_code =
               Load<Uint8T>(string_data, IntPtrAdd(index, string_data_offset));
+	   /*核心语句，需要继续追踪StringFromSingleOneByteCharCode的用处*/
           TNode<String> entry = StringFromSingleOneByteCharCode(char_code);
 
           // TODO(ishell): make it possible to skip write barriers here.
@@ -1527,22 +1504,7 @@ TNode<JSArray> StringBuiltinsAssembler::StringToArray(
     TNode<Map> array_map = LoadJSArrayElementsMap(PACKED_ELEMENTS, context);
     result_array = AllocateJSArray(array_map, elements, length_smi);
     Goto(&done);
-
-    BIND(&fill_thehole_and_call_runtime);
-    {
-      FillFixedArrayWithValue(PACKED_ELEMENTS, elements, IntPtrConstant(0),
-                              length, RootIndex::kTheHoleValue);
-      Goto(&call_runtime);
-    }
-  }
-
-  BIND(&call_runtime);
-  {
-    result_array = CAST(CallRuntime(Runtime::kStringToArray, context,
-                                    subject_string, limit_number));
-    Goto(&done);
-  }
-
+    /*...*/
   BIND(&done);
   return result_array.value();
 }

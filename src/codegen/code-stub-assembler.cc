@@ -8739,9 +8739,7 @@ TNode<Uint16T> CodeStubAssembler::StringCharCodeAt(TNode<String> string,
 
 TNode<String> CodeStubAssembler::StringFromSingleOneByteCharCode(
     TNode<Uint8T> code) {
-  CSA_DCHECK(this, Uint32LessThanOrEqual(
-                       code, Int32Constant(String::kMaxOneByteCharCode)));
-
+  /*...*/
   // Load the string for the {code} directly from the roots table.
   TNode<UintPtrT> code_index = ChangeUint32ToWord(code);
   TNode<IntPtrT> single_char_string_table_offset = IntPtrConstant(
