@@ -465,6 +465,7 @@ V8_NOINLINE Handle<JSFunction> CreateFunctionForBuiltinWithPrototype(
     Handle<HeapObject> prototype, InstanceType type, int instance_size,
     int inobject_properties, MutableMode prototype_mutability, int len,
     bool adapt) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   Factory* factory = isolate->factory();
   Handle<NativeContext> context(isolate->native_context());
   Handle<Map> map =
@@ -515,6 +516,7 @@ V8_NOINLINE Handle<JSFunction> CreateFunctionForBuiltinWithPrototype(
 V8_NOINLINE Handle<JSFunction> CreateFunctionForBuiltinWithoutPrototype(
     Isolate* isolate, Handle<String> name, Builtin builtin, int len,
     bool adapt) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   Handle<NativeContext> context(isolate->native_context());
   Handle<Map> map = isolate->strict_function_without_prototype_map();
   DCHECK(IsFunctionMapOrSpecialBuiltin(map, builtin, context));

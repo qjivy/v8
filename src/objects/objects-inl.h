@@ -1098,6 +1098,8 @@ void HeapObject::InitJSDispatchHandleField(size_t offset,
       isolate.GetJSDispatchTableSpaceFor(field_address(offset));
   JSDispatchHandle handle =
       jdt->AllocateAndInitializeEntry(space, parameter_count);
+  std::cout << __FUNCTION__ << " offset: " << offset << " handle2index: "
+            << (((uint32_t)handle) >> kJSDispatchHandleShift) << std::endl;
 
   // Use a Release_Store to ensure that the store of the pointer into the table
   // is not reordered after the store of the handle. Otherwise, other threads
@@ -1120,7 +1122,9 @@ void HeapObject::InitJSDispatchHandleField(size_t offset,
       isolate.GetJSDispatchTableSpaceFor(field_address(offset));
   JSDispatchHandle handle =
       jdt->AllocateAndInitializeEntry(space, parameter_count, code, entrypoint);
-
+  std::cout << __FUNCTION__ << " with code and entry point offset: " << offset
+            << " handle2index: "
+            << (((uint32_t)handle) >> kJSDispatchHandleShift) << std::endl;
   // Use a Release_Store to ensure that the store of the pointer into the table
   // is not reordered after the store of the handle. Otherwise, other threads
   // may access an uninitialized table entry and crash.

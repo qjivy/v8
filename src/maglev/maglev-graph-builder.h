@@ -197,9 +197,12 @@ class MaglevGraphBuilder {
       MaglevGraphBuilder* parent = nullptr);
 
   void Build() {
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << std::endl;
     DCHECK(!is_inline());
 
     StartPrologue();
+    std::cout << __FUNCTION__ << " <0> " << std::endl;
     for (int i = 0; i < parameter_count(); i++) {
       // TODO(v8:7700): Consider creating InitialValue nodes lazily.
       InitialValue* v = AddNewNode<InitialValue>(
@@ -221,6 +224,7 @@ class MaglevGraphBuilder {
     AddInitializedNodeToGraph(function_entry_stack_check);
 
     BuildMergeStates();
+    std::cout << __FUNCTION__ << " <0> " << std::endl;
     EndPrologue();
     in_prologue_ = false;
 
@@ -876,6 +880,8 @@ class MaglevGraphBuilder {
 
   void AddInitializedNodeToGraph(Node* node) {
     // VirtualObjects should never be add to the Maglev graph.
+    std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__
+              << std::endl;
     DCHECK(!node->Is<VirtualObject>());
     current_block_->nodes().Add(node);
     node->set_owner(current_block_);

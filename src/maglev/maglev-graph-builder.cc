@@ -1041,6 +1041,7 @@ void MaglevGraphBuilder::InitializeRegister(interpreter::Register reg,
 
 void MaglevGraphBuilder::BuildRegisterFrameInitialization(
     ValueNode* context, ValueNode* closure, ValueNode* new_target) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   if (closure == nullptr &&
       compilation_unit_->info()->specialize_to_function_context()) {
     compiler::JSFunctionRef function = compiler::MakeRefAssumeMemoryFence(

@@ -78,8 +78,8 @@ class JSReceiver : public TorqueGeneratedJSReceiver<JSReceiver, HeapObject> {
   //
   // 4) NameDictionary - This is the dictionary-mode backing store.
   //
-  // 4) GlobalDictionary - This is the backing store for the
-  // GlobalObject.
+  // 5) GlobalDictionary - This is the backing store for the
+  // GlobalObject. //qjftypo
   //
   // This is used only in the deoptimizer and heap. Please use the
   // above typed getters and setters to access the properties.

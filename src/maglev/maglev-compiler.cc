@@ -57,6 +57,7 @@ namespace maglev {
 // static
 bool MaglevCompiler::Compile(LocalIsolate* local_isolate,
                              MaglevCompilationInfo* compilation_info) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   compiler::CurrentHeapBrokerScope current_broker(compilation_info->broker());
   Graph* graph =
       Graph::New(compilation_info->zone(),
@@ -202,6 +203,7 @@ bool MaglevCompiler::Compile(LocalIsolate* local_isolate,
     TRACE_EVENT0(TRACE_DISABLED_BY_DEFAULT("v8.compile"),
                  "V8.Maglev.CodeAssembly");
     UnparkedScopeIfOnBackground unparked_scope(local_isolate->heap());
+    std::cout << "INTO code assemble" << std::endl;
     std::unique_ptr<MaglevCodeGenerator> code_generator =
         std::make_unique<MaglevCodeGenerator>(local_isolate, compilation_info,
                                               graph);

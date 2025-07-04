@@ -83,6 +83,7 @@ void ExportedMaglevCompilationInfo::set_canonical_handles(
 // static
 std::unique_ptr<MaglevCompilationJob> MaglevCompilationJob::New(
     Isolate* isolate, Handle<JSFunction> function, BytecodeOffset osr_offset) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   auto info = maglev::MaglevCompilationInfo::New(isolate, function, osr_offset);
   return std::unique_ptr<MaglevCompilationJob>(
       new MaglevCompilationJob(isolate, std::move(info)));
@@ -119,6 +120,7 @@ MaglevCompilationJob::MaglevCompilationJob(
 MaglevCompilationJob::~MaglevCompilationJob() = default;
 
 CompilationJob::Status MaglevCompilationJob::PrepareJobImpl(Isolate* isolate) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   BeginPhaseKind("V8.MaglevPrepareJob");
   if (info()->collect_source_positions()) {
     SharedFunctionInfo::EnsureSourcePositionsAvailable(
@@ -132,6 +134,7 @@ CompilationJob::Status MaglevCompilationJob::PrepareJobImpl(Isolate* isolate) {
 
 CompilationJob::Status MaglevCompilationJob::ExecuteJobImpl(
     RuntimeCallStats* stats, LocalIsolate* local_isolate) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   BeginPhaseKind("V8.MaglevExecuteJob");
   LocalIsolateScope scope{info(), local_isolate};
   if (!maglev::MaglevCompiler::Compile(local_isolate, info())) {
@@ -144,6 +147,7 @@ CompilationJob::Status MaglevCompilationJob::ExecuteJobImpl(
 }
 
 CompilationJob::Status MaglevCompilationJob::FinalizeJobImpl(Isolate* isolate) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   BeginPhaseKind("V8.MaglevFinalizeJob");
   Handle<Code> code;
   if (!maglev::MaglevCompiler::GenerateCode(isolate, info()).ToHandle(&code)) {
@@ -175,6 +179,7 @@ GlobalHandleVector<Map> MaglevCompilationJob::CollectRetainedMaps(
 }
 
 void MaglevCompilationJob::DisposeOnMainThread(Isolate* isolate) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   // Drop canonical handles on the main thread, to avoid (in the case of
   // background job destruction) needing to unpark the local isolate on the
   // background thread for unregistering the identity map's strong roots.
@@ -357,12 +362,14 @@ MaglevConcurrentDispatcher::~MaglevConcurrentDispatcher() {
 
 void MaglevConcurrentDispatcher::EnqueueJob(
     std::unique_ptr<MaglevCompilationJob>&& job) {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   DCHECK(is_enabled());
   incoming_queue_.Enqueue(std::move(job));
   job_handle_->NotifyConcurrencyIncrease();
 }
 
 void MaglevConcurrentDispatcher::FinalizeFinishedJobs() {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   HandleScope handle_scope(isolate_);
   while (!outgoing_queue_.IsEmpty()) {
     std::unique_ptr<MaglevCompilationJob> job;
@@ -389,6 +396,7 @@ void MaglevConcurrentDispatcher::FinalizeFinishedJobs() {
 }
 
 void MaglevConcurrentDispatcher::AwaitCompileJobs() {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   // Use Join to wait until there are no more queued or running jobs.
   {
     AllowGarbageCollection allow_before_parking;

@@ -552,7 +552,9 @@ void JSFunction::EnsureClosureFeedbackCellArray(
   }
 
   DirectHandle<ClosureFeedbackCellArray> feedback_cell_array =
-      ClosureFeedbackCellArray::New(isolate, shared);
+      ClosureFeedbackCellArray::New(
+          isolate,
+          shared);  // qj: here new the 2 slots for TimeFunc and ... (bits)
   // Many closure cell is used as a way to specify that there is no
   // feedback cell for this fnction and a new feedback cell has to be
   // allocated for this function. For ex: for eval functions, we have to create
@@ -598,7 +600,7 @@ void JSFunction::EnsureFeedbackVector(Isolate* isolate,
   CreateAndAttachFeedbackVector(isolate, function, compiled_scope);
 }
 
-// static
+// stati<<sizec
 void JSFunction::CreateAndAttachFeedbackVector(
     Isolate* isolate, DirectHandle<JSFunction> function,
     IsCompiledScope* compiled_scope) {

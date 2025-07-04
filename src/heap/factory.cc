@@ -442,6 +442,8 @@ Handle<FeedbackVector> Factory::NewFeedbackVector(
   DCHECK_LE(0, length);
   int size = FeedbackVector::SizeFor(length);
 
+  std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__
+            << " length: " << length << " size: " << size << std::endl;
   Tagged<FeedbackVector> vector =
       Cast<FeedbackVector>(AllocateRawWithImmortalMap(
           size, AllocationType::kOld, *feedback_vector_map()));
@@ -4662,11 +4664,10 @@ Handle<JSFunction> Factory::JSFunctionBuilder::Build() {
 Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     DirectHandle<Code> code) {
   std::cout << __FILE__ << " " << __FUNCTION__ << " " << __LINE__ << " "
-            << CodeKindToString(code->kind()) << std::endl;
+            << CodeKindToString(code->kind());
   if (Builtins::IsBuiltin(*code)) {
     std::cout << __FUNCTION__
-              << " bt-code: " << Builtins::name((*code)->builtin_id())
-              << std::endl;
+              << " bt-code: " << Builtins::name((*code)->builtin_id());
   }
   Isolate* isolate = isolate_;
   Factory* factory = isolate_->factory();
@@ -4674,7 +4675,7 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
   DirectHandle<Map> map = maybe_map_.ToHandleChecked();
   DirectHandle<FeedbackCell> feedback_cell =
       maybe_feedback_cell_.ToHandleChecked();
-  std::cout << *feedback_cell << std::endl;
+  std::cout << " feedback_cell: " << *feedback_cell << std::endl;
 
   DCHECK(InstanceTypeChecker::IsJSFunction(*map));
 
@@ -4683,9 +4684,11 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
       Cast<JSFunction>(factory->New(map, allocation_type_));
   DisallowGarbageCollection no_gc;
 
-  WriteBarrierMode mode = allocation_type_ == AllocationType::kYoung
-                              ? SKIP_WRITE_BARRIER
-                              : UPDATE_WRITE_BARRIER;
+  WriteBarrierMode mode =
+      allocation_type_ == AllocationType::kYoung
+          ? SKIP_WRITE_BARRIER
+          : UPDATE_WRITE_BARRIER;  // qj: you see here if alloc in old, then
+                                   // write barrier need
   // Header initialization.
   function->initialize_properties(isolate);
   function->initialize_elements();
@@ -4698,7 +4701,8 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
   // generic many_closures_cell (for example builtin functions), and only for
   // functions using certain kinds of code.
   if (feedback_cell->dispatch_handle() == kNullJSDispatchHandle) {
-    std::cout << "feedback_cell->dispatch_handle() == kNullJSDispatchHandle"
+    std::cout << "feedback_cell->dispatch_handle() == kNullJSDispatchHandle "
+                 "should alloc one dispatch entry"
               << std::endl;
     DCHECK_EQ(*feedback_cell, *factory->many_closures_cell());
     // We currently only expect to see these kinds of Code here. For BASELINE
@@ -4713,8 +4717,15 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     function->initialize_dispatch_handle(
         isolate, sfi_->internal_formal_parameter_count_with_receiver(), *code,
         code->instruction_start());
-  } else {
     std::cout << "dispatch handle2index: "
+              << (((uint32_t)feedback_cell->dispatch_handle() >>
+                   kJSDispatchHandleShift))
+              << " Name: " << sfi_->Name()
+              << " internal_formal_parameter_count_with_receiver: "
+              << sfi_->internal_formal_parameter_count_with_receiver()
+              << std::endl;
+  } else {
+    std::cout << "dispatch handle2index: " << std::dec
               << ((uint32_t)feedback_cell->dispatch_handle() >>
                   kJSDispatchHandleShift)
               << " Name: " << sfi_->Name() << std::endl;
@@ -4723,7 +4734,9 @@ Handle<JSFunction> Factory::JSFunctionBuilder::BuildRaw(
     // contains bytecode or CompileLazy and we'll tier on the next call. Otoh,
     // if we would UpdateCode we would risk tiering down already existing
     // closures with optimized code installed.
-    JSDispatchHandle handle = feedback_cell->dispatch_handle();
+    JSDispatchHandle handle =
+        feedback_cell
+            ->dispatch_handle();  // qj: see you get a handle, aka a index
     JSDispatchTable* jdt = GetProcessWideJSDispatchTable();
     // TODO(olivf): We should go through the cases where this is still needed
     // and maybe find some alternative to initialize it correctly from the

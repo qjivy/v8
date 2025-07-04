@@ -1270,6 +1270,7 @@ void RecordMaglevFunctionCompilation(Isolate* isolate,
 MaybeHandle<Code> CompileMaglev(Isolate* isolate, Handle<JSFunction> function,
                                 ConcurrencyMode mode, BytecodeOffset osr_offset,
                                 CompileResultBehavior result_behavior) {
+  std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
 #ifdef V8_ENABLE_MAGLEV
   DCHECK(maglev::IsMaglevEnabled());
   CHECK(result_behavior == CompileResultBehavior::kDefault);
@@ -1338,6 +1339,7 @@ MaybeHandle<Code> GetOrCompileOptimized(
     Isolate* isolate, Handle<JSFunction> function, ConcurrencyMode mode,
     CodeKind code_kind, BytecodeOffset osr_offset = BytecodeOffset::None(),
     CompileResultBehavior result_behavior = CompileResultBehavior::kDefault) {
+  // qj: here code_kind is target kind
   std::cout << __FUNCTION__ << " " << __LINE__ << " " << __FILE__ << std::endl;
   DCHECK(CodeKindIsOptimizedJSFunction(code_kind));
 
@@ -1402,7 +1404,7 @@ MaybeHandle<Code> GetOrCompileOptimized(
 
   if (code_kind == CodeKind::TURBOFAN) {
     return CompileTurbofan(isolate, function, shared, mode, osr_offset,
-                           result_behavior);
+                           result_behavior);  // qj: here kick off TurboFan
   } else {
     DCHECK_EQ(code_kind, CodeKind::MAGLEV);
     return CompileMaglev(isolate, function, mode, osr_offset,
@@ -3036,10 +3038,12 @@ bool Compiler::Compile(Isolate* isolate, Handle<JSFunction> function,
     function->UpdateMaybeContextSpecializedCode(isolate, *code);
   } else {
     const CodeKind code_kind = CodeKindForTopTier();
-    std::cout << __FUNCTION__ << " kind1: " << CodeKindToString(code_kind)
+    std::cout << __FUNCTION__
+              << " top tier code kind: " << CodeKindToString(code_kind)
               << std::endl;
 
-    std::cout << __FUNCTION__ << " kind2: " << CodeKindToString(code->kind())
+    std::cout << __FUNCTION__
+              << " current kind2: " << CodeKindToString(code->kind())
               << std::endl;
     if (Builtins::IsBuiltin(*code)) {
       std::cout << __FUNCTION__ << " bt-code: "

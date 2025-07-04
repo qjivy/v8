@@ -1697,7 +1697,10 @@ MaglevCodeGenerator::MaglevCodeGenerator(
 }
 
 bool MaglevCodeGenerator::Assemble() {
+  std::cout << __FUNCTION__ << " " << __FILE__ << " " << __LINE__ << std::endl;
   if (!EmitCode()) {
+    std::cout << __FUNCTION__ << "<0> !EmitCode is true, will return"
+              << std::endl;
 #ifdef V8_TARGET_ARCH_ARM
     // Even if we fail, we force emit the constant pool, so that it is empty.
     __ CheckConstPool(true, false);
@@ -1705,21 +1708,26 @@ bool MaglevCodeGenerator::Assemble() {
     return false;
   }
 
+  std::cout << __FUNCTION__ << " <1>" << std::endl;
   EmitMetadata();
 
   if (v8_flags.maglev_build_code_on_background) {
+    std::cout << __FUNCTION__ << " <2>" << std::endl;
     code_ = local_isolate_->heap()->NewPersistentMaybeHandle(
         BuildCodeObject(local_isolate_));
     Handle<Code> code;
     if (code_.ToHandle(&code)) {
+      std::cout << __FUNCTION__ << " <3>" << std::endl;
       retained_maps_ = CollectRetainedMaps(code);
     }
   } else if (v8_flags.maglev_deopt_data_on_background) {
+    std::cout << __FUNCTION__ << " <4>" << std::endl;
     // Only do this if not --maglev-build-code-on-background, since that will do
     // it itself.
     deopt_data_ = local_isolate_->heap()->NewPersistentHandle(
         GenerateDeoptimizationData(local_isolate_));
   }
+  std::cout << __FUNCTION__ << " <5>" << std::endl;
   return true;
 }
 

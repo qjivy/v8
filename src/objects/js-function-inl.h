@@ -235,6 +235,7 @@ Tagged<Object> JSFunction::raw_code(IsolateForSandbox isolate,
 #ifdef V8_ENABLE_LEAPTIERING
 void JSFunction::initialize_dispatch_handle(IsolateForSandbox isolate,
                                             uint16_t parameter_count) {
+  // std::cout<<__FUNCTION__<<" <0> "<<kHeaderSize<<std::endl;
   InitJSDispatchHandleField(kDispatchHandleOffset, isolate, parameter_count);
 }
 
@@ -242,6 +243,7 @@ void JSFunction::initialize_dispatch_handle(IsolateForSandbox isolate,
                                             uint16_t parameter_count,
                                             Tagged<Code> code,
                                             Address entrypoint) {
+  // std::cout<<__FUNCTION__<<" <1> "<<kHeaderSize<<std::endl;
   InitJSDispatchHandleField(kDispatchHandleOffset, isolate, parameter_count,
                             code, entrypoint);
 }

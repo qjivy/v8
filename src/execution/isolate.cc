@@ -7419,6 +7419,8 @@ void Isolate::InitializeBuiltinJSDispatchTable() {
       jdt->InitializePreAllocatedEntry(
           read_only_heap_->js_dispatch_table_space(), handle, code,
           parameter_count);
+      std::cout << __FUNCTION__ << " handle2index: "
+                << (((uint32_t)handle) >> kJSDispatchHandleShift) << std::endl;
     }
   }
 #endif

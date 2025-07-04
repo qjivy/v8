@@ -857,7 +857,8 @@ class BytecodeGenerator::TopLevelDeclarationsBuilder final : public ZoneObject {
         int start = array_index;
 #endif
         if (decl->IsVariableDeclaration()) {
-          std::cout << "global var decl" << std::endl;
+          std::cout << "global var decl: " << *var->raw_name()->string()
+                    << std::endl;
           data->set(array_index++, *var->raw_name()->string());
           DCHECK_EQ(start + kGlobalVariableDeclarationSize, array_index);
         } else {
@@ -1446,7 +1447,7 @@ Handle<BytecodeArray> BytecodeGenerator::FinalizeBytecode(
   NullContextScopeFor<IsolateT> null_context_scope(isolate);
 #endif
 
-  AllocateDeferredConstants(isolate, script);
+  AllocateDeferredConstants(isolate, script);  // qj
 
   if (block_coverage_builder_) {
     Handle<CoverageInfo> coverage_info =
