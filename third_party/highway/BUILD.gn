@@ -29,6 +29,9 @@ config("libhwy_external_config") {
     # Start using `-march=z14 -mzvector` once ready.
     defines += [ "HWY_BROKEN_EMU128=0" ]
   }
+  if (target_cpu == "riscv64") {
+    defines += [ "HWY_BROKEN_TARGETS=HWY_RVV" ]
+  }
   if (current_os == "aix") {
     # enable emulation until highway aix support is ready.
     defines += [ "HWY_BROKEN_EMU128=0" ]
