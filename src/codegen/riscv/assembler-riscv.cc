@@ -81,11 +81,13 @@ static unsigned CpuFeaturesImpliedByCompiler() {
 #ifdef _RISCV_TARGET_SIMULATOR
 static unsigned SimulatorFeatures() {
   unsigned answer = 0;
+  /*
   answer |= 1u << RISCV_SIMD;
   answer |= 1u << ZBA;
   answer |= 1u << ZBB;
   answer |= 1u << ZBS;
   answer |= 1u << ZICOND;
+  */
   answer |= 1u << FPU;
   return answer;
 }
