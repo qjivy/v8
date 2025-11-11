@@ -1,0 +1,29 @@
+From 89f961ca11053059c6ceb0cf8aefec37a025df2a Mon Sep 17 00:00:00 2001
+From: JiQiu <qiuji@iscas.ac.cn>
+Date: Tue, 11 Nov 2025 19:54:06 +0800
+Subject: [PATCH] Disable B extension for test
+
+---
+ src/codegen/riscv/assembler-riscv.cc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/codegen/riscv/assembler-riscv.cc b/src/codegen/riscv/assembler-riscv.cc
+index 9e282acf045..8d82e12b5cf 100644
+--- a/src/codegen/riscv/assembler-riscv.cc
++++ b/src/codegen/riscv/assembler-riscv.cc
+@@ -82,9 +82,12 @@ static unsigned CpuFeaturesImpliedByCompiler() {
+ static unsigned SimulatorFeatures() {
+   unsigned answer = 0;
+   answer |= 1u << RISCV_SIMD;
++//comment out to disable B extension
++/*
+   answer |= 1u << ZBA;
+   answer |= 1u << ZBB;
+   answer |= 1u << ZBS;
++*/
+   answer |= 1u << ZICOND;
+   answer |= 1u << ZICFISS;
+   answer |= 1u << FPU;
+-- 
+2.46.0
+
